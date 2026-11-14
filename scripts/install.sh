@@ -176,7 +176,7 @@ fi
 
 if [ -z "$binary" ]; then
     cd "$build_dir"
-    cargo build --release
+    cargo build --release --locked
     binary="$build_dir/target/release/shmc"
 fi
 

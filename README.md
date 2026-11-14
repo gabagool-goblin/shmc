@@ -69,7 +69,7 @@ cd shmc
 Alternatively, install with Cargo:
 
 ```sh
-cargo install --git https://github.com/gabagool-goblin/shmc
+cargo install --locked --git https://github.com/gabagool-goblin/shmc
 ```
 
 ## Getting started
