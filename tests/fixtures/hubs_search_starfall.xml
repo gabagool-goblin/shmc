@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MediaContainer size="17">
+<Hub title="Albums" type="album" size="2">
+<Directory ratingKey="20850" key="/library/metadata/20850/children" parentRatingKey="8735" type="album" title="Starfall!" parentTitle="Northwind Sounds" index="1" year="2020" thumb="/library/metadata/20850/thumb/1783849935" parentThumb="/library/metadata/8735/thumb/1791972453">
+</Directory>
+<Directory ratingKey="28140" key="/library/metadata/28140/children" parentRatingKey="8735" type="album" title="Starfall!" parentTitle="Northwind Sounds" index="1" year="2025" thumb="/library/metadata/28140/thumb/1772537525" parentThumb="/library/metadata/8735/thumb/1791972453">
+</Directory>
+</Hub>
+<Hub title="Tracks" type="track" size="14">
+<Track ratingKey="20545" key="/library/metadata/20545" parentRatingKey="20544" grandparentRatingKey="8735" type="track" title="Starfall!" grandparentTitle="Northwind Sounds" parentTitle="Evening Satellite" index="1" parentIndex="1" parentYear="2014" thumb="/library/metadata/20544/thumb/1783849901" parentThumb="/library/metadata/20544/thumb/1783849901" grandparentThumb="/library/metadata/8735/thumb/1791972453" duration="257293">
+<Media id="18392" duration="257293" bitrate="1119" audioChannels="2" audioCodec="flac" container="flac">
+<Part id="18392" key="/library/parts/18392/1740186047/file.flac" duration="257293" size="36015795" container="flac"/>
+</Media>
+</Track>
+<Track ratingKey="20776" key="/library/metadata/20776" parentRatingKey="20760" grandparentRatingKey="8735" type="track" title="Starfall!" grandparentTitle="Northwind Sounds" parentTitle="Album 13" originalTitle="Featured Acts" index="1" parentIndex="2" parentYear="2021" thumb="/library/metadata/20760/thumb/1783849896" parentThumb="/library/metadata/20760/thumb/1783849896" grandparentThumb="/library/metadata/8735/thumb/1791972453" duration="254735">
+<Media id="18600" duration="254735" bitrate="1160" audioChannels="2" audioCodec="flac" container="flac">
+<Part id="18600" key="/library/parts/18600/1630215190/file.flac" duration="254735" size="37024159" container="flac"/>
+</Media>
+</Track>
+<Track ratingKey="21166" key="/library/metadata/21166" parentRatingKey="21165" grandparentRatingKey="8735" type="track" title="Track 1" grandparentTitle="Northwind Sounds" parentTitle="Album 14" index="1" parentIndex="1" parentYear="2015" thumb="/library/metadata/21165/thumb/1783849898" parentThumb="/library/metadata/21165/thumb/1783849898" grandparentThumb="/library/metadata/8735/thumb/1791972453" duration="258000">
+<Media id="18954" duration="258000" bitrate="1135" audioChannels="2" audioCodec="flac" container="flac">
+<Part id="18954" key="/library/parts/18954/1627109127/file.flac" duration="258000" size="36712328" container="flac"/>
+</Media>
+</Track>
+<Track ratingKey="20962" key="/library/metadata/20962" parentRatingKey="20961" grandparentRatingKey="8735" type="track" title="Starfall!" grandparentTitle="Northwind Sounds" parentTitle="Album 15" originalTitle="&#12486;&#12473;&#12488;&#27468;&#25163; 8" index="1" parentIndex="1" parentYear="2017" thumb="/library/metadata/20961/thumb/1772537492" parentThumb="/library/metadata/20961/thumb/1772537492" grandparentThumb="/library/metadata/8735/thumb/1791972453" duration="254906">
+<Media id="18768" duration="254906" bitrate="1142" audioChannels="2" audioCodec="flac" container="flac">
+<Part id="18768" key="/library/parts/18768/1530805881/file.flac" duration="254906" size="36577214" container="flac"/>
+</Media>
+</Track>
+<Track ratingKey="21236" key="/library/metadata/21236" parentRatingKey="21235" grandparentRatingKey="8735" type="track" title="Starfall!" grandparentTitle="Northwind Sounds" parentTitle="Album 16" originalTitle="Artist 26" index="1" parentIndex="1" parentYear="2014" thumb="/library/metadata/21235/thumb/1783849902" parentThumb="/library/metadata/21235/thumb/1783849902" grandparentThumb="/library/metadata/8735/thumb/1791972453" duration="255493">
+<Media id="19018" duration="255493" bitrate="1135" audioChannels="2" audioCodec="flac" container="flac">
+<Part id="19018" key="/library/parts/19018/1530805769/file.flac" duration="255493" size="36364231" container="flac"/>
+</Media>
+</Track>
+<Track ratingKey="28314" key="/library/metadata/28314" parentRatingKey="28300" grandparentRatingKey="8735" type="track" title="Track 2" grandparentTitle="Northwind Sounds" parentTitle="Album 17" originalTitle="&#12486;&#12473;&#12488;&#27468;&#25163; 9" index="14" parentIndex="1" parentYear="2026" thumb="/library/metadata/28300/thumb/1779645532" parentThumb="/library/metadata/28300/thumb/1779645532" grandparentThumb="/library/metadata/8735/thumb/1791972453" duration="274480">
+<Media id="25427" duration="274480" bitrate="1176" audioChannels="2" audioCodec="flac" container="flac">
+<Part id="25474" key="/library/parts/25474/1779643668/file.flac" duration="274480" size="40364635" container="flac"/>
+</Media>
+</Track>
+<Track ratingKey="20536" key="/library/metadata/20536" parentRatingKey="20535" grandparentRatingKey="8735" type="track" title="Track 3" grandparentTitle="Northwind Sounds" parentTitle="Album 18" originalTitle="Featured Acts" index="1" parentIndex="1" parentYear="2014" thumb="/library/metadata/20535/thumb/1783849931" parentThumb="/library/metadata/20535/thumb/1783849931" grandparentThumb="/library/metadata/8735/thumb/1791972453" duration="274613">
+<Media id="18384" duration="274613" bitrate="1142" audioChannels="2" audioCodec="flac" container="flac">
+<Part id="18384" key="/library/parts/18384/1740186072/file.flac" duration="274613" size="39203121" container="flac"/>
+</Media>
+</Track>
+<Track ratingKey="20607" key="/library/metadata/20607" parentRatingKey="20606" grandparentRatingKey="8735" type="track" title="Track 3" grandparentTitle="Northwind Sounds" parentTitle="Album 19" originalTitle="Featured Acts" index="1" parentIndex="1" parentYear="2014" thumb="/library/metadata/20606/thumb/1783849931" parentThumb="/library/metadata/20606/thumb/1783849931" grandparentThumb="/library/metadata/8735/thumb/1791972453" duration="274613">
+<Media id="18448" duration="274613" bitrate="1143" audioChannels="2" audioCodec="flac" container="flac">
+<Part id="18448" key="/library/parts/18448/1563437736/file.flac" duration="274613" size="39593030" container="flac"/>
+</Media>
+</Track>
+<Track ratingKey="24999" key="/library/metadata/24999" parentRatingKey="24984" grandparentRatingKey="8735" type="track" title="Track 2" grandparentTitle="Northwind Sounds" parentTitle="Album 20" index="15" parentIndex="1" parentYear="2024" thumb="/library/metadata/24984/thumb/1772537468" parentThumb="/library/metadata/24984/thumb/1772537468" grandparentThumb="/library/metadata/8735/thumb/1791972453" duration="272480">
+<Media id="22493" duration="272480" bitrate="1181" audioChannels="2" audioCodec="flac" container="flac">
+<Part id="22539" key="/library/parts/22539/1735793340/file.flac" duration="272480" size="40250598" container="flac"/>
+</Media>
+</Track>
+<Track ratingKey="14795" key="/library/metadata/14795" parentRatingKey="14778" grandparentRatingKey="10463" type="track" title="Track 4" grandparentTitle="Artist 24" parentTitle="Album 21" originalTitle="Featured Acts" index="17" parentIndex="1" parentYear="2020" thumb="/library/metadata/14778/thumb/1783850510" parentThumb="/library/metadata/14778/thumb/1783850510" grandparentThumb="/library/metadata/10463/thumb/1791973479" duration="141266">
+<Media id="13496" duration="141266" bitrate="1152" audioChannels="2" audioCodec="flac" container="flac">
+<Part id="13496" key="/library/parts/13496/1692787509/file.flac" duration="141266" size="20486723" container="flac"/>
+</Media>
+</Track>
+<Track ratingKey="14820" key="/library/metadata/14820" parentRatingKey="14819" grandparentRatingKey="10463" type="track" title="Track 5" grandparentTitle="Artist 24" parentTitle="Album 22" originalTitle="Artist 27" index="1" parentIndex="1" parentYear="2016" thumb="/library/metadata/14819/thumb/1783850509" parentThumb="/library/metadata/14819/thumb/1783850509" grandparentThumb="/library/metadata/10463/thumb/1791973479" duration="296426">
+<Media id="13519" duration="296426" bitrate="1149" audioChannels="2" audioCodec="flac" container="flac">
+<Part id="13519" key="/library/parts/13519/1692787508/file.flac" duration="296426" size="42696727" container="flac"/>
+</Media>
+</Track>
+<Track ratingKey="20977" key="/library/metadata/20977" parentRatingKey="20961" grandparentRatingKey="8735" type="track" title="Track 6" grandparentTitle="Northwind Sounds" parentTitle="Album 15" originalTitle="&#12486;&#12473;&#12488;&#27468;&#25163; 8" index="16" parentIndex="1" parentYear="2017" thumb="/library/metadata/20961/thumb/1772537492" parentThumb="/library/metadata/20961/thumb/1772537492" grandparentThumb="/library/metadata/8735/thumb/1791972453" duration="262960">
+<Media id="18783" duration="262960" bitrate="1027" audioChannels="2" audioCodec="flac" container="flac">
+<Part id="18783" key="/library/parts/18783/1530805914/file.flac" duration="262960" size="33934163" container="flac"/>
+</Media>
+</Track>
+<Track ratingKey="21026" key="/library/metadata/21026" parentRatingKey="21016" grandparentRatingKey="8735" type="track" title="Track 5" grandparentTitle="Northwind Sounds" parentTitle="Album 23" originalTitle="Featured Acts" index="10" parentIndex="1" parentYear="2017" thumb="/library/metadata/21016/thumb/1783849932" parentThumb="/library/metadata/21016/thumb/1783849932" grandparentThumb="/library/metadata/8735/thumb/1791972453" duration="296293">
+<Media id="18828" duration="296293" bitrate="1164" audioChannels="2" audioCodec="flac" container="flac">
+<Part id="18828" key="/library/parts/18828/1530805835/file.flac" duration="296293" size="43187942" container="flac"/>
+</Media>
+</Track>
+<Track ratingKey="21665" key="/library/metadata/21665" parentRatingKey="21657" grandparentRatingKey="8735" type="track" title="Track 7" grandparentTitle="Northwind Sounds" parentTitle="Album 24" originalTitle="Featured Acts" index="8" parentIndex="1" parentYear="2015" thumb="/library/metadata/21657/thumb/1783849916" parentThumb="/library/metadata/21657/thumb/1783849916" grandparentThumb="/library/metadata/8735/thumb/1791972453" duration="262493">
+<Media id="19395" duration="262493" bitrate="1045" audioChannels="2" audioCodec="flac" container="flac">
+<Part id="19410" key="/library/parts/19410/1740186471/file.flac" duration="262493" size="34296766" container="flac"/>
+</Media>
+</Track>
+</Hub>
+<Hub title="Shows" type="show" size="0">
+</Hub>
+<Hub title="Artists" type="artist" size="0">
+</Hub>
+<Hub title="Episodes" type="episode" size="0">
+</Hub>
+<Hub title="Movies" type="movie" size="0">
+</Hub>
+<Hub title="Photo Albums" type="photoalbum" size="0">
+</Hub>
+<Hub title="Automatic Tags" type="autotag" size="0">
+</Hub>
+<Hub title="Photos" type="photo" size="0">
+</Hub>
+<Hub title="Tags" type="tag" size="0">
+</Hub>
+<Hub title="Actors" type="actor" size="0">
+</Hub>
+<Hub title="Directors" type="director" size="0">
+</Hub>
+<Hub title="Genres" type="genre" size="0">
+</Hub>
+<Hub title="Collections" type="collection" size="0">
+</Hub>
+<Hub title="Playlists" type="playlist" size="0">
+</Hub>
+<Hub title="Shared" type="shared" size="0">
+</Hub>
+<Hub title="Places" type="place" size="0">
+</Hub>
+</MediaContainer>

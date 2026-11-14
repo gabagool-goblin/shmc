@@ -1,0 +1,17 @@
+# Based on the Dracula palette (MIT): https://github.com/dracula/dracula-theme
+
+name = "Dracula"
+author = "Dracula Theme"
+variant = "dark"
+accent = "#bd93f9"
+on_accent = "#282a36"
+text = "#f8f8f2"
+dim = "#6272a4"
+secondary = "#f1fa8c"
+error = "#ff5555"
+border = "#6272a4"
+highlight = "#44475a"
+viz_bottom = "#ff5555"
+viz_mid = "#ff79c6"
+viz_top = "#8be9fd"
+background = "#282a36"

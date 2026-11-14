@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MediaContainer size="2" thumb="/:/resources/artist.png">
+<Directory ratingKey="20308" key="/library/metadata/20308/children" parentRatingKey="20041" type="album" title="Album 1" parentTitle="Artist 1" index="1" year="2008" thumb="/library/metadata/20308/thumb/1783849508" parentThumb="/library/metadata/20041/thumb/1789815504">
+</Directory>
+<Directory ratingKey="20042" key="/library/metadata/20042/children" parentRatingKey="20041" type="album" title="Album 2" parentTitle="Artist 1" index="1" year="2009" thumb="/library/metadata/20042/thumb/1783849508" parentThumb="/library/metadata/20041/thumb/1789815504">
+</Directory>
+</MediaContainer>

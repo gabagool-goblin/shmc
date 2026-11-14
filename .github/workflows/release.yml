@@ -1,0 +1,96 @@
+name: release
+
+on:
+  push:
+    tags: ['[0-9]+.[0-9]+.[0-9]+']
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    strategy:
+      matrix:
+        include:
+          - { os: macos-15, target: aarch64-apple-darwin }
+          # 22.04: the binary then needs only glibc 2.35.
+          - { os: ubuntu-22.04, target: x86_64-unknown-linux-gnu }
+          - { os: ubuntu-22.04-arm, target: aarch64-unknown-linux-gnu }
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Check the tag matches Cargo.toml
+        run: |
+          version="$(sed -n 's/^version = "\(.*\)"$/\1/p' Cargo.toml | head -n 1)"
+          [ "$version" = "$GITHUB_REF_NAME" ] ||
+            { echo "tag $GITHUB_REF_NAME but Cargo.toml says $version"; exit 1; }
+
+      - name: Install Rust toolchain
+        run: |
+          rustup toolchain install stable --profile minimal --no-self-update
+          rustup default stable
+          rustc --version
+
+      - name: Build
+        run: cargo build --release --locked
+
+      # Apple Silicon refuses to run a binary whose ad-hoc signature was stripped.
+      - name: Check the signature
+        if: runner.os == 'macOS'
+        run: codesign -v target/release/shmc
+
+      - name: Package
+        run: |
+          dir="shmc-${{ matrix.target }}"
+          mkdir "$dir"
+          cp target/release/shmc LICENSE README.md "$dir/"
+          "$dir/shmc" --version
+          tar -czf "$dir.tar.gz" "$dir"
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: shmc-${{ matrix.target }}.tar.gz
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: shmc-${{ matrix.target }}
+          path: shmc-${{ matrix.target }}.tar.gz
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download
+        uses: actions/download-artifact@v4
+        with:
+          pattern: shmc-*
+          merge-multiple: true
+
+      - name: Checksums
+        run: sha256sum shmc-*.tar.gz | tee SHA256SUMS
+
+      - name: Attach to the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          tag="$GITHUB_REF_NAME"
+          gh release view "$tag" >/dev/null 2>&1 ||
+            gh release create "$tag" --draft --verify-tag --title "$tag" --notes "Notes to come."
+          gh release upload "$tag" shmc-*.tar.gz SHA256SUMS --clobber

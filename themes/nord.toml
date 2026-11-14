@@ -1,0 +1,17 @@
+# Based on the Nord palette (MIT): https://github.com/nordtheme/nord
+
+name = "Nord"
+author = "Arctic Ice Studio"
+variant = "dark"
+accent = "#88c0d0"
+on_accent = "#2e3440"
+text = "#d8dee9"
+dim = "#4c566a"
+secondary = "#ebcb8b"
+error = "#bf616a"
+border = "#4c566a"
+highlight = "#434c5e"
+viz_bottom = "#bf616a"
+viz_mid = "#b48ead"
+viz_top = "#88c0d0"
+background = "#2e3440"

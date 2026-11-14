@@ -1,0 +1,9 @@
+/target
+.DS_Store
+*.swp
+*~
+.idea/
+.vscode/
+*.log
+core*
+.claude/settings.local.json

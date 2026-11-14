@@ -1,0 +1,17 @@
+# Based on the Catppuccin Mocha palette (MIT): https://github.com/catppuccin/catppuccin
+
+name = "Catppuccin Mocha"
+author = "Catppuccin"
+variant = "dark"
+accent = "#89b4fa"
+on_accent = "#1e1e2e"
+text = "#cdd6f4"
+dim = "#6c7086"
+secondary = "#f9e2af"
+error = "#f38ba8"
+border = "#6c7086"
+highlight = "#45475a"
+viz_bottom = "#f38ba8"
+viz_mid = "#cba6f7"
+viz_top = "#89b4fa"
+background = "#1e1e2e"

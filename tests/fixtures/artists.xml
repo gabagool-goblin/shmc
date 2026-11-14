@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MediaContainer size="3" thumb="/:/resources/artist.png">
+<Directory ratingKey="20041" key="/library/metadata/20041/children" type="artist" title="Artist 1" index="1" thumb="/library/metadata/20041/thumb/1789815504">
+</Directory>
+<Directory ratingKey="19654" key="/library/metadata/19654/children" type="artist" title="Artist 2" index="1" thumb="/library/metadata/19654/thumb/1790592559">
+</Directory>
+<Directory ratingKey="8361" key="/library/metadata/8361/children" type="artist" title="&#12486;&#12473;&#12488;&#27468;&#25163; 1" index="1" thumb="/library/metadata/8361/thumb/1790593041">
+</Directory>
+</MediaContainer>

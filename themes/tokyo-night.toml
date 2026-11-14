@@ -1,0 +1,17 @@
+# Based on the Tokyo Night palette (MIT): https://github.com/enkia/tokyo-night-vscode-theme
+
+name = "Tokyo Night"
+author = "Tokyo Night"
+variant = "dark"
+accent = "#7aa2f7"
+on_accent = "#161e2e"
+text = "#c0caf5"
+dim = "#565f89"
+secondary = "#e0af68"
+error = "#f7768e"
+border = "#565f89"
+highlight = "#414868"
+viz_bottom = "#f7768e"
+viz_mid = "#bb9af7"
+viz_top = "#7dcfff"
+background = "#1a1b26"

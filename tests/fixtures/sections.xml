@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MediaContainer size="4">
+<Directory key="3" type="movie" title="Movies">
+</Directory>
+<Directory key="2" type="show" title="Shows">
+</Directory>
+<Directory key="4" type="show" title="TV Shows">
+</Directory>
+<Directory key="1" type="artist" title="Music">
+</Directory>
+</MediaContainer>

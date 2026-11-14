@@ -1,0 +1,41 @@
+# VGA text-mode colours with double borders, inspired by DOS utilities.
+# Copy into ~/.config/shmc/themes/ and choose "vga" in `shmc config`
+# (or theme.name = "vga").
+#
+# Some terminals colour-manage images but not text, so the cover's padding can
+# look a lighter blue than the background; setting the terminal's colour space
+# to sRGB may make them match. A VGA font (e.g. "Px437 IBM VGA" from the
+# Ultimate Oldschool PC Font Pack) completes the look; that is a terminal setting.
+
+name = "VGA"
+author = "shmc"
+variant = "dark"
+background = "#0000aa"
+text = "#ffffff"
+dim = "#aaaaaa"
+secondary = "#ffff55"
+accent = "#00aaaa"
+on_accent = "#000000"
+border = "#aaaaaa"
+highlight = "#000000"
+error = "#ff5555"
+viz_bottom = "#00aaaa"
+viz_mid = "#55ffff"
+viz_top = "#ffff55"
+
+[spacing]
+borders = "double"
+
+[symbols]
+progress_bar = "solid"
+progress_filled = "█"
+progress_empty = "░"
+progress_head = "█"
+scroll_up = "▲"
+scroll_down = "▼"
+scroll_thumb = "█"
+volume_meter = "█░"
+
+[styles]
+progress_fill = { fg = "secondary" }
+progress_track = { fg = "dim" }

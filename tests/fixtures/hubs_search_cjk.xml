@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MediaContainer size="17">
+<Hub title="Shows" type="show" size="0">
+</Hub>
+<Hub title="Artists" type="artist" size="0">
+</Hub>
+<Hub title="Albums" type="album" size="2">
+<Directory ratingKey="27062" key="/library/metadata/27062/children" parentRatingKey="5875" type="album" title="&#12486;&#12473;&#12488;&#12450;&#12523;&#12496;&#12512; 1" parentTitle="Artist 3" index="1" year="2012" thumb="/library/metadata/27062/thumb/1783849880" parentThumb="/library/metadata/5875/thumb/1789889006">
+</Directory>
+<Directory ratingKey="25642" key="/library/metadata/25642/children" parentRatingKey="19835" type="album" title="&#12486;&#12473;&#12488;&#12450;&#12523;&#12496;&#12512; 2" parentTitle="Artist 4" index="1" year="2024" thumb="/library/metadata/25642/thumb/1783849472" parentThumb="/library/metadata/19835/thumb/1791971684">
+</Directory>
+</Hub>
+<Hub title="Episodes" type="episode" size="0">
+</Hub>
+<Hub title="Movies" type="movie" size="0">
+</Hub>
+<Hub title="Tracks" type="track" size="25">
+<Track ratingKey="13641" key="/library/metadata/13641" parentRatingKey="13638" grandparentRatingKey="3749" type="track" title="&#12486;&#12473;&#12488;&#26354; 1" grandparentTitle="Artist 5" parentTitle="Album 3" originalTitle="&#12486;&#12473;&#12488;&#27468;&#25163; 2" index="3" parentIndex="1" parentYear="2016" thumb="/library/metadata/13638/thumb/1783850080" parentThumb="/library/metadata/13638/thumb/1783850080" grandparentThumb="/library/metadata/3749/thumb/1791972829" duration="378160">
+<Media id="12447" duration="378160" bitrate="1083" audioChannels="2" audioCodec="flac" container="flac">
+<Part id="12447" key="/library/parts/12447/1530809893/file.flac" duration="378160" size="51474884" container="flac"/>
+</Media>
+</Track>
+<Track ratingKey="13979" key="/library/metadata/13979" parentRatingKey="13973" grandparentRatingKey="3749" type="track" title="&#12486;&#12473;&#12488;&#26354; 2" grandparentTitle="Artist 5" parentTitle="Album 4" index="6" parentIndex="1" parentYear="2010" thumb="/library/metadata/13973/thumb/1783850071" parentThumb="/library/metadata/13973/thumb/1783850071" grandparentThumb="/library/metadata/3749/thumb/1791972829" duration="271000">
+<Media id="12752" duration="271000" bitrate="1036" audioChannels="2" audioCodec="flac" container="flac">
+<Part id="12752" key="/library/parts/12752/1530809882/file.flac" duration="271000" size="35176850" container="flac"/>
+</Media>
+</Track>
+<Track ratingKey="17380" key="/library/metadata/17380" parentRatingKey="17362" grandparentRatingKey="17225" type="track" title="&#12486;&#12473;&#12488;&#26354; 3" grandparentTitle="Artist 6" parentTitle="&#12486;&#12473;&#12488;&#12450;&#12523;&#12496;&#12512; 3" index="18" parentIndex="1" parentYear="2008" thumb="/library/metadata/17362/thumb/1772438773" parentThumb="/library/metadata/17362/thumb/1772438773" grandparentThumb="/library/metadata/17225/thumb/1779875756" duration="178170">
+<Media id="15758" duration="178170" bitrate="596" audioChannels="2" audioCodec="flac" container="flac">
+<Part id="15758" key="/library/parts/15758/1738621069/file.flac" duration="178170" size="13386373" container="flac"/>
+</Media>
+</Track>
+<Track ratingKey="18387" key="/library/metadata/18387" parentRatingKey="18386" grandparentRatingKey="18363" type="track" title="&#12486;&#12473;&#12488;&#26354; 4" grandparentTitle="Artist 7" parentTitle="Album 5" originalTitle="Artist 8" index="1" parentIndex="1" parentYear="2012" thumb="/library/metadata/18386/thumb/1783849407" parentThumb="/library/metadata/18386/thumb/1783849407" grandparentThumb="/library/metadata/18363/thumb/1790592473" duration="311379">
+<Media id="16681" duration="311379" bitrate="320" audioChannels="2" audioCodec="mp3" container="mp3">
+<Part id="16681" key="/library/parts/16681/1738298368/file.mp3" duration="311379" size="12548914" container="mp3"/>
+</Media>
+</Track>
+<Track ratingKey="15000" key="/library/metadata/15000" parentRatingKey="14993" grandparentRatingKey="14945" type="track" title="&#12486;&#12473;&#12488;&#26354; 5" grandparentTitle="&#12486;&#12473;&#12488;&#27468;&#25163; 3" parentTitle="&#12486;&#12473;&#12488;&#12450;&#12523;&#12496;&#12512; 4" index="7" parentIndex="1" parentYear="2012" thumb="/library/metadata/14993/thumb/1772438682" parentThumb="/library/metadata/14993/thumb/1772438682" grandparentThumb="/library/metadata/14945/thumb/1792312123" duration="182000">
+<Media id="13675" duration="182000" bitrate="803" audioChannels="2" audioCodec="flac" container="flac">
+<Part id="13675" key="/library/parts/13675/1739138104/file.flac" duration="182000" size="18456128" container="flac"/>
+</Media>
+</Track>
+<Track ratingKey="17916" key="/library/metadata/17916" parentRatingKey="17913" grandparentRatingKey="17912" type="track" title="&#12486;&#12473;&#12488;&#26354; 6" grandparentTitle="Artist 9" parentTitle="&#12486;&#12473;&#12488;&#12450;&#12523;&#12496;&#12512; 5" originalTitle="Artist 10" index="3" parentIndex="1" parentYear="2016" thumb="/library/metadata/17913/thumb/1783849439" parentThumb="/library/metadata/17913/thumb/1783849439" grandparentThumb="/library/metadata/17912/thumb/1791971635" duration="348306">
+<Media id="16267" duration="348306" bitrate="1113" audioChannels="2" audioCodec="flac" container="flac">
+<Part id="16267" key="/library/parts/16267/1628704790/file.flac" duration="348306" size="48553562" container="flac"/>
+</Media>
+</Track>
+<Track ratingKey="17918" key="/library/metadata/17918" parentRatingKey="17913" grandparentRatingKey="17912" type="track" title="&#12486;&#12473;&#12488;&#26354; 7" grandparentTitle="Artist 9" parentTitle="&#12486;&#12473;&#12488;&#12450;&#12523;&#12496;&#12512; 5" originalTitle="Artist 10" index="5" parentIndex="1" parentYear="2016" thumb="/library/metadata/17913/thumb/1783849439" parentThumb="/library/metadata/17913/thumb/1783849439" grandparentThumb="/library/metadata/17912/thumb/1791971635" duration="546466">
+<Media id="16269" duration="546466" bitrate="1114" audioChannels="2" audioCodec="flac" container="flac">
+<Part id="16269" key="/library/parts/16269/1628704840/file.flac" duration="546466" size="76204651" container="flac"/>
+</Media>
+</Track>
+<Track ratingKey="17976" key="/library/metadata/17976" parentRatingKey="17971" grandparentRatingKey="17912" type="track" title="&#12486;&#12473;&#12488;&#26354; 8" grandparentTitle="Artist 9" parentTitle="&#12486;&#12473;&#12488;&#12450;&#12523;&#12496;&#12512; 6" originalTitle="Artist 10" index="5" parentIndex="1" parentYear="2008" thumb="/library/metadata/17971/thumb/1772438841" parentThumb="/library/metadata/17971/thumb/1772438841" grandparentThumb="/library/metadata/17912/thumb/1791971635" duration="542746">
+<Media id="16319" duration="542746" bitrate="1085" audioChannels="2" audioCodec="flac" container="flac">
+<Part id="16319" key="/library/parts/16319/1530808904/file.flac" duration="542746" size="73734825" container="flac"/>
+</Media>
+</Track>
+<Track ratingKey="1976" key="/library/metadata/1976" parentRatingKey="1967" grandparentRatingKey="1076" type="track" title="&#12486;&#12473;&#12488;&#26354; 9" grandparentTitle="Artist 11" parentTitle="Album 6" index="9" parentIndex="1" parentYear="2017" thumb="/library/metadata/1967/thumb/1783849760" parentThumb="/library/metadata/1967/thumb/1783849760" grandparentThumb="/library/metadata/1076/thumb/1789888747" duration="286320">
+<Media id="1828" duration="286320" bitrate="1044" audioChannels="2" audioCodec="flac" container="flac">
+<Part id="1828" key="/library/parts/1828/1530811434/file.flac" duration="286320" size="37509862" container="flac"/>
+</Media>
+</Track>
+<Track ratingKey="5580" key="/library/metadata/5580" parentRatingKey="5578" grandparentRatingKey="5374" type="track" title="&#12486;&#12473;&#12488;&#26354; 5" grandparentTitle="Artist 12" parentTitle="Album 7" originalTitle="Artist 12" index="2" parentIndex="1" parentYear="2019" thumb="/library/metadata/5578/thumb/1772875805" parentThumb="/library/metadata/5578/thumb/1772875805" grandparentThumb="/library/metadata/5374/thumb/1789889661" duration="356521">
+<Media id="5129" duration="356521" bitrate="1147" audioChannels="2" audioCodec="flac" container="flac">
+<Part id="5129" key="/library/parts/5129/1557508295/file.flac" duration="356521" size="51353893" container="flac"/>
+</Media>
+</Track>
+<Track ratingKey="14515" key="/library/metadata/14515" parentRatingKey="14513" grandparentRatingKey="14512" type="track" title="&#12486;&#12473;&#12488;&#26354; 10" grandparentTitle="Artist 13" parentTitle="&#12486;&#12473;&#12488;&#12450;&#12523;&#12496;&#12512; 7" index="2" parentIndex="1" parentYear="2018" thumb="/library/metadata/14513/thumb/1783939065" parentThumb="/library/metadata/14513/thumb/1783939065" grandparentThumb="/library/metadata/14512/thumb/1792312015" duration="310133">
+<Media id="13239" duration="310133" bitrate="973" audioChannels="2" audioCodec="flac" container="flac">
+<Part id="13239" key="/library/parts/13239/1739580453/file.flac" duration="310133" size="37731403" container="flac"/>
+</Media>
+</Track>
+<Track ratingKey="20349" key="/library/metadata/20349" parentRatingKey="20342" grandparentRatingKey="17778" type="track" title="&#12486;&#12473;&#12488;&#26354; 5" grandparentTitle="Artist 14" parentTitle="Album 8" originalTitle="Artist 15" index="7" parentIndex="1" parentYear="2012" thumb="/library/metadata/20342/thumb/1783850108" parentThumb="/library/metadata/20342/thumb/1783850108" grandparentThumb="/library/metadata/17778/thumb/1789889493" duration="422920">
+<Media id="18216" duration="422920" bitrate="987" audioChannels="2" audioCodec="flac" container="flac">
+<Part id="18216" key="/library/parts/18216/1530810794/file.flac" duration="422920" size="52265503" container="flac"/>
+</Media>
+</Track>
+<Track ratingKey="22570" key="/library/metadata/22570" parentRatingKey="22562" grandparentRatingKey="20108" type="track" title="&#12486;&#12473;&#12488;&#26354; 11" grandparentTitle="Artist 16" parentTitle="&#12486;&#12473;&#12488;&#12450;&#12523;&#12496;&#12512; 8" originalTitle="Artist 17" index="8" parentIndex="1" parentYear="2015" thumb="/library/metadata/22562/thumb/1783849518" parentThumb="/library/metadata/22562/thumb/1783849518" grandparentThumb="/library/metadata/20108/thumb/1791971747" duration="285066">
+<Media id="20325" duration="285066" bitrate="622" audioChannels="2" audioCodec="flac" container="flac">
+<Part id="20370" key="/library/parts/20370/1530818304/file.flac" duration="285066" size="22235280" container="flac"/>
+</Media>
+</Track>
+<Track ratingKey="6989" key="/library/metadata/6989" parentRatingKey="6977" grandparentRatingKey="6869" type="track" title="&#12486;&#12473;&#12488;&#26354; 5" grandparentTitle="Artist 18" parentTitle="&#12486;&#12473;&#12488;&#12450;&#12523;&#12496;&#12512; 9" originalTitle="&#12486;&#12473;&#12488;&#27468;&#25163; 4" index="12" parentIndex="1" parentYear="2018" thumb="/library/metadata/6977/thumb/1772875900" parentThumb="/library/metadata/6977/thumb/1772875900" grandparentThumb="/library/metadata/6869/thumb/1791973248" duration="127946">
+<Media id="6418" duration="127946" bitrate="935" audioChannels="2" audioCodec="flac" container="flac">
+<Part id="6418" key="/library/parts/6418/1739822338/file.flac" duration="127946" size="15561630" container="flac"/>
+</Media>
+</Track>
+<Track ratingKey="7071" key="/library/metadata/7071" parentRatingKey="7068" grandparentRatingKey="6869" type="track" title="&#12486;&#12473;&#12488;&#26354; 5" grandparentTitle="Artist 18" parentTitle="Album 9" index="3" parentIndex="1" parentYear="2008" thumb="/library/metadata/7068/thumb/1783850339" parentThumb="/library/metadata/7068/thumb/1783850339" grandparentThumb="/library/metadata/6869/thumb/1791973248" duration="117386">
+<Media id="6492" duration="117386" bitrate="594" audioChannels="2" audioCodec="flac" container="flac">
+<Part id="6492" key="/library/parts/6492/1739822080/file.flac" duration="117386" size="8736946" container="flac"/>
+</Media>
+</Track>
+<Track ratingKey="7164" key="/library/metadata/7164" parentRatingKey="7159" grandparentRatingKey="6869" type="track" title="&#12486;&#12473;&#12488;&#26354; 12" grandparentTitle="Artist 18" parentTitle="&#12486;&#12473;&#12488;&#12450;&#12523;&#12496;&#12512; 10" originalTitle="&#12486;&#12473;&#12488;&#27468;&#25163; 4" index="5" parentIndex="1" parentYear="2018" thumb="/library/metadata/7159/thumb/1772875900" parentThumb="/library/metadata/7159/thumb/1772875900" grandparentThumb="/library/metadata/6869/thumb/1791973248" duration="216440">
+<Media id="6579" duration="216440" bitrate="863" audioChannels="2" audioCodec="flac" container="flac">
+<Part id="6579" key="/library/parts/6579/1540573970/file.flac" duration="216440" size="24198484" container="flac"/>
+</Media>
+</Track>
+<Track ratingKey="7317" key="/library/metadata/7317" parentRatingKey="7313" grandparentRatingKey="6869" type="track" title="&#12486;&#12473;&#12488;&#26354; 13" grandparentTitle="Artist 18" parentTitle="&#12486;&#12473;&#12488;&#12450;&#12523;&#12496;&#12512; 11" originalTitle="Artist 19" index="4" parentIndex="1" parentYear="2015" thumb="/library/metadata/7313/thumb/1783850359" parentThumb="/library/metadata/7313/thumb/1783850359" grandparentThumb="/library/metadata/6869/thumb/1791973248" duration="294000">
+<Media id="6716" duration="294000" bitrate="1103" audioChannels="2" audioCodec="flac" container="flac">
+<Part id="6716" key="/library/parts/6716/1530809232/file.flac" duration="294000" size="40617203" container="flac"/>
+</Media>
+</Track>
+<Track ratingKey="7542" key="/library/metadata/7542" parentRatingKey="7538" grandparentRatingKey="6869" type="track" title="&#12486;&#12473;&#12488;&#26354; 14" grandparentTitle="Artist 18" parentTitle="Album 10" index="4" parentIndex="1" parentYear="2009" thumb="/library/metadata/7538/thumb/1783850354" parentThumb="/library/metadata/7538/thumb/1783850354" grandparentThumb="/library/metadata/6869/thumb/1791973248" duration="187640">
+<Media id="6917" duration="187640" bitrate="928" audioChannels="2" audioCodec="flac" container="flac">
+<Part id="6917" key="/library/parts/6917/1530809164/file.flac" duration="187640" size="21817330" container="flac"/>
+</Media>
+</Track>
+<Track ratingKey="7942" key="/library/metadata/7942" parentRatingKey="7935" grandparentRatingKey="7684" type="track" title="&#12486;&#12473;&#12488;&#26354; 15" grandparentTitle="Artist 20" parentTitle="Album 11" originalTitle="Artist 21" index="1" parentIndex="2" parentYear="2011" thumb="/library/metadata/7935/thumb/1783850170" parentThumb="/library/metadata/7935/thumb/1783850170" grandparentThumb="/library/metadata/7684/thumb/1790679314" duration="217240">
+<Media id="7267" duration="217240" bitrate="1035" audioChannels="2" audioCodec="flac" container="flac">
+<Part id="7267" key="/library/parts/7267/1547376983/file.flac" duration="217240" size="28228066" container="flac"/>
+</Media>
+</Track>
+<Track ratingKey="7958" key="/library/metadata/7958" parentRatingKey="7935" grandparentRatingKey="7684" type="track" title="&#12486;&#12473;&#12488;&#26354; 16" grandparentTitle="Artist 20" parentTitle="Album 11" originalTitle="Artist 22" index="12" parentIndex="1" parentYear="2011" thumb="/library/metadata/7935/thumb/1783850170" parentThumb="/library/metadata/7935/thumb/1783850170" grandparentThumb="/library/metadata/7684/thumb/1790679314" duration="205266">
+<Media id="7283" duration="205266" bitrate="1065" audioChannels="2" audioCodec="flac" container="flac">
+<Part id="7283" key="/library/parts/7283/1547321029/file.flac" duration="205266" size="27449730" container="flac"/>
+</Media>
+</Track>
+<Track ratingKey="10436" key="/library/metadata/10436" parentRatingKey="10434" grandparentRatingKey="10386" type="track" title="&#12486;&#12473;&#12488;&#26354; 17" grandparentTitle="Artist 23" parentTitle="&#12486;&#12473;&#12488;&#12450;&#12523;&#12496;&#12512; 12" originalTitle="&#12486;&#12473;&#12488;&#27468;&#25163; 5" index="2" parentIndex="1" parentYear="2018" thumb="/library/metadata/10434/thumb/1772537281" parentThumb="/library/metadata/10434/thumb/1772537281" grandparentThumb="/library/metadata/10386/thumb/1783849784" duration="273213">
+<Media id="9532" duration="273213" bitrate="1032" audioChannels="2" audioCodec="flac" container="flac">
+<Part id="9532" key="/library/parts/9532/1670617248/file.flac" duration="273213" size="35372735" container="flac"/>
+</Media>
+</Track>
+<Track ratingKey="11479" key="/library/metadata/11479" parentRatingKey="11473" grandparentRatingKey="10463" type="track" title="&#12486;&#12473;&#12488;&#26354; 5" grandparentTitle="Artist 24" parentTitle="Album 12" index="6" parentIndex="1" parentYear="2004" thumb="/library/metadata/11473/thumb/1783850461" parentThumb="/library/metadata/11473/thumb/1783850461" grandparentThumb="/library/metadata/10463/thumb/1791973479" duration="366586">
+<Media id="10476" duration="366586" bitrate="1058" audioChannels="2" audioCodec="flac" container="flac">
+<Part id="10476" key="/library/parts/10476/1530805544/file.flac" duration="366586" size="48507175" container="flac"/>
+</Media>
+</Track>
+<Track ratingKey="13649" key="/library/metadata/13649" parentRatingKey="13638" grandparentRatingKey="3749" type="track" title="&#12486;&#12473;&#12488;&#26354; 18" grandparentTitle="Artist 5" parentTitle="Album 3" originalTitle="Artist 25" index="11" parentIndex="1" parentYear="2016" thumb="/library/metadata/13638/thumb/1783850080" parentThumb="/library/metadata/13638/thumb/1783850080" grandparentThumb="/library/metadata/3749/thumb/1791972829" duration="378240">
+<Media id="12455" duration="378240" bitrate="1072" audioChannels="2" audioCodec="flac" container="flac">
+<Part id="12455" key="/library/parts/12455/1530809893/file.flac" duration="378240" size="50960891" container="flac"/>
+</Media>
+</Track>
+<Track ratingKey="17974" key="/library/metadata/17974" parentRatingKey="17971" grandparentRatingKey="17912" type="track" title="&#12486;&#12473;&#12488;&#26354; 19" grandparentTitle="Artist 9" parentTitle="&#12486;&#12473;&#12488;&#12450;&#12523;&#12496;&#12512; 6" originalTitle="Artist 10" index="3" parentIndex="1" parentYear="2008" thumb="/library/metadata/17971/thumb/1772438841" parentThumb="/library/metadata/17971/thumb/1772438841" grandparentThumb="/library/metadata/17912/thumb/1791971635" duration="343933">
+<Media id="16317" duration="343933" bitrate="1071" audioChannels="2" audioCodec="flac" container="flac">
+<Part id="16317" key="/library/parts/16317/1530808904/file.flac" duration="343933" size="46161887" container="flac"/>
+</Media>
+</Track>
+<Track ratingKey="27230" key="/library/metadata/27230" parentRatingKey="27224" grandparentRatingKey="26020" type="track" title="&#12486;&#12473;&#12488;&#26354; 20" grandparentTitle="&#12486;&#12473;&#12488;&#27468;&#25163; 6" parentTitle="&#12486;&#12473;&#12488;&#12450;&#12523;&#12496;&#12512; 13" originalTitle="&#12486;&#12473;&#12488;&#27468;&#25163; 7" index="6" parentIndex="1" parentYear="2025" thumb="/library/metadata/27224/thumb/1772537294" parentThumb="/library/metadata/27224/thumb/1772537294" grandparentThumb="/library/metadata/26020/thumb/1790592948" duration="116120">
+<Media id="24474" duration="116120" bitrate="1175" audioChannels="2" audioCodec="flac" container="flac">
+<Part id="24520" key="/library/parts/24520/1756061934/file.flac" duration="116120" size="19865461" container="flac"/>
+</Media>
+</Track>
+</Hub>
+<Hub title="Photo Albums" type="photoalbum" size="0">
+</Hub>
+<Hub title="Automatic Tags" type="autotag" size="0">
+</Hub>
+<Hub title="Photos" type="photo" size="0">
+</Hub>
+<Hub title="Tags" type="tag" size="0">
+</Hub>
+<Hub title="Actors" type="actor" size="0">
+</Hub>
+<Hub title="Directors" type="director" size="0">
+</Hub>
+<Hub title="Genres" type="genre" size="0">
+</Hub>
+<Hub title="Collections" type="collection" size="0">
+</Hub>
+<Hub title="Playlists" type="playlist" size="0">
+</Hub>
+<Hub title="Shared" type="shared" size="0">
+</Hub>
+<Hub title="Places" type="place" size="0">
+</Hub>
+</MediaContainer>

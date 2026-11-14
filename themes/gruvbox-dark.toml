@@ -1,0 +1,17 @@
+# Based on the Gruvbox palette (MIT/X11): https://github.com/morhetz/gruvbox
+
+name = "Gruvbox Dark"
+author = "morhetz"
+variant = "dark"
+accent = "#83a598"
+on_accent = "#282828"
+text = "#ebdbb2"
+dim = "#928374"
+secondary = "#fabd2f"
+error = "#fb4934"
+border = "#928374"
+highlight = "#504945"
+viz_bottom = "#fb4934"
+viz_mid = "#d3869b"
+viz_top = "#8ec07c"
+background = "#282828"

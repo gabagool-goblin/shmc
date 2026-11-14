@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MediaContainer size="25">
+<Playlist ratingKey="1276" key="/playlists/1276/items" type="playlist" title="&#10084;&#65039; Tracks" smart="1" playlistType="audio" composite="/playlists/1276/composite/1792121793" duration="612892000" leafCount="2236">
+</Playlist>
+<Playlist ratingKey="1274" key="/playlists/1274/items" type="playlist" title="All Music" smart="1" playlistType="audio" composite="/playlists/1274/composite/1792119579" duration="6392546000" leafCount="24372">
+</Playlist>
+<Playlist ratingKey="29555" key="/playlists/29555/items" type="playlist" title="Playlist 2" smart="1" playlistType="audio" composite="/playlists/29555/composite/1792123064" thumb="/library/metadata/29555/thumb/1792123064" duration="17021000" leafCount="60">
+</Playlist>
+<Playlist ratingKey="29557" key="/playlists/29557/items" type="playlist" title="Playlist 3" smart="1" playlistType="audio" composite="/playlists/29557/composite/1791861659" thumb="/library/metadata/29557/thumb/1791861659" duration="137251000" leafCount="468">
+</Playlist>
+<Playlist ratingKey="29554" key="/playlists/29554/items" type="playlist" title="Playlist 4" smart="1" playlistType="audio" composite="/playlists/29554/composite/1791780722" thumb="/library/metadata/29554/thumb/1791780722" duration="3229068000" leafCount="12296">
+</Playlist>
+<Playlist ratingKey="29562" key="/playlists/29562/items" type="playlist" title="Playlist 5" smart="1" playlistType="audio" composite="/playlists/29562/composite/1792029204" thumb="/library/metadata/29562/thumb/1792029204" duration="22209000" leafCount="83">
+</Playlist>
+<Playlist ratingKey="29556" key="/playlists/29556/items" type="playlist" title="Playlist 6" smart="1" playlistType="audio" composite="/playlists/29556/composite/1791785431" thumb="/library/metadata/29556/thumb/1791785431" duration="10477000" leafCount="43">
+</Playlist>
+<Playlist ratingKey="29552" key="/playlists/29552/items" type="playlist" title="Playlist 7" smart="1" playlistType="audio" composite="/playlists/29552/composite/1791853703" thumb="/library/metadata/29552/thumb/1791853703" duration="101079000" leafCount="302">
+</Playlist>
+<Playlist ratingKey="29559" key="/playlists/29559/items" type="playlist" title="Playlist 8" smart="1" playlistType="audio" composite="/playlists/29559/composite/1791936108" thumb="/library/metadata/29559/thumb/1791936108" duration="150971000" leafCount="531">
+</Playlist>
+<Playlist ratingKey="29549" key="/playlists/29549/items" type="playlist" title="Playlist 9" smart="1" playlistType="audio" composite="/playlists/29549/composite/1791861635" thumb="/library/metadata/29549/thumb/1791861635" duration="4113533000" leafCount="15678">
+</Playlist>
+<Playlist ratingKey="29550" key="/playlists/29550/items" type="playlist" title="Playlist 10" smart="1" playlistType="audio" composite="/playlists/29550/composite/1792119664" thumb="/library/metadata/29550/thumb/1792119664" duration="16850000" leafCount="60">
+</Playlist>
+<Playlist ratingKey="29561" key="/playlists/29561/items" type="playlist" title="Playlist 11" smart="1" playlistType="audio" composite="/playlists/29561/composite/1791860430" thumb="/library/metadata/29561/thumb/1791860430" duration="6961000" leafCount="23">
+</Playlist>
+<Playlist ratingKey="1275" key="/playlists/1275/items" type="playlist" title="Recently Added" smart="1" playlistType="audio" composite="/playlists/1275/composite/1792119579" duration="101079000" leafCount="302">
+</Playlist>
+<Playlist ratingKey="28196" key="/playlists/28196/items" type="playlist" title="Recently Played" smart="1" playlistType="audio" composite="/playlists/28196/composite/1792119579" duration="273453000" leafCount="969">
+</Playlist>
+<Playlist ratingKey="29558" key="/playlists/29558/items" type="playlist" title="Playlist 12" smart="1" playlistType="audio" composite="/playlists/29558/composite/1791936103" thumb="/library/metadata/29558/thumb/1791936103" duration="5161574000" leafCount="19677">
+</Playlist>
+<Playlist ratingKey="29551" key="/playlists/29551/items" type="playlist" title="Playlist 13" smart="1" playlistType="audio" composite="/playlists/29551/composite/1791936094" thumb="/library/metadata/29551/thumb/1791936094" duration="16127000" leafCount="60">
+</Playlist>
+<Playlist ratingKey="29553" key="/playlists/29553/items" type="playlist" title="Playlist 14" smart="1" playlistType="audio" composite="/playlists/29553/composite/1792123818" thumb="/library/metadata/29553/thumb/1792123818" duration="29586000" leafCount="100">
+</Playlist>
+<Playlist ratingKey="27261" key="/playlists/27261/items" type="playlist" title="Playlist 15" smart="0" playlistType="audio" composite="/playlists/27261/composite/1791851299" duration="167017000" leafCount="635">
+</Playlist>
+<Playlist ratingKey="29564" key="/playlists/29564/items" type="playlist" title="Playlist 16" smart="0" playlistType="audio" composite="/playlists/29564/composite/1792294998" duration="60410000" leafCount="228">
+</Playlist>
+<Playlist ratingKey="29566" key="/playlists/29566/items" type="playlist" title="Playlist 17" smart="0" playlistType="audio" composite="/playlists/29566/composite/1792294947" duration="57131000" leafCount="217">
+</Playlist>
+<Playlist ratingKey="27962" key="/playlists/27962/items" type="playlist" title="Playlist 18" smart="0" playlistType="audio" composite="/playlists/27962/composite/1791858318" duration="60666000" leafCount="238">
+</Playlist>
+<Playlist ratingKey="29545" key="/playlists/29545/items" type="playlist" title="Playlist 19" smart="0" playlistType="audio" composite="/playlists/29545/composite/1791860490" duration="16419000" leafCount="72">
+</Playlist>
+<Playlist ratingKey="29568" key="/playlists/29568/items" type="playlist" title="Playlist 1" smart="0" playlistType="audio" composite="/playlists/29568/composite/1792294910" duration="10540000" leafCount="39">
+</Playlist>
+<Playlist ratingKey="29563" key="/playlists/29563/items" type="playlist" title="Playlist 20" smart="0" playlistType="audio" composite="/playlists/29563/composite/1792213699" duration="80654000" leafCount="265">
+</Playlist>
+<Playlist ratingKey="20310" key="/playlists/20310/items" type="playlist" title="Playlist 21" smart="0" playlistType="audio" composite="/playlists/20310/composite/1769084976" duration="107099000" leafCount="577">
+</Playlist>
+</MediaContainer>

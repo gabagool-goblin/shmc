@@ -1,0 +1,17 @@
+# Based on the Catppuccin Latte palette (MIT): https://github.com/catppuccin/catppuccin
+
+name = "Catppuccin Latte"
+author = "Catppuccin"
+variant = "light"
+accent = "#1e66f5"
+on_accent = "#eff1f5"
+text = "#4c4f69"
+dim = "#9ca0b0"
+secondary = "#df8e1d"
+error = "#d20f39"
+border = "#9ca0b0"
+highlight = "#bcc0cc"
+viz_bottom = "#d20f39"
+viz_mid = "#8839ef"
+viz_top = "#1e66f5"
+background = "#eff1f5"
