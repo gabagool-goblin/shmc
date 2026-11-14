@@ -1,0 +1,33 @@
+accepted = [
+    "0BSD",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "BSL-1.0",
+    "CC0-1.0",
+    "CDLA-Permissive-2.0",
+    "ISC",
+    "MIT",
+    "MPL-2.0",
+    "Unicode-3.0",
+    "Unlicense",
+    "Zlib",
+]
+targets = [
+    "aarch64-apple-darwin",
+    "x86_64-unknown-linux-gnu",
+    "aarch64-unknown-linux-gnu",
+]
+ignore-build-dependencies = true
+ignore-dev-dependencies = true
+private = { ignore = true }
+
+# icy_sixel declares no licence in Cargo.toml; its LICENSE file is MIT.
+[icy_sixel.clarify]
+license = "MIT"
+
+[[icy_sixel.clarify.files]]
+path = "LICENSE"
+license = "MIT"
+checksum = "f719f01f57fec5dea2103ce3b2443b0d457bac44dcb8989f08885116bae12d18"
