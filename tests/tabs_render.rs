@@ -8,7 +8,7 @@ use ratatui::style::Color;
 use ratatui::widgets::TableState;
 use ratatui::Terminal;
 use shmc::config::{KeyTable, MpvConfig, UiConfig};
-use shmc::playback::{mpv, MpvEvent};
+use shmc::playback::{mpv, MpvCmd, MpvEvent};
 use shmc::plex::models::{Album, Artist, AudioInfo, HitKind, Playlist, SearchHit, Track};
 use shmc::ui::app::{
     App, BrowserCol, Confirm, Msg, PlaylistsCol, PlexCmd, PlexHandle, QueueAction, SearchDetail,
@@ -95,6 +95,7 @@ static TAB_TEST_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(())
 
 struct TestApp {
     app: App,
+    _mpv_events: tokio::sync::mpsc::UnboundedReceiver<MpvEvent>,
     _guard: tokio::sync::MutexGuard<'static, ()>,
 }
 
@@ -138,7 +139,7 @@ async fn new_app_with_ui_and_keys(
 ) -> (TestApp, tokio::sync::mpsc::UnboundedReceiver<PlexCmd>) {
     let guard = TAB_TEST_LOCK.lock().await;
     let cfg = MpvConfig { path: "mpv".into(), extra_args: vec!["--ao=null".into()], volume: 50.0 };
-    let (mpv_handle, _events) = mpv::spawn(&cfg).await.expect("spawn mpv");
+    let (mpv_handle, mpv_events) = mpv::spawn(&cfg).await.expect("spawn mpv");
     let (plex_tx, plex_rx) = unbounded_channel();
     let (msg_tx, _msg_rx) = unbounded_channel();
     let app = App::new(
@@ -154,7 +155,7 @@ async fn new_app_with_ui_and_keys(
         ui,
         keys,
     );
-    (TestApp { app, _guard: guard }, plex_rx)
+    (TestApp { app, _mpv_events: mpv_events, _guard: guard }, plex_rx)
 }
 
 fn key(c: char) -> Msg {
@@ -4076,6 +4077,16 @@ async fn mpv_matches_queue(app: &App) -> bool {
     let queued: Vec<String> =
         app.queue.iter().map(|t| t.stream_url("http://127.0.0.1:1", "TOK").unwrap()).collect();
     in_mpv == queued
+}
+
+/// mpv's reader stops when nobody receives its events, so the test app holds them.
+#[tokio::test]
+async fn mpv_answers_after_sending_an_event() {
+    let app = new_app().await;
+    let _ = app.mpv.tx.send(MpvCmd::SetPause { paused: true });
+    // mpv sends property changes on its next loop, after answering requests
+    tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+    assert_eq!(app.mpv.get_property("pause").await.expect("mpv answers"), true);
 }
 
 #[tokio::test]
