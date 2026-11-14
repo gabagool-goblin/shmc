@@ -409,6 +409,11 @@ mod tests {
         assert_eq!(report.sections[0].entries.len(), 3);
     }
 
+    /// Config warnings only: the environment checks (cava starting, mpv) vary by machine.
+    fn config_warnings(report: &Report) -> usize {
+        report.settings.iter().filter(|e| e.severity == Severity::Warn).count()
+    }
+
     /// A theme file that does not load is a warning, not a failure: the player
     /// starts on the default theme.
     #[test]
@@ -439,8 +444,8 @@ mod tests {
         // the broken file is said once, also when it is the chosen theme
         let clean =
             rt.block_on(collect(&Config::default(), Path::new("/nonexistent/shmc.toml"), false));
-        assert_eq!(good.warnings, clean.warnings + 2, "one per problem");
-        assert_eq!(bad.warnings, clean.warnings + 2);
+        assert_eq!(config_warnings(&good), config_warnings(&clean) + 2, "one per problem");
+        assert_eq!(config_warnings(&bad), config_warnings(&clean) + 2);
         let text = bad.render("shmc checks");
         assert!(text.contains("bad: secondary") && !text.contains("nope"), "{text}");
         assert!(text.contains("bad: styles.current") && !text.contains("SECRET"), "{text}");
@@ -458,7 +463,7 @@ mod tests {
         cfg.cava.noise_reduction = 500;
         let bad = report(&cfg);
         assert_eq!(bad.failures, clean.failures);
-        assert_eq!(bad.warnings, clean.warnings + 1);
+        assert_eq!(config_warnings(&bad), config_warnings(&clean) + 1);
         let text = bad.render("shmc checks");
         assert!(text.contains("cava.noise_reduction") && !text.contains("500"), "{text}");
 
@@ -466,27 +471,27 @@ mod tests {
         cfg.ui.column_weights = vec![0, 0, 0];
         let bad = report(&cfg);
         assert_eq!(bad.failures, clean.failures);
-        assert_eq!(bad.warnings, clean.warnings + 1);
+        assert_eq!(config_warnings(&bad), config_warnings(&clean) + 1);
         assert!(bad.render("shmc checks").contains("ui.column_weights"));
 
         let mut cfg = Config::default();
         cfg.ui.queue_columns = vec!["title".into(), "title".into()];
         let bad = report(&cfg);
         assert_eq!(bad.failures, clean.failures);
-        assert_eq!(bad.warnings, clean.warnings + 1);
+        assert_eq!(config_warnings(&bad), config_warnings(&clean) + 1);
         assert!(bad.render("shmc checks").contains("ui.queue_columns"));
 
         let mut cfg = Config::default();
         cfg.ui.visualizer_anchor = "both".into();
         let bad = report(&cfg);
         assert_eq!(bad.failures, clean.failures);
-        assert_eq!(bad.warnings, clean.warnings + 1);
+        assert_eq!(config_warnings(&bad), config_warnings(&clean) + 1);
         assert!(bad.render("shmc checks").contains("ui.visualizer_anchor"));
 
         let mut cfg = Config::default();
         cfg.ui.header = "SECRETbogus".into();
         let bad = report(&cfg);
-        assert_eq!(bad.warnings, clean.warnings + 1);
+        assert_eq!(config_warnings(&bad), config_warnings(&clean) + 1);
         let text = bad.render("shmc checks");
         assert!(text.contains("ui.header") && !text.contains("SECRET"), "{text}");
     }
@@ -501,7 +506,7 @@ mod tests {
         let cfg = Config::parse("[keys.queue]\nundo = [\"d\"]\n").unwrap();
         let bad = report(&cfg);
         assert_eq!(bad.failures, clean.failures);
-        assert_eq!(bad.warnings, clean.warnings + 1);
+        assert_eq!(config_warnings(&bad), config_warnings(&clean) + 1);
         let text = bad.render("shmc checks");
         assert!(
             text.contains("keys.queue.undo") && text.contains("using the default keys"),
@@ -522,7 +527,7 @@ mod tests {
         cfg.theme.borders = Some("SECRETframes".into());
         let bad = report(&cfg);
         assert_eq!(bad.failures, clean.failures);
-        assert_eq!(bad.warnings, clean.warnings + 3);
+        assert_eq!(config_warnings(&bad), config_warnings(&clean) + 3);
         let text = bad.render("shmc checks");
         assert!(text.contains("theme.block_gap") && text.contains("theme.volume_meter"), "{text}");
         assert!(text.contains("theme.borders"), "{text}");
