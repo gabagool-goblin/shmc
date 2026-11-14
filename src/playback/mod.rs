@@ -1,4 +1,4 @@
 pub mod cava;
 pub mod mpv;
 
-pub use mpv::{MpvCmd, MpvEvent, MpvHandle};
+pub use mpv::{LoadItem, MpvCmd, MpvEvent, MpvHandle};

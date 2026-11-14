@@ -2,7 +2,7 @@
 //! and `--ao=null`: no network or audio device.
 
 use shmc::config::MpvConfig;
-use shmc::playback::{mpv, MpvCmd, MpvEvent};
+use shmc::playback::{mpv, LoadItem, MpvCmd, MpvEvent};
 
 /// The tests share audio and log resources, so they run one at a time.
 /// Deadlines are long: a loaded machine can take seconds to start mpv.
@@ -46,6 +46,10 @@ async fn settle(events: &mut tokio::sync::mpsc::UnboundedReceiver<MpvEvent>, pos
 
 /// Wait for mpv to report `want` by asking, as a late event can be missed. An
 /// `end-file` fails unless `allow_stop`.
+fn item(url: String) -> LoadItem {
+    LoadItem { url, title: "Test track".into() }
+}
+
 async fn wait_for_property(
     handle: &mpv::MpvHandle,
     events: &mut tokio::sync::mpsc::UnboundedReceiver<MpvEvent>,
@@ -98,7 +102,7 @@ async fn mpv_plays_queue_and_reports_state() {
     }
 
     let url = "av://lavfi:sine=frequency=440:duration=1".to_string();
-    handle.tx.send(MpvCmd::Play(vec![url])).expect("send play");
+    handle.tx.send(MpvCmd::Play(vec![item(url)])).expect("send play");
 
     let mut saw_playlist_pos = false;
     let mut saw_time = false;
@@ -154,7 +158,7 @@ async fn mpv_gapless_advances_through_queue() {
     let _ = events.recv().await; // Ready
 
     let mk = || "av://lavfi:sine=frequency=440:duration=1".to_string();
-    handle.tx.send(MpvCmd::Play(vec![mk(), mk()])).expect("send play");
+    handle.tx.send(MpvCmd::Play(vec![item(mk()), item(mk())])).expect("send play");
 
     let mut positions = std::collections::HashSet::new();
     let mut ends = 0;
@@ -199,7 +203,7 @@ async fn mpv_stop_keeps_the_queue_playable() {
     }
 
     let url = "av://lavfi:sine=frequency=440:duration=60".to_string();
-    handle.tx.send(MpvCmd::Play(vec![url.clone(), url])).expect("send play");
+    handle.tx.send(MpvCmd::Play(vec![item(url.clone()), item(url)])).expect("send play");
 
     let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(30);
     loop {
@@ -294,7 +298,10 @@ async fn insert_and_move_keep_playing_entry() {
     let _ = events.recv().await; // Ready
 
     let mk = |hz: u32| format!("av://lavfi:sine=frequency={hz}:duration=60");
-    handle.tx.send(MpvCmd::Play(vec![mk(300), mk(400), mk(500)])).expect("send play");
+    handle
+        .tx
+        .send(MpvCmd::Play(vec![item(mk(300)), item(mk(400)), item(mk(500))]))
+        .expect("send play");
 
     let mut seen = Seen::default();
     let deadline = std::time::Duration::from_secs(25);
@@ -303,7 +310,7 @@ async fn insert_and_move_keep_playing_entry() {
 
     handle
         .tx
-        .send(MpvCmd::Insert { index: 1, append_at: 3, urls: vec![mk(600)] })
+        .send(MpvCmd::Insert { index: 1, append_at: 3, items: vec![item(mk(600))] })
         .expect("send insert");
     wait_for_property(&handle, &mut events, &mut seen, "playlist-count", 4, false, deadline).await;
     // An insert is an append and a move; let both land before playing.
@@ -338,7 +345,7 @@ async fn mpv_answers_get_property_requests() {
     let _ = events.recv().await; // Ready
 
     let url = "av://lavfi:sine=frequency=440:duration=60".to_string();
-    handle.tx.send(MpvCmd::Play(vec![url])).expect("send play");
+    handle.tx.send(MpvCmd::Play(vec![item(url)])).expect("send play");
 
     let mut seen = Seen::default();
     let deadline = std::time::Duration::from_secs(30);
@@ -373,7 +380,7 @@ async fn mpv_replaces_the_playing_queue() {
     let _ = events.recv().await; // Ready
 
     let mk = |hz: u32| format!("av://lavfi:sine=frequency={hz}:duration=60");
-    handle.tx.send(MpvCmd::Play(vec![mk(300), mk(400)])).expect("send old queue");
+    handle.tx.send(MpvCmd::Play(vec![item(mk(300)), item(mk(400))])).expect("send old queue");
 
     let mut count = -1i64;
     let mut pos = -1i64;
@@ -400,7 +407,7 @@ async fn mpv_replaces_the_playing_queue() {
     }
 
     let new_urls: Vec<String> = (0..5).map(|i| mk(500 + i)).collect();
-    handle.tx.send(MpvCmd::Play(new_urls)).expect("send new queue");
+    handle.tx.send(MpvCmd::Play(new_urls.into_iter().map(item).collect())).expect("send new queue");
 
     let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(20);
     loop {
@@ -457,7 +464,7 @@ async fn mpv_log_reaches_disk_redacted() {
 
     // Port 9 is closed, so mpv fails to open this and logs the failure.
     let url = format!("http://127.0.0.1:9/x?X-Plex-Token={token}");
-    handle.tx.send(MpvCmd::Play(vec![url])).expect("send play");
+    handle.tx.send(MpvCmd::Play(vec![item(url)])).expect("send play");
 
     // Wait for the redacted URL, so a missing log cannot pass.
     let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(30);
@@ -599,7 +606,7 @@ async fn long_queue_start_does_not_deadlock() {
     const N: usize = 300;
     let urls: Vec<String> =
         (0..N).map(|i| format!("av://lavfi:sine=frequency={}:duration=1", 200 + i)).collect();
-    handle.tx.send(MpvCmd::Play(urls)).expect("send play");
+    handle.tx.send(MpvCmd::Play(urls.into_iter().map(item).collect())).expect("send play");
 
     let mut last_pos = -1i64;
     let mut last_count = -1i64;
@@ -661,4 +668,35 @@ async fn mpv_ignores_the_users_config_and_scripts() {
 
     assert_eq!(mute.as_bool(), Some(false), "mpv.conf was applied: mute={mute}");
     assert_eq!(speed.as_f64(), Some(1.0), "a script ran: speed={speed}");
+}
+
+#[tokio::test]
+async fn media_title_is_the_queue_entry_title() {
+    let _guard = MPV_TEST_LOCK.lock().await;
+
+    let cfg = MpvConfig { path: "mpv".into(), extra_args: vec!["--ao=null".into()], volume: 50.0 };
+    let (handle, mut events) = mpv::spawn(&cfg).await.expect("spawn mpv");
+    match events.recv().await {
+        Some(MpvEvent::Ready) => {}
+        other => panic!("expected Ready, got {other:?}"),
+    }
+
+    let title = "Queue title, with a comma";
+    let url = "av://lavfi:sine=frequency=440:duration=60".to_string();
+    handle.tx.send(MpvCmd::Play(vec![LoadItem { url, title: title.into() }])).expect("send play");
+
+    let until = tokio::time::Instant::now() + std::time::Duration::from_secs(30);
+    let mut last = String::new();
+    loop {
+        if let Ok(v) = handle.get_property("media-title").await {
+            last = v.as_str().unwrap_or_default().to_string();
+            if last == title {
+                break;
+            }
+        }
+        assert!(tokio::time::Instant::now() < until, "media-title stayed {last:?}");
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    }
+
+    handle.shutdown().await;
 }

@@ -17,18 +17,26 @@ use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 use tokio::sync::oneshot;
 use tracing::{debug, error, info, warn};
 
+/// A queue entry for `loadfile`. `title` becomes mpv's `media-title`; without
+/// it an untagged file shows its name, the URL with the token.
+#[derive(Debug, Clone)]
+pub struct LoadItem {
+    pub url: String,
+    pub title: String,
+}
+
 #[derive(Debug, Clone)]
 pub enum MpvCmd {
     /// Replace the playlist and start the first URL (`playlist-clear` would
     /// leave the playing entry behind, so the first is `loadfile replace`).
-    Play(Vec<String>),
-    Append(Vec<String>),
+    Play(Vec<LoadItem>),
+    Append(Vec<LoadItem>),
     /// mpv 0.36 has no `playlist-insert`: append, then move into place
     /// (`append_at` is the playlist length before the append).
     Insert {
         index: usize,
         append_at: usize,
-        urls: Vec<String>,
+        items: Vec<LoadItem>,
     },
     PlayIndex(usize),
     Remove(usize),
@@ -623,37 +631,45 @@ async fn connect_with_retry(
 fn command_name(line: &str) -> String {
     serde_json::from_str::<Value>(line)
         .ok()
-        .and_then(|v| v.get("command")?.get(0)?.as_str().map(str::to_string))
+        .and_then(|v| {
+            let command = v.get("command")?;
+            let verb = command.get(0).or_else(|| command.get("name"))?;
+            verb.as_str().map(str::to_string)
+        })
         .unwrap_or_else(|| "unknown".into())
+}
+
+/// Named arguments, as mpv 0.38 put `index` before `options`. A blank title
+/// would fall back to the URL, so it is sent as "Untitled".
+fn loadfile_line(item: &LoadItem, flags: &str) -> String {
+    let title = item.title.trim();
+    let title = if title.is_empty() { "Untitled" } else { title };
+    json!({"command": {
+        "name": "loadfile",
+        "url": item.url,
+        "flags": flags,
+        "options": {"force-media-title": title},
+    }})
+    .to_string()
 }
 
 fn cmd_to_lines(cmd: MpvCmd) -> Vec<String> {
     let v: Value = match cmd {
-        MpvCmd::Play(urls) => {
-            let mut urls = urls.into_iter();
-            let Some(first) = urls.next() else {
-                return Vec::new();
-            };
-            let mut lines = vec![json!({"command": ["loadfile", first, "replace"]}).to_string()];
-            for u in urls {
-                lines.push(json!({"command": ["loadfile", u, "append"]}).to_string());
-            }
-            return lines;
-        }
-        MpvCmd::Append(urls) => {
-            let lines: Vec<String> = urls
+        MpvCmd::Play(items) => {
+            return items
                 .iter()
-                .map(|u| json!({"command": ["loadfile", u, "append"]}).to_string())
+                .enumerate()
+                .map(|(i, item)| loadfile_line(item, if i == 0 { "replace" } else { "append" }))
                 .collect();
-            return lines;
         }
-        MpvCmd::Insert { index, append_at, urls } => {
-            let mut lines: Vec<String> = urls
-                .iter()
-                .map(|u| json!({"command": ["loadfile", u, "append"]}).to_string())
-                .collect();
+        MpvCmd::Append(items) => {
+            return items.iter().map(|item| loadfile_line(item, "append")).collect();
+        }
+        MpvCmd::Insert { index, append_at, items } => {
+            let mut lines: Vec<String> =
+                items.iter().map(|item| loadfile_line(item, "append")).collect();
             // Ascending, so each move leaves the next item's index untouched.
-            for (i, _) in urls.iter().enumerate() {
+            for (i, _) in items.iter().enumerate() {
                 let from = append_at + i;
                 let to = index + i;
                 if from != to {
@@ -841,26 +857,74 @@ mod tests {
         assert!(off[0].contains("\"no\""));
     }
 
+    fn item(url: &str, title: &str) -> LoadItem {
+        LoadItem { url: url.into(), title: title.into() }
+    }
+
+    fn loadfile_args(line: &str) -> Value {
+        let v: Value = serde_json::from_str(line).expect("json");
+        assert_eq!(v["command"]["name"], "loadfile", "{line}");
+        v["command"].clone()
+    }
+
+    #[test]
+    fn every_loadfile_carries_its_title() {
+        let items = || vec![item("http://plex/1?X-Plex-Token=T", "One"), item("u2", "Two, b=c")];
+        let cmds = [
+            MpvCmd::Play(items()),
+            MpvCmd::Append(items()),
+            MpvCmd::Insert { index: 0, append_at: 5, items: items() },
+        ];
+        for cmd in cmds {
+            let lines: Vec<String> =
+                cmd_to_lines(cmd).into_iter().filter(|l| l.contains("loadfile")).collect();
+            assert_eq!(lines.len(), 2);
+            let a = loadfile_args(&lines[0]);
+            assert_eq!(a["options"]["force-media-title"], "One");
+            assert_eq!(a["url"], "http://plex/1?X-Plex-Token=T");
+            let b = loadfile_args(&lines[1]);
+            assert_eq!(b["options"]["force-media-title"], "Two, b=c");
+            assert_eq!(b["url"], "u2");
+            assert!(!a["options"].to_string().contains("X-Plex-Token"));
+        }
+    }
+
+    #[test]
+    fn a_blank_title_is_sent_as_untitled() {
+        let lines = cmd_to_lines(MpvCmd::Append(vec![
+            item("u1", ""),
+            item("u2", "  \t "),
+            item("u3", " X "),
+        ]));
+        let titles: Vec<String> = lines
+            .iter()
+            .map(|l| loadfile_args(l)["options"]["force-media-title"].as_str().unwrap().to_string())
+            .collect();
+        assert_eq!(titles, ["Untitled", "Untitled", "X"]);
+    }
+
     #[test]
     fn insert_appends_then_moves_into_place() {
         let lines = cmd_to_lines(MpvCmd::Insert {
             index: 1,
             append_at: 3,
-            urls: vec!["a".into(), "b".into()],
+            items: vec![item("a", "A"), item("b", "B")],
         });
         assert_eq!(lines.len(), 4, "two appends then two moves: {lines:?}");
-        assert!(lines[0].contains("\"loadfile\""));
-        assert!(lines[1].contains("\"loadfile\""));
+        assert_eq!(command_name(&lines[0]), "loadfile");
+        assert_eq!(command_name(&lines[1]), "loadfile");
         assert!(lines[2].contains("[\"playlist-move\",3,1]"), "{}", lines[2]);
         assert!(lines[3].contains("[\"playlist-move\",4,2]"), "{}", lines[3]);
     }
 
     #[test]
     fn play_replaces_the_whole_playlist() {
-        let lines = cmd_to_lines(MpvCmd::Play(vec!["a".into(), "b".into()]));
+        let lines = cmd_to_lines(MpvCmd::Play(vec![item("a", "A"), item("b", "B")]));
         assert_eq!(lines.len(), 2, "replace then append: {lines:?}");
-        assert!(lines[0].contains("[\"loadfile\",\"a\",\"replace\"]"), "{}", lines[0]);
-        assert!(lines[1].contains("[\"loadfile\",\"b\",\"append\"]"), "{}", lines[1]);
+        let first = loadfile_args(&lines[0]);
+        assert_eq!((first["url"].as_str(), first["flags"].as_str()), (Some("a"), Some("replace")));
+        let second = loadfile_args(&lines[1]);
+        assert_eq!((second["url"].as_str(), second["flags"].as_str()), (Some("b"), Some("append")));
         assert!(
             !lines.iter().any(|l| l.contains("playlist-clear")),
             "playlist-clear keeps the playing entry: {lines:?}"
@@ -872,8 +936,10 @@ mod tests {
 
     #[test]
     fn logged_command_metadata_has_no_payload() {
-        let lines =
-            cmd_to_lines(MpvCmd::Play(vec!["http://plex/x?X-Plex-Token=SECRETTOKEN123".into()]));
+        let lines = cmd_to_lines(MpvCmd::Play(vec![item(
+            "http://plex/x?X-Plex-Token=SECRETTOKEN123",
+            "T",
+        )]));
         assert_eq!(command_name(&lines[0]), "loadfile");
         assert!(
             !command_name(&lines[0]).contains("SECRETTOKEN123"),
