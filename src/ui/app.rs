@@ -1,5 +1,5 @@
 use crate::config::{KeyTable, UiConfig, VolumeDisplay};
-use crate::playback::{MpvCmd, MpvEvent, MpvHandle};
+use crate::playback::{LoadItem, MpvCmd, MpvEvent, MpvHandle};
 use crate::plex::{Album, Artist, AudioInfo, PlexClient, SearchHit, Track};
 use crate::ui::filter::{self, ListFilter};
 use crate::ui::keymap::{self, Act, KeyCtx, Keymap};
@@ -1557,14 +1557,18 @@ impl App {
 
     /// The tracks that can stream, with their URLs. Built together so the
     /// queue and mpv's playlist cannot drift apart by one.
-    fn playable(&self, tracks: Vec<Track>) -> (Vec<Track>, Vec<String>) {
+    fn playable(&self, tracks: Vec<Track>) -> (Vec<Track>, Vec<LoadItem>) {
         tracks
             .into_iter()
             .filter_map(|t| {
-                let url = t.stream_url(&self.server, &self.token)?;
-                Some((t, url))
+                let item = self.load_item(&t)?;
+                Some((t, item))
             })
             .unzip()
+    }
+
+    fn load_item(&self, t: &Track) -> Option<LoadItem> {
+        Some(LoadItem { url: t.stream_url(&self.server, &self.token)?, title: t.title.clone() })
     }
 
     /// New tracks join the end of the pre-shuffle order, so turning shuffle
@@ -1582,7 +1586,7 @@ impl App {
     /// Put the playable `tracks` at the end of the app queue and of mpv's
     /// playlist, in step. Returns how many there were.
     fn append_playable(&mut self, tracks: Vec<Track>) -> usize {
-        let (playable, urls) = self.playable(tracks);
+        let (playable, items) = self.playable(tracks);
         let n = playable.len();
         if n == 0 {
             return 0;
@@ -1590,7 +1594,7 @@ impl App {
         self.extend_shuffle_snapshot(&playable);
         self.queue.extend(playable);
         self.removed.clear();
-        let _ = self.mpv.tx.send(MpvCmd::Append(urls));
+        let _ = self.mpv.tx.send(MpvCmd::Append(items));
         self.refilter(ListRef::Queue);
         if self.queue_state.selected().is_none() {
             self.queue_state.select(Some(0));
@@ -1657,11 +1661,11 @@ impl App {
             return false;
         }
         self.shuffle_new_queue(&mut playable);
-        let (playable, urls) = self.playable(playable);
+        let (playable, items) = self.playable(playable);
         self.queue = playable;
         self.removed.clear();
         self.drop_visual(ListRef::Queue);
-        let _ = self.mpv.tx.send(MpvCmd::Play(urls));
+        let _ = self.mpv.tx.send(MpvCmd::Play(items));
         self.current = Some(0);
         self.expect_pos = None;
         self.stopped = false;
@@ -1680,7 +1684,7 @@ impl App {
 
     /// Inserts after the current track without interrupting it.
     pub fn play_next_tracks(&mut self, tracks: Vec<Track>, confirm: Confirm) {
-        let (playable, urls) = self.playable(tracks);
+        let (playable, items) = self.playable(tracks);
         let n = playable.len();
         if n == 0 {
             self.transient_err("no playable media for selection".into());
@@ -1695,7 +1699,7 @@ impl App {
         let append_at = self.queue.len();
         self.expect_pos = None;
         self.extend_shuffle_snapshot(&playable);
-        let _ = self.mpv.tx.send(MpvCmd::Insert { index, append_at, urls });
+        let _ = self.mpv.tx.send(MpvCmd::Insert { index, append_at, items });
         self.queue.splice(index..index, playable);
         self.removed.clear();
         self.drop_visual(ListRef::Queue);
@@ -1941,10 +1945,7 @@ impl App {
             self.transient("nothing to undo".into());
             return;
         };
-        let Some(urls) = batch
-            .iter()
-            .map(|(_, t)| t.stream_url(&self.server, &self.token))
-            .collect::<Option<Vec<_>>>()
+        let Some(items) = batch.iter().map(|(_, t)| self.load_item(t)).collect::<Option<Vec<_>>>()
         else {
             self.transient_err("cannot restore: no playable media".into());
             return;
@@ -1966,7 +1967,7 @@ impl App {
             let _ = self.mpv.tx.send(MpvCmd::Insert {
                 index,
                 append_at: len,
-                urls: urls[start..end].to_vec(),
+                items: items[start..end].to_vec(),
             });
             self.queue.splice(index..index, batch[start..end].iter().map(|(_, t)| t.clone()));
             if let Some(c) = self.current {
