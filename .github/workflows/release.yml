@@ -45,6 +45,11 @@ jobs:
       - name: Build
         run: cargo build --release --locked
 
+      - name: Third-party licences
+        run: |
+          cargo install cargo-about --locked --features cli --version 0.9.3
+          cargo about generate --locked --fail -o THIRD_PARTY_LICENSES about.hbs
+
       # Apple Silicon refuses to run a binary whose ad-hoc signature was stripped.
       - name: Check the signature
         if: runner.os == 'macOS'
@@ -54,7 +59,7 @@ jobs:
         run: |
           dir="shmc-${{ matrix.target }}"
           mkdir "$dir"
-          cp target/release/shmc LICENSE README.md "$dir/"
+          cp target/release/shmc LICENSE THIRD_PARTY_LICENSES README.md "$dir/"
           "$dir/shmc" --version
           tar -czf "$dir.tar.gz" "$dir"
 
