@@ -21,6 +21,7 @@ mod layout;
 mod queue;
 mod queue_requests;
 mod rating;
+mod report;
 mod theme;
 
 fn track(i: usize) -> Track {

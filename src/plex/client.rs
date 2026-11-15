@@ -1,4 +1,5 @@
 use super::models::*;
+use super::report::Report;
 use anyhow::{bail, Context, Result};
 use url::Url;
 
@@ -358,6 +359,44 @@ impl PlexClient {
         let status = resp.status();
         if status == reqwest::StatusCode::UNAUTHORIZED || status == reqwest::StatusCode::FORBIDDEN {
             bail!("Plex refused the rating (HTTP {status})");
+        }
+        if !status.is_success() {
+            if let Some(msg) = redirect_error(&resp) {
+                bail!(msg);
+            }
+            bail!("Plex returned HTTP {status}");
+        }
+        Ok(())
+    }
+
+    /// Reports playback state for the session `client_id` names. One attempt:
+    /// a late report is worth less than the next one.
+    pub async fn timeline(&self, client_id: &str, r: &Report) -> Result<()> {
+        let mut url = self.url_for("/:/timeline")?;
+        url.query_pairs_mut()
+            .append_pair("ratingKey", &r.rating_key)
+            .append_pair("key", &format!("/library/metadata/{}", r.rating_key))
+            .append_pair("state", r.state.as_str())
+            .append_pair("time", &r.time_ms.to_string())
+            .append_pair("duration", &r.duration_ms.to_string())
+            .append_pair("identifier", "com.plexapp.plugins.library");
+        let platform = match std::env::consts::OS {
+            "macos" => "macOS",
+            "linux" => "Linux",
+            other => other,
+        };
+        let resp = self
+            .request(reqwest::Method::GET, url.as_str(), "application/xml")
+            .header("X-Plex-Client-Identifier", client_id)
+            .header("X-Plex-Device-Name", "shmc")
+            .header("X-Plex-Platform", platform)
+            .timeout(std::time::Duration::from_secs(5))
+            .send()
+            .await
+            .map_err(|e| anyhow::anyhow!("request failed: {}", e.without_url()))?;
+        let status = resp.status();
+        if status == reqwest::StatusCode::UNAUTHORIZED || status == reqwest::StatusCode::FORBIDDEN {
+            bail!("Plex refused the playback report (HTTP {status})");
         }
         if !status.is_success() {
             if let Some(msg) = redirect_error(&resp) {
@@ -1021,11 +1060,21 @@ mod save_tests {
 
     /// A fake PMS answering `reply(request_line)` with a status and body.
     async fn serve(reply: impl Fn(&str) -> (u16, String) + Send + 'static) -> (String, Seen) {
+        let (base, seen, _) = serve_full(reply).await;
+        (base, seen)
+    }
+
+    /// `serve`, also keeping each whole request (headers included).
+    async fn serve_full(
+        reply: impl Fn(&str) -> (u16, String) + Send + 'static,
+    ) -> (String, Seen, Seen) {
         use tokio::io::{AsyncReadExt, AsyncWriteExt};
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let base = format!("http://{}", listener.local_addr().unwrap());
         let seen: Seen = Arc::default();
         let log = seen.clone();
+        let full: Seen = Arc::default();
+        let full_log = full.clone();
         tokio::spawn(async move {
             loop {
                 let (mut sock, _) = listener.accept().await.unwrap();
@@ -1034,6 +1083,7 @@ mod save_tests {
                 let req = String::from_utf8_lossy(&buf[..n]).to_string();
                 let line = req.lines().next().unwrap_or("").to_string();
                 log.lock().unwrap().push(line.clone());
+                full_log.lock().unwrap().push(req);
                 let (status, body) = reply(&line);
                 let resp = format!(
                     "HTTP/1.1 {status} X\r\nContent-Type: application/xml\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
@@ -1042,7 +1092,7 @@ mod save_tests {
                 let _ = sock.write_all(resp.as_bytes()).await;
             }
         });
-        (base, seen)
+        (base, seen, full)
     }
 
     fn param(line: &str, name: &str) -> Option<String> {
@@ -1106,6 +1156,34 @@ mod save_tests {
         assert_eq!(param(&w[0], "rating").as_deref(), Some("8"));
         assert_eq!(param(&w[1], "rating").as_deref(), Some("-1"));
         assert!(w.iter().all(|l| !l.contains("X-Plex-Token")), "{w:?}");
+    }
+
+    #[tokio::test]
+    async fn timeline_sends_the_state_and_identity_without_the_token_in_the_url() {
+        use crate::plex::report::{PlayState, Report};
+        let (base, seen, full) = serve_full(|_| (200, String::new())).await;
+        let client = PlexClient::new(&base, "faketoken-timeline");
+        let report = Report {
+            rating_key: "42".into(),
+            state: PlayState::Paused,
+            time_ms: 31_000,
+            duration_ms: 257_000,
+        };
+        client.timeline("abc123", &report).await.unwrap();
+        let line = seen.lock().unwrap()[0].clone();
+        assert!(line.starts_with("GET /:/timeline?"), "{line}");
+        assert_eq!(param(&line, "ratingKey").as_deref(), Some("42"));
+        assert_eq!(param(&line, "key").as_deref(), Some("/library/metadata/42"));
+        assert_eq!(param(&line, "state").as_deref(), Some("paused"));
+        assert_eq!(param(&line, "time").as_deref(), Some("31000"));
+        assert_eq!(param(&line, "duration").as_deref(), Some("257000"));
+        assert_eq!(param(&line, "identifier").as_deref(), Some("com.plexapp.plugins.library"));
+        assert!(!line.contains("X-Plex-Token"), "{line}");
+        let head = full.lock().unwrap()[0].to_lowercase();
+        assert!(head.contains("x-plex-client-identifier: abc123"), "{head}");
+        assert!(head.contains("x-plex-device-name: shmc"), "{head}");
+        assert!(head.contains("x-plex-platform: "), "{head}");
+        assert!(head.contains("x-plex-token: faketoken-timeline"), "{head}");
     }
 
     fn keys(ks: &[&str]) -> Vec<String> {

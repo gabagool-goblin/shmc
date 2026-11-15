@@ -23,6 +23,7 @@ mod nav;
 mod plex_worker;
 mod queue;
 mod rating;
+mod report;
 mod shuffle;
 
 pub use plex_worker::{spawn_plex_worker, PlexCmd, PlexHandle};
@@ -453,6 +454,9 @@ pub struct App {
     pub rating_style: RatingStyle,
     /// Writing ratings is allowed (`plex.set_ratings`).
     pub set_ratings: bool,
+    /// Where playback reports go; None when `plex.report_playback` is off.
+    pub reporter: Option<UnboundedSender<crate::plex::report::Report>>,
+    report: Option<report::TrackReport>,
     /// The playlist still arriving after its first page.
     playlist_load: Option<PlaylistLoad>,
     queue_seq: QueueSeq,
@@ -596,6 +600,8 @@ impl App {
             ratings: HashMap::new(),
             rating_style: ui.rating_mode(),
             set_ratings: false,
+            reporter: None,
+            report: None,
             playlist_load: None,
             queue_seq: QueueSeq::default(),
             preview_tracks: ui.preview_tracks,

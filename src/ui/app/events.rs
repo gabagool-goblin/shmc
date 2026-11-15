@@ -359,6 +359,7 @@ impl App {
                 "time-pos" => {
                     if let Some(v) = value.as_ref().and_then(|v| v.as_f64()) {
                         self.position = v;
+                        self.report_position(v);
                         // a failing file never gets a playback time, so this is
                         // the one signal that a track really plays
                         if v > 0.0 {
@@ -371,6 +372,7 @@ impl App {
                 "pause" => {
                     if let Some(v) = value.as_ref().and_then(|v| v.as_bool()) {
                         self.paused = v;
+                        self.report_pause(v);
                         if v {
                             self.cava_frame = vec![0; crate::playback::cava::BARS];
                         }
@@ -423,6 +425,7 @@ impl App {
                 _ => {}
             },
             MpvEvent::EndFile { reason } => {
+                self.report_end(&reason);
                 if reason == "error" {
                     self.err_streak += 1;
                     // mpv may fail a few entries before the Stop lands, so keep
@@ -468,6 +471,7 @@ impl App {
                 }
             }
             MpvEvent::Shutdown => {
+                self.report_stop();
                 self.transient_err("mpv exited".into());
                 self.stopped = true;
                 self.mpv_exited = true;
@@ -475,6 +479,7 @@ impl App {
             MpvEvent::Ready => {}
             MpvEvent::MediaKey(key) => self.media_key(key),
             MpvEvent::FileLoaded => {
+                self.report_open();
                 self.cover_due = true;
                 self.attach_cover();
             }

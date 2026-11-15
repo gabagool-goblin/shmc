@@ -173,9 +173,23 @@ fn run() -> Result<()> {
     // A signal during startup abandons it; dropping kills an mpv already
     // spawned (`kill_on_drop`).
     lifecycle::begin_orderly();
+    let mut client_id_failed = false;
+    let client_id = if cfg.plex.report_playback {
+        let dir = config_path.parent().unwrap_or_else(|| std::path::Path::new("."));
+        match plex::client_id::load_or_create(dir) {
+            Ok(id) => Some(id),
+            Err(e) => {
+                tracing::warn!("playback reports are off: cannot store the client id: {e}");
+                client_id_failed = true;
+                None
+            }
+        }
+    } else {
+        None
+    };
     let started = rt.block_on(async {
         tokio::select! {
-            started = start(cfg) => Some(started),
+            started = start(cfg, client_id) => Some(started),
             _ = signals.wait_for(|sig| sig.is_some()) => None,
         }
     });
@@ -184,6 +198,11 @@ fn run() -> Result<()> {
         std::process::exit(Outcome::Signal(n).exit_code());
     };
     let mut started = started?;
+    if client_id_failed {
+        let _ = started
+            .msg_tx
+            .send(Msg::Error("playback reports are off: cannot store the client id".into()));
+    }
 
     // A signal from here on is the same as pressing `q`.
     {
@@ -213,6 +232,9 @@ fn run() -> Result<()> {
     })();
 
     rt.block_on(started.mpv.shutdown());
+    if let Some(reporter) = started.reporter.take() {
+        rt.block_on(reporter.finish(std::time::Duration::from_secs(2)));
+    }
     if let Some(cava) = started.cava.take() {
         cava.shutdown();
     }
@@ -415,11 +437,12 @@ struct Started {
     plex: PlexHandle,
     mpv: playback::MpvHandle,
     cava: Option<playback::cava::CavaControl>,
+    reporter: Option<plex::report::Reporter>,
     picker: Option<ratatui_image::picker::Picker>,
     art_enabled: bool,
 }
 
-async fn start(cfg: config::Config) -> Result<Started> {
+async fn start(cfg: config::Config, client_id: Option<String>) -> Result<Started> {
     let client = plex::PlexClient::new(&cfg.plex.server, &cfg.plex.token);
 
     let section = if !cfg.plex.music_section.is_empty() {
@@ -478,6 +501,13 @@ async fn start(cfg: config::Config) -> Result<Started> {
         });
     }
 
+    let reporter = client_id.map(|id| {
+        let tx = msg_tx.clone();
+        plex::report::Reporter::spawn(client.clone(), id, move |note| {
+            let _ = tx.send(Msg::Error(note));
+        })
+    });
+
     let plex_tx = spawn_plex_worker(
         client,
         section,
@@ -520,6 +550,7 @@ async fn start(cfg: config::Config) -> Result<Started> {
         plex: PlexHandle { tx: plex_tx },
         mpv,
         cava,
+        reporter,
         picker,
         art_enabled,
     })
@@ -677,6 +708,7 @@ fn ui_loop(terminal: &mut ui::term::Term, started: &mut Started) -> Result<UiEnd
         &cfg.keys,
     );
     app.set_ratings = cfg.plex.set_ratings;
+    app.reporter = started.reporter.as_ref().map(|r| r.sender());
 
     let cava = started.cava.clone();
     let mut cava_state = cava_wanted(&app);
@@ -760,6 +792,7 @@ fn ui_loop(terminal: &mut ui::term::Term, started: &mut Started) -> Result<UiEnd
             );
         }
     }
+    app.finish_reporting();
     Ok(UiEnd::from_state(app.should_quit, app.mpv_exited))
 }
 
