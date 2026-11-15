@@ -1,6 +1,6 @@
 use super::widgets::clean;
 use super::{draw_block_as, draw_vdivider};
-use crate::config::VolumeDisplay;
+use crate::config::{RatingStyle, VolumeDisplay};
 use crate::ui::app::{App, Tab};
 use crate::ui::icons;
 use crate::ui::theme;
@@ -159,6 +159,27 @@ fn format_rate(hz: u32) -> String {
     format!("{s}k")
 }
 
+/// A rating (Plex's 0 to 10, a star is 2) as stars; an odd value rounds up.
+/// None when unrated or when the style shows nothing.
+pub(crate) fn rating_glyphs(style: RatingStyle, rating: u8, ascii: bool) -> Option<String> {
+    if rating == 0 {
+        return None;
+    }
+    let (full, empty) = if ascii { ('*', '.') } else { ('★', '☆') };
+    match style {
+        RatingStyle::Off => None,
+        RatingStyle::One => Some(full.to_string()),
+        RatingStyle::Five => {
+            let stars = usize::from(rating.min(10) + 1) / 2;
+            Some(format!(
+                "{}{}",
+                full.to_string().repeat(stars),
+                empty.to_string().repeat(5 - stars)
+            ))
+        }
+    }
+}
+
 /// What the header shows, as plain data: the player fills it from the app and
 /// the config screen's preview from placeholders, and both draw through here.
 pub(crate) struct HeaderInfo {
@@ -176,6 +197,8 @@ pub(crate) struct HeaderInfo {
     /// Repeat, shuffle, single, consume.
     pub flags: [bool; 4],
     pub sleep: Option<String>,
+    /// The playing track's rating as glyphs, drawn after the title when it fits.
+    pub rating: Option<String>,
 }
 
 pub(super) fn header_info(app: &App) -> HeaderInfo {
@@ -204,6 +227,7 @@ pub(super) fn header_info(app: &App) -> HeaderInfo {
         ascii: app.icons_ascii,
         flags: [app.loop_playlist, app.random, app.loop_file, app.consume],
         sleep: app.sleep_timer_label(),
+        rating: app.rating_label(),
     }
 }
 
@@ -246,6 +270,16 @@ pub(crate) fn draw_header_block(
         None => Line::from(Span::styled("No Song", theme::dim())),
     };
     f.render_widget(Paragraph::new(title_line).alignment(Alignment::Center), center);
+    if let (Some((title, _, _)), Some(rating)) = (&info.track, &info.rating) {
+        // Drawn apart from the title, so the title sits where it would unrated.
+        let title_w = theme::str_width(&theme::ellipsize(title, center.width)) as u16;
+        let rating_w = theme::str_width(rating) as u16;
+        let title_end = center.x + (center.width / 2).saturating_sub(title_w / 2) + title_w;
+        if title_end + 1 + rating_w <= center.right() {
+            let rect = Rect { x: title_end + 1, width: rating_w, ..center };
+            f.render_widget(Paragraph::new(Span::styled(rating.clone(), theme::accent())), rect);
+        }
+    }
 
     let vol = volume_spans(info.volume, info.volume_display);
     f.render_widget(Paragraph::new(Line::from(vol)).alignment(Alignment::Right), right);

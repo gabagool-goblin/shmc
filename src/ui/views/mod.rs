@@ -10,7 +10,7 @@ mod visualizer;
 mod widgets;
 
 pub use header::draw_tabs;
-pub(crate) use header::{draw_header_block, draw_tab_row, HeaderInfo};
+pub(crate) use header::{draw_header_block, draw_tab_row, rating_glyphs, HeaderInfo};
 
 use crate::ui::app::{App, Tab};
 use crate::ui::theme;

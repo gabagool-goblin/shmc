@@ -1,4 +1,4 @@
-use crate::config::{KeyTable, UiConfig, VolumeDisplay};
+use crate::config::{KeyTable, RatingStyle, UiConfig, VolumeDisplay};
 use crate::playback::{MpvCmd, MpvEvent, MpvHandle};
 use crate::plex::{Album, Artist, AudioInfo, SearchHit, Track};
 use crate::ui::filter::ListFilter;
@@ -22,6 +22,7 @@ mod input;
 mod nav;
 mod plex_worker;
 mod queue;
+mod rating;
 mod shuffle;
 
 pub use plex_worker::{spawn_plex_worker, PlexCmd, PlexHandle};
@@ -192,6 +193,12 @@ pub enum Msg {
     TrackInfo {
         rating_key: String,
         audio: AudioInfo,
+        user_rating: Option<u8>,
+    },
+    /// The server accepted a rating.
+    Rated {
+        rating_key: String,
+        rating: Option<u8>,
     },
     Mpv(MpvEvent),
     Cava(Vec<u8>),
@@ -439,6 +446,13 @@ pub struct App {
     /// When "clear the queue?" was asked; `y` or `D` confirms, any other key
     /// cancels, and it times out like `pending_playlist`.
     pending_clear: Option<Instant>,
+    /// The "rate the track?" question, with the track it named.
+    pending_rating: Option<rating::PendingRating>,
+    /// Ratings known per rating key, from a track's metadata or a confirmed write.
+    pub ratings: HashMap<String, Option<u8>>,
+    pub rating_style: RatingStyle,
+    /// Writing ratings is allowed (`plex.set_ratings`).
+    pub set_ratings: bool,
     /// The playlist still arriving after its first page.
     playlist_load: Option<PlaylistLoad>,
     queue_seq: QueueSeq,
@@ -578,6 +592,10 @@ impl App {
             consume: false,
             pending_playlist: None,
             pending_clear: None,
+            pending_rating: None,
+            ratings: HashMap::new(),
+            rating_style: ui.rating_mode(),
+            set_ratings: false,
             playlist_load: None,
             queue_seq: QueueSeq::default(),
             preview_tracks: ui.preview_tracks,

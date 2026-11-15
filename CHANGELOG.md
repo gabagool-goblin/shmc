@@ -10,6 +10,7 @@ All notable changes to shmc are documented here. The format follows
 
 - `-v` prints the version, like `-V` and `--version`.
 - On macOS, Now Playing in Control Center shows the album cover.
+- Star ratings in the header; `r` rates the playing track when `plex.set_ratings` is on.
 
 ### Changed
 

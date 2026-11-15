@@ -2,6 +2,7 @@ use super::{
     sort_albums, App, BrowserCol, ListRef, Msg, PlaylistsCol, PlexCmd, SearchDetail, Tab,
     FAILED_STREAK_LIMIT,
 };
+use crate::config::RatingStyle;
 use crate::playback::{MpvCmd, MpvEvent};
 use crate::plex::AudioInfo;
 use crate::ui::keymap::Act;
@@ -252,7 +253,9 @@ impl App {
                     self.art.requested = None;
                 }
             }
-            Msg::TrackInfo { rating_key, audio } => {
+            Msg::Rated { rating_key, rating } => self.rating_saved(rating_key, rating),
+            Msg::TrackInfo { rating_key, audio, user_rating } => {
+                self.ratings.insert(rating_key.clone(), user_rating);
                 let wanted = self.current_track().map(|t| t.rating_key.as_str())
                     == Some(rating_key.as_str());
                 if wanted {
@@ -529,16 +532,13 @@ impl App {
         let full = t.audio.sample_rate_hz.is_some() || t.audio.bit_depth.is_some();
         let duration = t.duration_ms.map(|ms| ms as f64 / 1000.0).unwrap_or(0.0);
         self.duration = duration;
-        if full {
-            self.audio = bulk;
-            return;
+        let cached = self.audio_cache.get(&key).cloned();
+        let need_audio = !full && cached.is_none();
+        let need_rating = self.rating_style != RatingStyle::Off && !self.ratings.contains_key(&key);
+        self.audio = if full { bulk } else { cached.unwrap_or(bulk) };
+        if need_audio || need_rating {
+            let _ = self.plex.tx.send(PlexCmd::LoadTrackInfo(key));
         }
-        if let Some(cached) = self.audio_cache.get(&key).cloned() {
-            self.audio = cached;
-            return;
-        }
-        self.audio = bulk;
-        let _ = self.plex.tx.send(PlexCmd::LoadTrackInfo(key));
     }
 }
 
@@ -567,6 +567,7 @@ mod tests {
             container: None,
             audio: AudioInfo::default(),
             playlist_item_id: None,
+            user_rating: None,
         }
     }
 

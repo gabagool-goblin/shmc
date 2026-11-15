@@ -128,6 +128,14 @@ pub const ALL: &[Setting] = &[
         applies: None,
     },
     Setting {
+        key: "plex.set_ratings",
+        label: "Set ratings",
+        help: "Let r rate tracks on the server.",
+        kind: Kind::Bool,
+        group: "Plex",
+        applies: None,
+    },
+    Setting {
         key: "mpv.extra_args",
         label: "mpv arguments",
         help: "Extra mpv arguments, one per row; mpv ignores your mpv.conf, and a --log-file is dropped.",
@@ -483,6 +491,16 @@ pub const ALL: &[Setting] = &[
         help: "The header's volume: meter, percent (the number) or both.",
         kind: Kind::Enum {
             options: &["meter", "percent", "both"],
+        },
+        group: "Interface",
+        applies: None,
+    },
+    Setting {
+        key: "ui.rating_style",
+        label: "Rating",
+        help: "The header's rating: five stars, one star or off.",
+        kind: Kind::Enum {
+            options: &["five", "one", "off"],
         },
         group: "Interface",
         applies: None,
@@ -864,6 +882,11 @@ mod tests {
             options("ui.volume_display"),
             Some(&["meter", "percent", "both"][..]),
             "ui.volume_display"
+        );
+        assert_eq!(
+            options("ui.rating_style"),
+            Some(&["five", "one", "off"][..]),
+            "ui.rating_style"
         );
         assert_eq!(options("ui.header"), Some(&["full", "compact"][..]), "ui.header");
         assert_eq!(

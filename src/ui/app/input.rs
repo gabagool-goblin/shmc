@@ -90,7 +90,9 @@ impl App {
         };
 
         // a held `D` must not answer its own "clear the queue?"
-        if key.kind == KeyEventKind::Repeat && self.pending_clear.is_some() {
+        if key.kind == KeyEventKind::Repeat
+            && (self.pending_clear.is_some() || self.has_pending_rating())
+        {
             return;
         }
 
@@ -99,6 +101,10 @@ impl App {
         // Ctrl-C quits from anywhere, even mid-input
         if keymap::key_id(&key) == "C-c" {
             self.exec(Act::Quit);
+            return;
+        }
+
+        if self.answer_rating(key.code) {
             return;
         }
 
@@ -743,6 +749,7 @@ impl App {
                 self.transient(format!("consume {}", if on { "on" } else { "off" }));
             }
             Act::SleepTimer => self.cycle_sleep_timer(),
+            Act::Rate => self.rate_playing(),
         }
     }
 }

@@ -317,7 +317,11 @@ async fn track_info_updates_entry_and_cache() {
         ..Default::default()
     };
 
-    app.handle_msg(Msg::TrackInfo { rating_key: "t0".into(), audio: audio.clone() });
+    app.handle_msg(Msg::TrackInfo {
+        rating_key: "t0".into(),
+        audio: audio.clone(),
+        user_rating: None,
+    });
 
     assert_eq!(app.audio, audio);
     assert_eq!(app.queue[0].audio.sample_rate_hz, Some(44100));

@@ -27,6 +27,8 @@ pub struct PlexConfig {
     pub token: String,
     /// Which Plex music library section to use. Empty = auto (first artist section)
     pub music_section: String,
+    /// Let `r` change a track's rating on the server.
+    pub set_ratings: bool,
 }
 
 impl std::fmt::Debug for PlexConfig {
@@ -36,6 +38,7 @@ impl std::fmt::Debug for PlexConfig {
             .field("server", &crate::redact::redact_url(&self.server))
             .field("token", &token_label(&self.token))
             .field("music_section", &self.music_section)
+            .field("set_ratings", &self.set_ratings)
             .finish()
     }
 }
@@ -69,6 +72,14 @@ pub enum VolumeDisplay {
     Both,
 }
 
+/// What the header shows for the playing track's rating (`ui.rating_style`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RatingStyle {
+    Five,
+    One,
+    Off,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct UiConfig {
@@ -90,6 +101,9 @@ pub struct UiConfig {
     /// The header's repeat/shuffle/single/consume flags: "icons" or "words"
     /// (Repeat Shuffle Single Consume, bright when on, dim when off).
     pub mode_flags: String,
+    /// The header's rating for the playing track: "five" (five stars), "one"
+    /// (a single star) or "off".
+    pub rating_style: String,
     /// "full" (the now-playing header) or "compact" (the tab row carries the
     /// sleep timer, volume and flags).
     pub header: String,
@@ -242,6 +256,17 @@ impl UiConfig {
         }
     }
 
+    /// Anything but "one" or "off" is five.
+    pub fn rating_mode(&self) -> RatingStyle {
+        if self.rating_style.eq_ignore_ascii_case("one") {
+            RatingStyle::One
+        } else if self.rating_style.eq_ignore_ascii_case("off") {
+            RatingStyle::Off
+        } else {
+            RatingStyle::Five
+        }
+    }
+
     pub fn compact_header(&self) -> bool {
         self.header.eq_ignore_ascii_case("compact")
     }
@@ -323,6 +348,7 @@ impl Default for UiConfig {
             auto_follow: true,
             icons: "nerd".into(),
             volume_display: "both".into(),
+            rating_style: "five".into(),
             mode_flags: "icons".into(),
             header: "full".into(),
             art_pct: 40,
@@ -1558,6 +1584,7 @@ mod tests {
                 server: "http://host:32400".into(),
                 token: "abcdef123456".into(),
                 music_section: "3".into(),
+                ..Default::default()
             },
             ..Config::default()
         };
@@ -1632,6 +1659,7 @@ mod tests {
                 server: "http://host:32400".into(),
                 token: "fake-token".into(),
                 music_section: "3".into(),
+                ..Default::default()
             },
             ..Config::default()
         };
@@ -1673,6 +1701,7 @@ mod tests {
                 server: "http://host:32400".into(),
                 token: "fake-token".into(),
                 music_section: "3".into(),
+                ..Default::default()
             },
             ..Config::default()
         };
@@ -1724,6 +1753,7 @@ mod tests {
                 server: "http://host:32400".into(),
                 token: "secret".into(),
                 music_section: "3".into(),
+                ..Default::default()
             },
             ..Config::default()
         };
