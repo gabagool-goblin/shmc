@@ -284,10 +284,7 @@ impl PlexClient {
                     if status == reqwest::StatusCode::UNAUTHORIZED
                         || status == reqwest::StatusCode::FORBIDDEN
                     {
-                        bail!(
-                            "Plex rejected the token (HTTP {}); check token in the config",
-                            status
-                        );
+                        bail!("Plex rejected the token (HTTP {status}); check token in the config");
                     }
                     if !status.is_success() {
                         if let Some(msg) = redirect_error(&resp) {
@@ -311,7 +308,7 @@ impl PlexClient {
                         .await;
                 }
                 Err(e) => {
-                    return Err(e).with_context(|| format!("GET {}", url));
+                    return Err(e).with_context(|| format!("GET {url}"));
                 }
             }
         }
@@ -492,7 +489,7 @@ impl PlexClient {
     pub async fn artists(&self, section: &str) -> Result<Vec<Artist>> {
         let dirs = self
             .get_all_paged(
-                &format!("/library/sections/{}/all?type=8", section),
+                &format!("/library/sections/{section}/all?type=8"),
                 LIST_PAGE_SIZE,
                 |c| c.directories,
                 |d| d.key.clone(),
@@ -506,7 +503,7 @@ impl PlexClient {
     pub async fn albums(&self, section: &str, artist_key: &str) -> Result<Vec<Album>> {
         let dirs = self
             .get_all_paged(
-                &format!("/library/sections/{}/all?type=9&parent={}", section, artist_key),
+                &format!("/library/sections/{section}/all?type=9&parent={artist_key}"),
                 LIST_PAGE_SIZE,
                 |c| c.directories,
                 |d| d.key.clone(),
@@ -518,7 +515,7 @@ impl PlexClient {
 
     pub async fn album_tracks(&self, album_key: &str) -> Result<Vec<Track>> {
         let mut c =
-            self.get_xml(&format!("/library/metadata/{}/children?type=10", album_key)).await?;
+            self.get_xml(&format!("/library/metadata/{album_key}/children?type=10")).await?;
         // Disc first: track numbers restart on every disc.
         c.tracks.sort_by_key(|t| (t.parent_index.unwrap_or(0), t.index.unwrap_or(u32::MAX)));
         Ok(c.into_tracks())
@@ -537,12 +534,12 @@ impl PlexClient {
     }
 
     pub async fn track(&self, rating_key: &str) -> Result<Track> {
-        let c = self.get_xml(&format!("/library/metadata/{}", rating_key)).await?;
+        let c = self.get_xml(&format!("/library/metadata/{rating_key}")).await?;
         c.tracks.into_iter().next().map(|t| t.into_track()).context("no track found")
     }
 
     pub async fn artist(&self, rating_key: &str) -> Result<Artist> {
-        let c = self.get_xml(&format!("/library/metadata/{}", rating_key)).await?;
+        let c = self.get_xml(&format!("/library/metadata/{rating_key}")).await?;
         c.directories.into_iter().next().map(|d| d.into_artist()).context("no artist found")
     }
 
@@ -591,8 +588,7 @@ impl PlexClient {
     ) -> Result<PlaylistPage> {
         let c = self
             .get_xml(&format!(
-                "/playlists/{}/items?X-Plex-Container-Start={}&X-Plex-Container-Size={}",
-                rating_key, start, size
+                "/playlists/{rating_key}/items?X-Plex-Container-Start={start}&X-Plex-Container-Size={size}"
             ))
             .await?;
         Ok(PlaylistPage { total: c.total_size, tracks: c.into_tracks() })

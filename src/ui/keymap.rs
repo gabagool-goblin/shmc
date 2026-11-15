@@ -561,7 +561,7 @@ pub enum HelpLine {
 pub fn key_id(key: &KeyEvent) -> String {
     if key.modifiers.contains(KeyModifiers::CONTROL) {
         if let KeyCode::Char(c) = key.code {
-            return format!("C-{}", c);
+            return format!("C-{c}");
         }
     }
     match key.code {

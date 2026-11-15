@@ -479,7 +479,7 @@ impl App {
         self.current_track().and_then(|t| t.thumb.clone()).or_else(|| {
             self.current_track()
                 .and_then(|t| t.parent_rating_key.clone())
-                .map(|k| format!("/library/metadata/{}/thumb", k))
+                .map(|k| format!("/library/metadata/{k}/thumb"))
         })
     }
 
