@@ -253,7 +253,7 @@ async fn all_tabs_render_at_several_sizes() {
     app.playlists.items_for = Some("p3".into());
 
     let c: shmc::plex::models::MediaContainer =
-        quick_xml::de::from_str(include_str!("fixtures/hubs_search_starfall.xml")).unwrap();
+        quick_xml::de::from_str(include_str!("../fixtures/hubs_search_starfall.xml")).unwrap();
     app.search.hits = c.into_search_hits();
     app.search.state.select(Some(0));
 
@@ -4617,7 +4617,7 @@ async fn app_with_every_table() -> TestApp {
     app.playlists.focus = PlaylistsCol::Items;
     app.playlists.items_for = Some("p0".into());
     let c: shmc::plex::models::MediaContainer =
-        quick_xml::de::from_str(include_str!("fixtures/hubs_search_starfall.xml")).unwrap();
+        quick_xml::de::from_str(include_str!("../fixtures/hubs_search_starfall.xml")).unwrap();
     app.search.hits = c.into_search_hits();
     app.search.state.select(Some(0));
     app
