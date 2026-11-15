@@ -579,6 +579,7 @@ fn r_refuses_settings_without_default() {
             server: "http://x:32400".into(),
             token: "FAKE".into(),
             music_section: "7".into(),
+            ..Default::default()
         },
         ..Config::default()
     };
@@ -599,6 +600,7 @@ fn capital_r_asks_then_restores_tab() {
             server: "http://x:32400".into(),
             token: "FAKE".into(),
             music_section: "7".into(),
+            ..Default::default()
         },
         ..Config::default()
     };

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <MediaContainer size="1" grandparentRatingKey="20041" grandparentThumb="/library/metadata/20041/thumb/1789815504" grandparentTitle="Artist 1" key="20308" parentIndex="1" parentTitle="Album 1" parentYear="2008" thumb="/library/metadata/20308/thumb/1783849508">
-<Track ratingKey="20309" key="/library/metadata/20309" parentRatingKey="20308" grandparentRatingKey="20041" type="track" title="&#12486;&#12473;&#12488;&#26354; 25" grandparentTitle="Artist 1" parentTitle="Album 1" index="13" parentIndex="1" parentYear="2008" thumb="/library/metadata/20308/thumb/1783849508" parentThumb="/library/metadata/20308/thumb/1783849508" grandparentThumb="/library/metadata/20041/thumb/1789815504" duration="245054">
+<Track ratingKey="20309" key="/library/metadata/20309" parentRatingKey="20308" grandparentRatingKey="20041" type="track" title="&#12486;&#12473;&#12488;&#26354; 25" grandparentTitle="Artist 1" parentTitle="Album 1" index="13" parentIndex="1" parentYear="2008" thumb="/library/metadata/20308/thumb/1783849508" parentThumb="/library/metadata/20308/thumb/1783849508" grandparentThumb="/library/metadata/20041/thumb/1789815504" duration="245054" userRating="10.0">
 <Media id="18181" duration="245054" bitrate="243" audioChannels="2" audioCodec="mp3" container="mp3">
 <Part id="18181" key="/library/parts/18181/1380499850/file.mp3" duration="245054" size="7550774" container="mp3"/>
 </Media>

@@ -77,6 +77,16 @@ fn parse_tracks_fixture_and_stream_url() {
     let url = t.stream_url("http://192.168.1.100:32400", "TOK").unwrap();
     assert!(url.starts_with("http://192.168.1.100:32400/library/parts/"));
     assert!(url.ends_with("X-Plex-Token=TOK"));
+    assert_eq!(t.user_rating, Some(10));
+}
+
+/// Plex sends a float, omits it for an unrated track, and 0 means unrated.
+#[test]
+fn user_rating_is_rounded_and_zero_is_unrated() {
+    let xml = r#"<MediaContainer><Track ratingKey="1" key="/k" userRating="6.5"/><Track ratingKey="2" key="/k" userRating="0.0"/><Track ratingKey="3" key="/k"/></MediaContainer>"#;
+    let c: MediaContainer = quick_xml::de::from_str(xml).unwrap();
+    let r: Vec<_> = c.tracks.into_iter().map(|t| t.into_track().user_rating).collect();
+    assert_eq!(r, [Some(7), None, None]);
 }
 
 #[test]

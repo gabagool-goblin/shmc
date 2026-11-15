@@ -20,6 +20,7 @@ mod keys;
 mod layout;
 mod queue;
 mod queue_requests;
+mod rating;
 mod theme;
 
 fn track(i: usize) -> Track {
@@ -38,6 +39,7 @@ fn track(i: usize) -> Track {
         container: Some("mp3".into()),
         audio: AudioInfo::default(),
         playlist_item_id: None,
+        user_rating: None,
     }
 }
 

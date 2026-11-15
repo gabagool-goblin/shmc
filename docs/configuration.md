@@ -58,6 +58,7 @@ These are the defaults shown by `shmc config --list`. Only include settings you 
 server = "http://192.168.1.100:32400"
 token = "your-plex-token"
 music_section = ""            # Library ID; empty uses the first music library
+set_ratings = false           # Let r rate tracks on the server
 
 [mpv]
 path = "mpv"                  # Executable path or name on $PATH
@@ -86,6 +87,7 @@ higher_cutoff_hz = 10000      # 1000-20000; must exceed lower_cutoff_hz
 [ui]
 header = "full"               # full or compact
 volume_display = "both"       # meter, percent or both
+rating_style = "five"         # five, one or off
 mode_flags = "icons"          # icons or words
 icons = "nerd"                # nerd or ascii
 art_pct = 40                  # Queue art pane width, %; 0 = hidden

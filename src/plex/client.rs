@@ -314,19 +314,22 @@ impl PlexClient {
         }
     }
 
-    /// POST or PUT with the same headers as a read. Never retried: a second
-    /// POST could create a second playlist.
-    async fn write_xml(&self, method: reqwest::Method, url: Url) -> Result<MediaContainer> {
+    async fn write_request(&self, method: reqwest::Method, url: &Url) -> Result<reqwest::Response> {
         tracing::debug!(
             url = %crate::redact::escape_field(url.as_str()),
             %method,
             "plex write"
         );
-        let resp = self
-            .request(method, url.as_str(), "application/xml")
+        self.request(method, url.as_str(), "application/xml")
             .send()
             .await
-            .map_err(|e| anyhow::anyhow!("request failed: {}", e.without_url()))?;
+            .map_err(|e| anyhow::anyhow!("request failed: {}", e.without_url()))
+    }
+
+    /// POST or PUT with the same headers as a read. Never retried: a second
+    /// POST could create a second playlist.
+    async fn write_xml(&self, method: reqwest::Method, url: Url) -> Result<MediaContainer> {
+        let resp = self.write_request(method, &url).await?;
         let status = resp.status();
         if status == reqwest::StatusCode::UNAUTHORIZED || status == reqwest::StatusCode::FORBIDDEN {
             bail!(
@@ -341,6 +344,28 @@ impl PlexClient {
         }
         let bytes = read_capped(resp, MAX_XML_BYTES, url.as_str()).await?;
         quick_xml::de::from_reader::<_, MediaContainer>(&bytes[..]).context("parsing Plex's reply")
+    }
+
+    /// Sets a track's rating (Plex's 0 to 10), or clears it with `None`. The
+    /// reply carries nothing worth reading.
+    pub async fn rate(&self, rating_key: &str, rating: Option<u8>) -> Result<()> {
+        let mut url = self.url_for("/:/rate")?;
+        url.query_pairs_mut()
+            .append_pair("key", rating_key)
+            .append_pair("identifier", "com.plexapp.plugins.library")
+            .append_pair("rating", &rating.map_or(-1, i32::from).to_string());
+        let resp = self.write_request(reqwest::Method::PUT, &url).await?;
+        let status = resp.status();
+        if status == reqwest::StatusCode::UNAUTHORIZED || status == reqwest::StatusCode::FORBIDDEN {
+            bail!("Plex refused the rating (HTTP {status})");
+        }
+        if !status.is_success() {
+            if let Some(msg) = redirect_error(&resp) {
+                bail!(msg);
+            }
+            bail!("Plex returned HTTP {status}");
+        }
+        Ok(())
     }
 
     /// Saves `keys` as a new audio playlist; never touches an existing one and
@@ -1065,6 +1090,22 @@ mod save_tests {
             }
         })
         .await
+    }
+
+    #[tokio::test]
+    async fn rate_sends_the_rating_or_minus_one_without_the_token_in_the_url() {
+        let (base, seen) = serve(|_| (200, String::new())).await;
+        let client = PlexClient::new(&base, "faketoken-rate");
+        client.rate("42", Some(8)).await.unwrap();
+        client.rate("42", None).await.unwrap();
+        let w = writes(&seen);
+        assert_eq!(w.len(), 2, "{w:?}");
+        assert!(w[0].starts_with("PUT /:/rate?"), "{}", w[0]);
+        assert_eq!(param(&w[0], "key").as_deref(), Some("42"));
+        assert_eq!(param(&w[0], "identifier").as_deref(), Some("com.plexapp.plugins.library"));
+        assert_eq!(param(&w[0], "rating").as_deref(), Some("8"));
+        assert_eq!(param(&w[1], "rating").as_deref(), Some("-1"));
+        assert!(w.iter().all(|l| !l.contains("X-Plex-Token")), "{w:?}");
     }
 
     fn keys(ks: &[&str]) -> Vec<String> {

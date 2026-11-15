@@ -63,6 +63,11 @@ pub enum PlexCmd {
     },
     /// Sample rate and bit depth come only from the full metadata.
     LoadTrackInfo(String),
+    /// `None` clears the rating.
+    Rate {
+        key: String,
+        rating: Option<u8>,
+    },
 }
 
 pub struct PlexHandle {
@@ -254,9 +259,21 @@ pub fn spawn_plex_worker(
                     }
                     PlexCmd::LoadTrackInfo(key) => match client.track(&key).await {
                         Ok(t) => {
-                            let _ = tx.send(Msg::TrackInfo { rating_key: key, audio: t.audio });
+                            let _ = tx.send(Msg::TrackInfo {
+                                rating_key: key,
+                                audio: t.audio,
+                                user_rating: t.user_rating,
+                            });
                         }
                         Err(e) => tracing::warn!("track info: {e:#}"),
+                    },
+                    PlexCmd::Rate { key, rating } => match client.rate(&key, rating).await {
+                        Ok(()) => {
+                            let _ = tx.send(Msg::Rated { rating_key: key, rating });
+                        }
+                        Err(e) => {
+                            let _ = tx.send(Msg::Error(format!("rating failed: {e:#}")));
+                        }
                     },
                 }
             });

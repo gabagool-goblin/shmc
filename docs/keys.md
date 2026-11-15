@@ -19,6 +19,7 @@ Press `?` or `5` to open Help. It lists all current key bindings, including chan
 | `Z` | Reshuffle queue |
 | `C` | Toggle consume |
 | `S` | Sleep timer: 15, 30 or 60 minutes, or off |
+| `r` | Rate the playing track |
 | `:` | Open command line |
 
 Shuffle reorders the queue, keeping the playing track first. Turning it off restores the original order. Tracks added while shuffle is on go to the end.
@@ -26,6 +27,8 @@ Shuffle reorders the queue, keeping the playing track first. Turning it off rest
 Consume removes a track after it plays. Skipping with `>` also removes the track.
 
 The sleep timer pauses playback when it expires. The header shows the remaining time. Use `:sleep 20` for a custom duration or `:sleep off` to cancel it.
+
+The header shows the playing track's rating: five stars, one star or none, set by `ui.rating_style`. With `plex.set_ratings = true`, `r` rates it: `1` to `5`, or `0` to clear; with one star, `r` toggles the star. Ratings live in Plex, so other Plex apps see them.
 
 On macOS, the media keys and the Control Center buttons work like shmc's own keys: play/pause like `Space`, next and previous like `>` and `<`, fast-forward and rewind seek 5 seconds, and stop like `:stop`. To leave the media keys alone, add `--input-media-keys=no` to `mpv.extra_args`.
 

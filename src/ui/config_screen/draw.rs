@@ -685,6 +685,7 @@ fn draw_theme_preview(f: &mut Frame, area: Rect, ui: &crate::config::UiConfig) {
         ascii: ui.ascii_icons(),
         flags: [true, false, false, false],
         sleep: None,
+        rating: views::rating_glyphs(ui.rating_mode(), 8, ui.ascii_icons()),
     };
     if ui.compact_header() {
         views::draw_tab_row(

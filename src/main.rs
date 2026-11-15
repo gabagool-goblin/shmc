@@ -676,6 +676,7 @@ fn ui_loop(terminal: &mut ui::term::Term, started: &mut Started) -> Result<UiEnd
         ui_settings(cfg),
         &cfg.keys,
     );
+    app.set_ratings = cfg.plex.set_ratings;
 
     let cava = started.cava.clone();
     let mut cava_state = cava_wanted(&app);
