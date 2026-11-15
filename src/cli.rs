@@ -3,7 +3,7 @@
 
 const COMMANDS: &[&str] = &["config", "setup", "cache", "log"];
 
-/// For the "did you mean" line. `-h` and `-V` are left out: any two
+/// For the "did you mean" line. `-h`, `-V` and `-v` are left out: any two
 /// one-character flags are within the edit distance, so `-x` would suggest `-V`.
 const OPTIONS: &[&str] = &["--version", "--help", "--config", "--check", "--list"];
 
@@ -21,7 +21,7 @@ pub fn validate(args: &[String]) -> Result<(), String> {
         let arg = args[i].as_str();
 
         match arg {
-            "--version" | "-V" | "--help" | "-h" => {
+            "--version" | "-V" | "-v" | "--help" | "-h" => {
                 i += 1;
                 continue;
             }
