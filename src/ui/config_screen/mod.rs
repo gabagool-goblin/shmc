@@ -552,7 +552,7 @@ impl Screen {
 
     fn handle_quit_ask(&mut self, ask: QuitAsk, key: KeyEvent) -> bool {
         match key.code {
-            KeyCode::Char('y') | KeyCode::Char('Y') => false,
+            KeyCode::Char('y' | 'Y') => false,
             // Too easy to hit by reflex with edits pending: discarding takes `y`.
             KeyCode::Enter | KeyCode::Char('q') if ask == QuitAsk::Clean => false,
             // A wedged screen still needs an exit.
@@ -561,7 +561,7 @@ impl Screen {
                 // A failed or conflicted save keeps the screen open.
                 !self.save()
             }
-            KeyCode::Char('n') | KeyCode::Char('N') | KeyCode::Esc => {
+            KeyCode::Char('n' | 'N') | KeyCode::Esc => {
                 self.quit_ask = None;
                 self.status.clear();
                 self.status_error = false;

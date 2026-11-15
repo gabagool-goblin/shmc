@@ -410,8 +410,7 @@ impl Screen {
             input.insert_str(&clean);
             return;
         }
-        let (Some(Editor::Field { text, .. }) | Some(Editor::Export { text })) = &mut self.editor
-        else {
+        let Some(Editor::Field { text, .. } | Editor::Export { text }) = &mut self.editor else {
             return;
         };
         text.insert_str(&clean);

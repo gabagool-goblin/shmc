@@ -31,6 +31,7 @@ unicode-normalization = "0.1"
 [lints.clippy]
 semicolon_if_nothing_returned = "warn"
 uninlined_format_args = "warn"
+unnested_or_patterns = "warn"
 
 [dev-dependencies]
 tempfile = "3"

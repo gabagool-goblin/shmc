@@ -60,7 +60,7 @@ pub const KEYBOARD_THREAD: &str = "shmc-keys";
 /// Other threads (tokio workers) can panic while the app carries on, and
 /// restoring the terminal then would leave a live UI on a broken screen.
 fn panic_ends_the_ui(thread_name: Option<&str>) -> bool {
-    matches!(thread_name, Some("main") | Some(KEYBOARD_THREAD))
+    matches!(thread_name, Some("main" | KEYBOARD_THREAD))
 }
 
 /// Restore the terminal before the panic message prints, but only while the UI
