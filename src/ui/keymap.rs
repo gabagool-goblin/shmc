@@ -246,11 +246,11 @@ pub const BINDINGS: &[Binding] = &[
 
 /// The `:` commands, listed in Help and run by command mode.
 pub const COMMANDS: &[(&str, &str)] = &[
-    (":q", "quit"),
-    (":n", "next track"),
-    (":p", "previous track"),
+    (":q / :quit", "quit"),
+    (":n / :next", "next track"),
+    (":p / :prev", "previous track"),
     (":pause", "toggle pause"),
-    (":play", "play or resume"),
+    (":play / :resume", "play or resume"),
     (":stop", "stop (keep queue)"),
     (":seek N", "seek N seconds (negative = back)"),
     (":vol N", "set volume (0-100, or ±N relative)"),

@@ -95,9 +95,9 @@ Press `:` to open the command line.
 
 | Command | Action |
 |---|---|
-| `:q` | Quit |
-| `:n`, `:p` | Next / previous track |
-| `:play`, `:pause`, `:stop` | Play / resume, toggle pause, stop |
+| `:q`, `:quit` | Quit |
+| `:n`, `:next`, `:p`, `:prev` | Next / previous track |
+| `:play`, `:resume`, `:pause`, `:stop` | Play / resume, toggle pause, stop |
 | `:seek N` | Seek N seconds; negative values go back |
 | `:vol N` | Set volume (0–100); `+N` and `-N` adjust it |
 | `:shuffle`, `:repeat`, `:single`, `:consume` | Toggle playback modes |
