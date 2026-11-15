@@ -21,7 +21,7 @@
 - One test per behaviour, asserting the outcome: the queue, the file on disk,
   what mpv was sent. No tests that only pin wording, would pass without the
   change, or test trivial getters. Delete an obsolete test; don't bend it.
-- Render tests (`tests/tabs_render.rs`) check that things are shown, aligned
+- Render tests (`tests/tabs_render/`) check that things are shown, aligned
   and not clipped at several sizes, narrow and tall included.
 
 ---
@@ -77,7 +77,7 @@
 | `src/ui/filter.rs`, `icons.rs` | The list filter; the glyph sets for `ui.icons` |
 | `src/ui/term.rs` | Terminal setup and the panic-safe restore |
 | `build.rs` | Stamps the commit into `--version` |
-| `tests/` | `mpv_ipc.rs`, `tabs_render.rs` (TestBackend), `plex_xml.rs` (on `fixtures/`), `cli.rs` (runs the binary) |
+| `tests/` | `mpv_ipc.rs`, `tabs_render/` (TestBackend), `plex_xml.rs` (on `fixtures/`), `cli.rs` (runs the binary) |
 
 ---
 
