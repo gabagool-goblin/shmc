@@ -204,11 +204,8 @@ async fn app_with_cover() -> (TestApp, Terminal<TestBackend>) {
     (app, terminal)
 }
 
-fn play_pos(app: &mut App, i: u64) {
-    app.handle_msg(Msg::Mpv(MpvEvent::Property {
-        name: "playlist-pos".into(),
-        value: Some(serde_json::json!(i)),
-    }));
+fn playlist_pos(i: usize) -> Msg {
+    Msg::Mpv(MpvEvent::Property { name: "playlist-pos".into(), value: Some(serde_json::json!(i)) })
 }
 
 fn run_cmd(app: &mut App, cmd: &str) {
@@ -234,6 +231,23 @@ fn resolve_seqs(plex: &mut tokio::sync::mpsc::UnboundedReceiver<PlexCmd>) -> Vec
         }
     }
     out
+}
+
+/// Drains the Plex requests the UI has sent, oldest first.
+fn sent(plex: &mut tokio::sync::mpsc::UnboundedReceiver<PlexCmd>) -> Vec<PlexCmd> {
+    let mut out = Vec::new();
+    while let Ok(cmd) = plex.try_recv() {
+        out.push(cmd);
+    }
+    out
+}
+
+/// The last request `pick` matches among those the UI has sent.
+fn last_sent<T>(
+    plex: &mut tokio::sync::mpsc::UnboundedReceiver<PlexCmd>,
+    pick: impl FnMut(PlexCmd) -> Option<T>,
+) -> Option<T> {
+    sent(plex).into_iter().rev().find_map(pick)
 }
 
 fn reply(seq: u64, outcome: QueueOutcome) -> Msg {
@@ -287,4 +301,26 @@ fn keys(app: &mut App, s: &str) {
     for c in s.chars() {
         app.handle_msg(key(c));
     }
+}
+
+/// Draws one frame; whether every cell of `rect` is marked skip in it.
+fn cells_skipped(
+    terminal: &mut Terminal<TestBackend>,
+    app: &mut App,
+    rect: ratatui::layout::Rect,
+) -> bool {
+    let mut all_skipped = true;
+    // check the live frame buffer: the backend only receives the diff
+    terminal
+        .draw(|f| {
+            views::draw(f, app);
+            let buf = f.buffer_mut();
+            for y in rect.top()..rect.bottom() {
+                for x in rect.left()..rect.right() {
+                    all_skipped &= buf.cell((x, y)).is_some_and(|c| c.skip);
+                }
+            }
+        })
+        .unwrap();
+    all_skipped
 }

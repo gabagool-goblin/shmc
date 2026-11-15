@@ -7,6 +7,10 @@ fn end_file_error() -> Msg {
     Msg::Mpv(MpvEvent::EndFile { reason: "error".into() })
 }
 
+fn end_file_eof() -> Msg {
+    Msg::Mpv(MpvEvent::EndFile { reason: "eof".into() })
+}
+
 /// `D` stops mpv as well as emptying the queue, and drops the cover.
 #[tokio::test]
 async fn clear_queue_stops_and_drops_the_cover() {
@@ -91,7 +95,7 @@ async fn consume_keeps_cursor_on_item_under_filter() {
     let cursor = app.queue_filter.cursor_of(29).expect("visible");
     app.queue_state.select(Some(cursor));
 
-    app.handle_msg(Msg::Mpv(MpvEvent::EndFile { reason: "eof".into() }));
+    app.handle_msg(end_file_eof());
 
     let sel = app.queue_state.selected().expect("a row is highlighted");
     let real = app.queue_filter.real(sel, app.queue.len());
@@ -279,7 +283,7 @@ async fn consume_removes_finished_entry() {
     app.stopped = false;
     app.consume = true;
 
-    app.handle_msg(Msg::Mpv(MpvEvent::EndFile { reason: "eof".into() }));
+    app.handle_msg(end_file_eof());
 
     assert_eq!(app.queue.len(), 2);
     assert_eq!(app.queue[0].title, "Starfall! 1");
@@ -294,7 +298,7 @@ async fn consume_removes_finished_entry() {
     app.stopped = false;
     app.consume = true;
 
-    app.handle_msg(Msg::Mpv(MpvEvent::EndFile { reason: "eof".into() }));
+    app.handle_msg(end_file_eof());
 
     assert!(app.queue.is_empty());
     assert_eq!(app.current, None);
@@ -411,10 +415,7 @@ async fn queue_follow_pins_playing_until_browse() {
     let visible = app.scroll.visible(ScrollId::Queue);
     assert!(visible > 0 && visible < 300, "unexpected queue height {visible}");
 
-    app.handle_msg(Msg::Mpv(MpvEvent::Property {
-        name: "playlist-pos".into(),
-        value: Some(serde_json::json!(80)),
-    }));
+    app.handle_msg(playlist_pos(80));
     let _ = render(&mut app, 120, 40);
     assert_eq!(app.queue_state.selected(), Some(80));
     assert_eq!(
@@ -439,10 +440,7 @@ async fn queue_follow_pins_playing_until_browse() {
         80,
         "the first manual step must not scroll the pane"
     );
-    app.handle_msg(Msg::Mpv(MpvEvent::Property {
-        name: "playlist-pos".into(),
-        value: Some(serde_json::json!(100)),
-    }));
+    app.handle_msg(playlist_pos(100));
     let _ = render(&mut app, 120, 40);
     assert_eq!(
         app.queue_state.selected(),
@@ -457,10 +455,7 @@ async fn queue_follow_pins_playing_until_browse() {
     assert_eq!(app.queue_state.selected(), Some(100));
     assert_eq!(app.scroll.offset(ScrollId::Queue), 100);
 
-    app.handle_msg(Msg::Mpv(MpvEvent::Property {
-        name: "playlist-pos".into(),
-        value: Some(serde_json::json!(110)),
-    }));
+    app.handle_msg(playlist_pos(110));
     let _ = render(&mut app, 120, 40);
     assert_eq!(app.queue_state.selected(), Some(110));
     assert_eq!(app.scroll.offset(ScrollId::Queue), 110);
@@ -570,10 +565,7 @@ async fn queue_follow_does_not_fight_the_filter() {
     filter_queue(&mut app, "Starfall! 9");
     assert!(app.queue_filter.cursor_of(0).is_none(), "test filter must hide the playing track");
 
-    app.handle_msg(Msg::Mpv(MpvEvent::Property {
-        name: "playlist-pos".into(),
-        value: Some(serde_json::json!(90)),
-    }));
+    app.handle_msg(playlist_pos(90));
     let _ = render(&mut app, 120, 40);
     assert_eq!(
         app.queue_state.selected(),
@@ -755,10 +747,7 @@ async fn auto_follow_can_be_disabled() {
     );
 
     let selected = app.queue_state.selected();
-    app.handle_msg(Msg::Mpv(MpvEvent::Property {
-        name: "playlist-pos".into(),
-        value: Some(serde_json::json!(120)),
-    }));
+    app.handle_msg(playlist_pos(120));
     let _ = render(&mut app, 120, 40);
     assert_eq!(
         app.queue_state.selected(),
@@ -778,20 +767,14 @@ async fn stale_playlist_pos_keeps_current_track() {
     app.consume = true;
     app.stopped = false;
 
-    app.handle_msg(Msg::Mpv(MpvEvent::EndFile { reason: "eof".into() }));
+    app.handle_msg(end_file_eof());
     assert_eq!(app.queue.len(), 2);
     assert_eq!(app.current, Some(1), "the next track takes the freed slot");
 
-    app.handle_msg(Msg::Mpv(MpvEvent::Property {
-        name: "playlist-pos".into(),
-        value: Some(serde_json::json!(2)),
-    }));
+    app.handle_msg(playlist_pos(2));
     assert_eq!(app.current, Some(1), "a stale position must not move the current track");
 
-    app.handle_msg(Msg::Mpv(MpvEvent::Property {
-        name: "playlist-pos".into(),
-        value: Some(serde_json::json!(9)),
-    }));
+    app.handle_msg(playlist_pos(9));
     assert_eq!(app.current, Some(1));
 }
 
@@ -805,11 +788,8 @@ async fn play_next_after_consume_does_not_panic() {
     app.consume = true;
     app.stopped = false;
 
-    app.handle_msg(Msg::Mpv(MpvEvent::EndFile { reason: "eof".into() }));
-    app.handle_msg(Msg::Mpv(MpvEvent::Property {
-        name: "playlist-pos".into(),
-        value: Some(serde_json::json!(2)),
-    }));
+    app.handle_msg(end_file_eof());
+    app.handle_msg(playlist_pos(2));
 
     app.tab = Tab::Browser;
     app.browser.focus = BrowserCol::Tracks;
@@ -819,10 +799,6 @@ async fn play_next_after_consume_does_not_panic() {
     app.handle_msg(key('i'));
     assert_eq!(app.queue.len(), 3, "the track was queued after the current one");
     assert_eq!(app.queue[2].rating_key, "t10");
-}
-
-fn playlist_pos(i: usize) -> Msg {
-    Msg::Mpv(MpvEvent::Property { name: "playlist-pos".into(), value: Some(serde_json::json!(i)) })
 }
 
 /// The consume guard stays armed (mpv sends no position for the advance); the
@@ -836,7 +812,7 @@ async fn next_after_a_consume_follows_mpv() {
     app.consume = true;
     app.stopped = false;
 
-    app.handle_msg(Msg::Mpv(MpvEvent::EndFile { reason: "eof".into() }));
+    app.handle_msg(end_file_eof());
     assert_eq!(app.queue.len(), 5);
     assert_eq!(app.current, Some(0));
 
@@ -868,7 +844,7 @@ async fn next_with_consume_removes_left_track() {
     app.handle_msg(playlist_pos(1));
     assert_eq!(app.current, Some(1));
 
-    app.handle_msg(Msg::Mpv(MpvEvent::EndFile { reason: "eof".into() }));
+    app.handle_msg(end_file_eof());
     let keys: Vec<_> = app.queue.iter().map(|t| t.rating_key.as_str()).collect();
     assert_eq!(keys, ["t0", "t3"]);
 }
@@ -913,7 +889,7 @@ fn reorder_storm(app: &mut App, plex: &mut tokio::sync::mpsc::UnboundedReceiver<
             "stale position {pos} bounced the queue cursor"
         );
         // Only the playing track may be fetched
-        while let Ok(cmd) = plex.try_recv() {
+        for cmd in sent(plex) {
             match cmd {
                 PlexCmd::LoadThumb { path } => assert_eq!(
                     Some(&path),
@@ -1257,7 +1233,7 @@ async fn visual_range_above_playing_removes_and_undoes() {
     assert!(app.visual.is_none());
 
     // mpv walks the playing entry down through the slots in between
-    play_pos(&mut app, 3);
+    app.handle_msg(playlist_pos(3));
     assert_eq!(app.current, Some(2), "a stale position moved current");
 
     app.handle_msg(key('u'));
@@ -1327,7 +1303,7 @@ async fn visual_mode_lifetime() {
     // the finished entry above the anchor shifts it down by one
     app.consume = true;
     app.current = Some(1);
-    app.handle_msg(Msg::Mpv(MpvEvent::EndFile { reason: "eof".into() }));
+    app.handle_msg(end_file_eof());
     assert_eq!(app.visual.map(|v| v.anchor), Some(2));
     assert_eq!(app.queue[2].rating_key, "t3");
 
@@ -1499,13 +1475,13 @@ async fn g_letter_in_visual_jumps_not_adds() {
 async fn save_sends_whole_queue_even_when_filtered() {
     let (mut app, mut plex_rx) = new_app_with_plex().await;
     let saves = |rx: &mut tokio::sync::mpsc::UnboundedReceiver<PlexCmd>| {
-        let mut out = Vec::new();
-        while let Ok(cmd) = rx.try_recv() {
-            if let PlexCmd::SavePlaylist { name, keys } = cmd {
-                out.push((name, keys));
-            }
-        }
-        out
+        sent(rx)
+            .into_iter()
+            .filter_map(|cmd| match cmd {
+                PlexCmd::SavePlaylist { name, keys } => Some((name, keys)),
+                _ => None,
+            })
+            .collect::<Vec<_>>()
     };
 
     run_cmd(&mut app, "save Road trip");

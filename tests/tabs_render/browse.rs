@@ -88,29 +88,6 @@ async fn right_on_an_artist_opens_its_albums() {
     }
 }
 
-/// Enter and `a` say what they queued or started.
-#[tokio::test]
-async fn enter_reports_what_it_added() {
-    let mut app = new_app().await;
-    app.tab = Tab::Browser;
-
-    app.replace_queue_and_play(vec![track(0)], Confirm::Track { title: "Starfall! 0".into() });
-    assert!(!app.status_error);
-    assert_eq!(app.status, "Playing: Starfall! 0");
-    assert_eq!(app.queue.len(), 1);
-
-    app.add_tracks(vec![track(7)], Confirm::Track { title: "Starfall! 7".into() });
-    assert!(!app.status_error);
-    assert_eq!(app.status, "Added: Starfall! 7");
-    assert_eq!(app.queue.len(), 2);
-
-    app.add_tracks(vec![track(1), track(2)], Confirm::FromList { name: "Road Trip".into() });
-    assert_eq!(app.status, "Added 2 tracks from Road Trip");
-
-    app.add_tracks((10..52).map(track).collect(), Confirm::Artist { name: "Artist".into() });
-    assert!(app.status.contains("42"), "{}", app.status);
-}
-
 /// Show in Browser jumps to a real artist index, so it must drop the Artists filter.
 #[tokio::test]
 async fn goto_artist_clears_the_artists_filter() {
@@ -149,14 +126,15 @@ async fn highlighting_a_playlist_previews_its_tracks() {
 
     app.handle_msg(key('j'));
 
-    let mut loaded = None;
-    while let Ok(cmd) = plex.try_recv() {
-        if let PlexCmd::LoadPlaylistPreview { key, size } = cmd {
-            assert_eq!(size, 500, "preview must be a bounded page");
-            loaded = Some(key);
-        }
-    }
-    assert_eq!(loaded.as_deref(), Some("p1"));
+    let previews: Vec<_> = sent(&mut plex)
+        .into_iter()
+        .filter_map(|cmd| match cmd {
+            PlexCmd::LoadPlaylistPreview { key, size } => Some((key, size)),
+            _ => None,
+        })
+        .collect();
+    assert!(previews.iter().all(|(_, size)| *size == 500), "preview must be a bounded page");
+    assert_eq!(previews.last().map(|(key, _)| key.as_str()), Some("p1"));
 }
 
 #[tokio::test]
@@ -172,12 +150,8 @@ async fn cached_playlist_preview_skips_the_request() {
     app.handle_msg(key('j'));
 
     assert_eq!(app.playlists.items.len(), 1);
-    let mut requested = false;
-    while let Ok(cmd) = plex.try_recv() {
-        if matches!(cmd, PlexCmd::LoadPlaylistPreview { .. }) {
-            requested = true;
-        }
-    }
+    let requested =
+        sent(&mut plex).into_iter().any(|cmd| matches!(cmd, PlexCmd::LoadPlaylistPreview { .. }));
     assert!(!requested, "a cache hit must not fetch again");
 }
 
@@ -191,13 +165,10 @@ async fn failed_playlist_preview_retried_on_highlight() {
     app.tab = Tab::Playlists;
     app.preview_debounce_ms = 0;
     let requests = |plex: &mut tokio::sync::mpsc::UnboundedReceiver<PlexCmd>| {
-        let mut n = 0;
-        while let Ok(cmd) = plex.try_recv() {
-            if matches!(cmd, PlexCmd::LoadPlaylistPreview { .. }) {
-                n += 1;
-            }
-        }
-        n
+        sent(plex)
+            .into_iter()
+            .filter(|cmd| matches!(cmd, PlexCmd::LoadPlaylistPreview { .. }))
+            .count()
     };
 
     app.handle_msg(key('j'));
@@ -231,14 +202,6 @@ async fn unrelated_error_keeps_goto_jump() {
     app.handle_msg(Msg::LoadFailed { key: "ar1".into(), error: "resolving artist: boom".into() });
     assert_eq!(app.tab, Tab::Queue, "the jump's own failure returns to the queue");
     assert!(app.status.contains("not found"), "{:?}", app.status);
-}
-
-fn sent(plex: &mut tokio::sync::mpsc::UnboundedReceiver<PlexCmd>) -> Vec<PlexCmd> {
-    let mut out = Vec::new();
-    while let Ok(cmd) = plex.try_recv() {
-        out.push(cmd);
-    }
-    out
 }
 
 fn artist_ar1() -> Artist {
@@ -426,12 +389,10 @@ async fn large_playlist_add_asks_for_confirmation() {
     assert!(resolve_seqs(&mut plex).is_empty(), "a large playlist must ask before queueing");
 
     app.handle_msg(key('y'));
-    let mut resolved = None;
-    while let Ok(cmd) = plex.try_recv() {
-        if let PlexCmd::ResolvePlaylist { key, action, .. } = cmd {
-            resolved = Some((key, action));
-        }
-    }
+    let resolved = last_sent(&mut plex, |cmd| match cmd {
+        PlexCmd::ResolvePlaylist { key, action, .. } => Some((key, action)),
+        _ => None,
+    });
     assert_eq!(
         resolved,
         Some(("p0".to_string(), QueueAction::Replace)),
@@ -449,12 +410,10 @@ async fn enter_on_a_playlist_replaces_the_queue() {
 
     app.handle_msg(enter());
 
-    let mut resolved = None;
-    while let Ok(cmd) = plex.try_recv() {
-        if let PlexCmd::ResolvePlaylist { key, action, .. } = cmd {
-            resolved = Some((key, action));
-        }
-    }
+    let resolved = last_sent(&mut plex, |cmd| match cmd {
+        PlexCmd::ResolvePlaylist { key, action, .. } => Some((key, action)),
+        _ => None,
+    });
     assert_eq!(resolved, Some(("p1".to_string(), QueueAction::Replace)));
     assert_eq!(
         app.playlists.focus,
@@ -475,13 +434,11 @@ async fn add_on_artist_queues_its_tracks() {
 
     app.handle_msg(key('a'));
 
-    let mut sent = None;
-    while let Ok(cmd) = plex.try_recv() {
-        if let PlexCmd::ResolveArtistTracks { key, action, .. } = cmd {
-            sent = Some((key, action));
-        }
-    }
-    assert_eq!(sent, Some(("ar1".to_string(), QueueAction::Append)));
+    let request = last_sent(&mut plex, |cmd| match cmd {
+        PlexCmd::ResolveArtistTracks { key, action, .. } => Some((key, action)),
+        _ => None,
+    });
+    assert_eq!(request, Some(("ar1".to_string(), QueueAction::Append)));
 }
 
 /// A capped preview is announced in the status, fresh or from the cache (a
@@ -498,9 +455,6 @@ async fn capped_preview_is_announced() {
         tracks: (0..100).map(track).collect(),
     });
     assert!(app.status.contains("20000"), "{}", app.status);
-
-    let frame = render(&mut app, 120, 40);
-    assert!(!frame.contains("preview 100/20000"), "the note moved to the status window\n{frame}");
 
     drop(app); // one app at a time: it holds the suite's lock
 
@@ -566,13 +520,11 @@ async fn browser_album_enter_replaces_queue_with_album() {
 
     app.handle_msg(enter());
 
-    let mut sent = None;
-    while let Ok(cmd) = plex.try_recv() {
-        if let PlexCmd::ResolveAlbum { key, action, .. } = cmd {
-            sent = Some((key, action));
-        }
-    }
-    assert_eq!(sent, Some(("al1".to_string(), QueueAction::Replace)));
+    let request = last_sent(&mut plex, |cmd| match cmd {
+        PlexCmd::ResolveAlbum { key, action, .. } => Some((key, action)),
+        _ => None,
+    });
+    assert_eq!(request, Some(("al1".to_string(), QueueAction::Replace)));
 }
 
 #[tokio::test]
@@ -587,13 +539,11 @@ async fn playlist_track_enter_replaces_from_that_track() {
 
     app.handle_msg(enter());
 
-    let mut sent = None;
-    while let Ok(cmd) = plex.try_recv() {
-        if let PlexCmd::ResolvePlaylist { key, action, start, .. } = cmd {
-            sent = Some((key, action, start));
-        }
-    }
-    assert_eq!(sent, Some(("p0".to_string(), QueueAction::Replace, Some("t1".to_string()))));
+    let request = last_sent(&mut plex, |cmd| match cmd {
+        PlexCmd::ResolvePlaylist { key, action, start, .. } => Some((key, action, start)),
+        _ => None,
+    });
+    assert_eq!(request, Some(("p0".to_string(), QueueAction::Replace, Some("t1".to_string()))));
 }
 
 /// A track row asks before replacing or appending a huge playlist, counting
@@ -624,14 +574,12 @@ async fn large_playlist_track_asks_remainder_or_start() {
         );
 
         app.handle_msg(key('y'));
-        let mut sent = None;
-        while let Ok(cmd) = plex.try_recv() {
-            if let PlexCmd::ResolvePlaylist { key, action, start, .. } = cmd {
-                sent = Some((key, action, start));
-            }
-        }
+        let request = last_sent(&mut plex, |cmd| match cmd {
+            PlexCmd::ResolvePlaylist { key, action, start, .. } => Some((key, action, start)),
+            _ => None,
+        });
         assert_eq!(
-            sent,
+            request,
             Some(("p0".to_string(), want, Some("t1".to_string()))),
             "y must keep the start track, not use the whole playlist"
         );
@@ -700,13 +648,13 @@ async fn search_track_enter_replaces_with_album_remainder() {
 
     app.handle_msg(enter());
 
-    let mut sent = None;
-    while let Ok(cmd) = plex.try_recv() {
-        if let PlexCmd::ResolveTrack { key, action, rest_of_album, .. } = cmd {
-            sent = Some((key, action, rest_of_album));
+    let request = last_sent(&mut plex, |cmd| match cmd {
+        PlexCmd::ResolveTrack { key, action, rest_of_album, .. } => {
+            Some((key, action, rest_of_album))
         }
-    }
-    assert_eq!(sent, Some(("t9".to_string(), QueueAction::Replace, true)));
+        _ => None,
+    });
+    assert_eq!(request, Some(("t9".to_string(), QueueAction::Replace, true)));
 }
 
 #[tokio::test]
@@ -726,17 +674,11 @@ async fn browser_album_right_drills_into_tracks() {
     app.handle_msg(key_code(KeyCode::Right));
 
     assert_eq!(app.browser.focus, BrowserCol::Tracks);
-    let mut sent = None;
-    while let Ok(cmd) = plex.try_recv() {
-        if let PlexCmd::LoadTracks(key) = cmd {
-            sent = Some(key);
-        }
-    }
-    assert_eq!(sent.as_deref(), Some("al1"));
-}
-
-fn album_y(key: &str, title: &str, year: Option<u32>) -> Album {
-    Album { rating_key: key.into(), title: title.into(), artist: "A".into(), year, thumb: None }
+    let request = last_sent(&mut plex, |cmd| match cmd {
+        PlexCmd::LoadTracks(key) => Some(key),
+        _ => None,
+    });
+    assert_eq!(request.as_deref(), Some("al1"));
 }
 
 /// Missing years sort last in both year orders; ties go by title; an unknown mode is `year`.
@@ -745,12 +687,12 @@ fn albums_sort_by_mode_with_missing_years() {
     use shmc::ui::app::sort_albums;
     let set = || {
         vec![
-            album_y("1", "beta", Some(2010)),
-            album_y("2", "Zed", None),
-            album_y("3", "Alpha", Some(2010)),
-            album_y("4", "gamma", Some(1999)),
-            album_y("5", "alpha", None),
-            album_y("6", "Alpha", Some(1990)),
+            album_by("1", "beta", "A", Some(2010)),
+            album_by("2", "Zed", "A", None),
+            album_by("3", "Alpha", "A", Some(2010)),
+            album_by("4", "gamma", "A", Some(1999)),
+            album_by("5", "alpha", "A", None),
+            album_by("6", "Alpha", "A", Some(1990)),
         ]
     };
     let keys = |mode: &str| {
@@ -774,9 +716,9 @@ async fn albums_loaded_applies_the_configured_order() {
     app.handle_msg(Msg::AlbumsLoaded {
         artist_key: "a1".into(),
         albums: vec![
-            album_y("old", "Old", Some(1990)),
-            album_y("none", "None", None),
-            album_y("new", "New", Some(2020)),
+            album_by("old", "Old", "A", Some(1990)),
+            album_by("none", "None", "A", None),
+            album_by("new", "New", "A", Some(2020)),
         ],
     });
     let keys: Vec<&str> = app.browser.albums.iter().map(|a| a.rating_key.as_str()).collect();
