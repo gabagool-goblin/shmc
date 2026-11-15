@@ -17,12 +17,11 @@ async fn enter_on_repeated_song_names_entry() {
     app.playlists.focus = PlaylistsCol::Items;
     app.handle_msg(enter());
 
-    let mut start = None;
-    while let Ok(cmd) = plex.try_recv() {
-        if let PlexCmd::ResolvePlaylist { start: s, .. } = cmd {
-            start = s;
-        }
-    }
+    let start = last_sent(&mut plex, |cmd| match cmd {
+        PlexCmd::ResolvePlaylist { start, .. } => Some(start),
+        _ => None,
+    })
+    .flatten();
     assert_eq!(start.as_deref(), Some("202"));
 }
 
@@ -148,14 +147,16 @@ fn start_load(
 ) -> (u64, Arc<std::sync::atomic::AtomicBool>) {
     on_playlist(app, 0);
     app.handle_msg(enter());
-    let mut found = None;
-    while let Ok(cmd) = plex.try_recv() {
-        if let PlexCmd::ResolvePlaylist { seq, stream, cancel, .. } = cmd {
-            assert!(stream, "a replace streams");
-            found = Some((seq, cancel));
-        }
-    }
-    found.expect("a ResolvePlaylist was sent")
+    let mut found: Vec<_> = sent(plex)
+        .into_iter()
+        .filter_map(|cmd| match cmd {
+            PlexCmd::ResolvePlaylist { seq, stream, cancel, .. } => Some((seq, stream, cancel)),
+            _ => None,
+        })
+        .collect();
+    assert!(found.iter().all(|(_, stream, _)| *stream), "a replace streams");
+    let (seq, _, cancel) = found.pop().expect("a ResolvePlaylist was sent");
+    (seq, cancel)
 }
 
 /// The first page landing: 200 tracks of a 5,000-track playlist.

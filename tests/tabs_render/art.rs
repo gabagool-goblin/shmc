@@ -12,34 +12,12 @@ async fn resize_repaints_cover() {
 /// The cover is painted once, then its cells are skipped.
 #[tokio::test]
 async fn album_art_is_painted_once_then_skipped() {
-    let mut app = new_app().await;
-    app.tab = Tab::Queue;
-    app.art_enabled = true;
-    app.picker = Some(ratatui_image::picker::Picker::from_fontsize((10, 20)));
-    app.art.img = Some(Arc::new(DynamicImage::ImageRgba8(RgbaImage::new(8, 8))));
-    app.art.protocol = None;
-    app.art.shown_rect = None;
-
-    let mut terminal = Terminal::new(TestBackend::new(80, 30)).unwrap();
-    terminal.draw(|f| views::draw(f, &mut app)).unwrap();
+    let (mut app, mut terminal) = app_with_cover().await;
     let rect = app.art.shown_rect.expect("cover was not painted");
-
-    // check the live frame buffer: the backend only receives the diff
-    let mut all_skipped = true;
-    terminal
-        .draw(|f| {
-            views::draw(f, &mut app);
-            let buf = f.buffer_mut();
-            for y in rect.top()..rect.bottom() {
-                for x in rect.left()..rect.right() {
-                    if !buf.cell((x, y)).is_some_and(|c| c.skip) {
-                        all_skipped = false;
-                    }
-                }
-            }
-        })
-        .unwrap();
-    assert!(all_skipped, "cover cells were not skipped on the second frame");
+    assert!(
+        cells_skipped(&mut terminal, &mut app, rect),
+        "cover cells were not skipped on the second frame"
+    );
 }
 
 /// Draws a frame; whether the cover is in it.
@@ -110,7 +88,7 @@ async fn app_showing_album_cover(
     app.queue = (0..4).map(track).collect();
     app.queue[2].parent_rating_key = Some("al2".into());
     app.queue[3].parent_rating_key = None;
-    play_pos(&mut app, 0);
+    app.handle_msg(playlist_pos(0));
     assert_eq!(thumb_requests(&mut plex), [AL1_THUMB]);
     let img = Arc::new(DynamicImage::ImageRgba8(RgbaImage::new(8, 8)));
     app.handle_msg(Msg::ArtReady { thumb_path: AL1_THUMB.into(), img });
@@ -135,7 +113,7 @@ fn thumb_requests(plex: &mut tokio::sync::mpsc::UnboundedReceiver<PlexCmd>) -> V
 async fn same_album_track_keeps_the_cover() {
     let (mut app, _terminal, mut plex) = app_showing_album_cover().await;
     let (shown, prepared) = (app.art.shown_rect, app.art.prepared_rect);
-    play_pos(&mut app, 1);
+    app.handle_msg(playlist_pos(1));
     assert!(thumb_requests(&mut plex).is_empty(), "the same cover was requested again");
     assert!(app.art.protocol.is_some());
     assert_eq!((app.art.shown_rect, app.art.prepared_rect), (shown, prepared));
@@ -160,19 +138,19 @@ async fn cover_for_shown_path_is_noop() {
 #[tokio::test]
 async fn new_cover_loads_once() {
     let (mut app, _terminal, mut plex) = app_showing_album_cover().await;
-    play_pos(&mut app, 2);
-    play_pos(&mut app, 2);
+    app.handle_msg(playlist_pos(2));
+    app.handle_msg(playlist_pos(2));
     assert_eq!(thumb_requests(&mut plex), ["/library/metadata/al2/thumb"]);
 
     app.handle_msg(Msg::ArtFailed { thumb_path: "/library/metadata/al2/thumb".into() });
-    play_pos(&mut app, 2);
+    app.handle_msg(playlist_pos(2));
     assert_eq!(
         thumb_requests(&mut plex),
         ["/library/metadata/al2/thumb"],
         "no retry after a failure"
     );
 
-    play_pos(&mut app, 3);
+    app.handle_msg(playlist_pos(3));
     assert!(app.art.img.is_none() && app.art.protocol.is_none(), "the old cover stayed");
     assert!(app.art.shown_rect.is_none() && app.art.thumb.is_none());
 }

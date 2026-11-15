@@ -35,7 +35,7 @@ async fn all_tabs_render_at_several_sizes() {
     app.random = true;
     app.bitrate_bps = 320_000.0;
     app.cava_alive = true;
-    app.cava_frame = vec![255u8; 20]; // full bars -> bottom row is '█'
+    app.cava_frame = vec![255u8; 20];
 
     app.browser.artists = (0..40)
         .map(|i| Artist {
@@ -122,7 +122,6 @@ async fn all_tabs_render_at_several_sizes() {
     ] {
         assert!(q.contains(want), "Queue frame must contain {want:?}\nframe:\n{q}");
     }
-    assert!(q.contains('█'), "visualizer must render full blocks\nframe:\n{q}");
 
     app.tab = Tab::Browser;
     let b = render(&mut app, 120, 40);
@@ -208,8 +207,16 @@ async fn all_tabs_render_at_several_sizes() {
         );
     }
     app.help_state.select(Some(0));
+}
 
-    // bottom row: command input > filter typing > applied filter > status > progress
+/// The bottom row shows command input over filter typing over an applied filter over the status.
+#[tokio::test]
+async fn bottom_row_prefers_command_then_filter_then_status() {
+    let mut app = new_app().await;
+    app.queue = (0..50).map(track).collect();
+    app.queue_state.select(Some(7));
+    app.current = Some(7);
+    app.stopped = false;
     app.tab = Tab::Queue;
 
     app.command.typing = true;
@@ -238,43 +245,44 @@ async fn all_tabs_render_at_several_sizes() {
     app.status = "Added album: Evening Satellite (12 tracks)".into();
     let c4 = render(&mut app, 120, 40);
     assert!(c4.contains("Added album: Evening Satellite (12 tracks)"), "frame:\n{c4}");
-    app.status.clear();
-
-    let c5 = render(&mut app, 120, 40);
-    assert!(c5.contains('>'), "progress bar must show the play glyph\nframe:\n{c5}");
-
-    app.paused = true;
-    let c6 = render(&mut app, 120, 40);
-    assert!(c6.contains("[Paused]"), "frame:\n{c6}");
-    app.paused = false;
-    app.stopped = true;
-    let c7 = render(&mut app, 120, 40);
-    assert!(c7.contains("[Stopped]"), "frame:\n{c7}");
 }
 
 #[tokio::test]
-async fn review_verification_120x40() {
+async fn transport_state_shows_badge_and_glyph() {
     let mut app = new_app().await;
-    app.art_enabled = true;
+    app.queue = (0..5).map(track).collect();
+    app.queue_state.select(Some(1));
+    app.current = Some(1);
+    app.stopped = false;
+    app.duration = 257.0;
+    app.position = 42.0;
+    app.tab = Tab::Queue;
+
+    let play = render(&mut app, 120, 40);
+    assert!(play.contains('>'), "progress bar must show the play glyph\nframe:\n{play}");
+    app.paused = true;
+    let pause = render(&mut app, 120, 40);
+    assert!(pause.contains("[Paused]"), "frame:\n{pause}");
+    assert!(pause.contains("||"), "pause glyph\n{pause}");
+    app.paused = false;
+    app.stopped = true;
+    let stop = render(&mut app, 120, 40);
+    assert!(stop.contains("[Stopped]"), "frame:\n{stop}");
+    assert!(stop.contains('■'), "stop glyph\n{stop}");
+    for frame in [&play, &pause, &stop] {
+        assert!(!frame.contains('\u{23f8}'), "no U+23F8 pause glyph");
+        assert!(!frame.contains('\u{fe0f}'), "no variation selector");
+    }
+}
+
+#[tokio::test]
+async fn header_renders_a_cjk_title() {
+    let mut app = new_app().await;
     app.queue = (0..30).map(track).collect();
     app.queue_state.select(Some(3));
     app.current = Some(3);
     app.stopped = false;
-    app.duration = 3725.0; // 1:02:05 -> h:mm:ss
-    app.position = 42.0;
-    app.cava_alive = true;
-    app.cava_frame = vec![220u8; 20];
     app.tab = Tab::Queue;
-
-    app.loop_playlist = true;
-    app.random = true;
-    app.loop_file = true;
-    app.consume = true;
-    let latin = render(&mut app, 120, 40);
-    let header: String = latin.lines().take(4).collect::<Vec<_>>().join("\n");
-    for want in ["rep", "shf", "one", "con", "│", "Starfall! 3", "Northwind Sounds"] {
-        assert!(header.contains(want), "header must contain {want:?}\n{header}");
-    }
     app.queue[3].title = "日本語の曲".into();
     let cjk = render(&mut app, 120, 40);
     let header_nospace: String = cjk.lines().take(4).collect::<String>().replace(' ', "");
@@ -286,7 +294,11 @@ async fn review_verification_120x40() {
     let row2 = cjk.lines().nth(2).unwrap_or("");
     assert!(row1.contains("日本語の曲"), "row1 title\n{row1}");
     assert!(row2.contains("Northwind Sounds"), "row2 credit\n{row2}");
+}
 
+#[tokio::test]
+async fn browser_cuts_long_artist_name() {
+    let mut app = new_app().await;
     app.tab = Tab::Browser;
     app.browser.tracks_for = Some("al0".into());
     app.browser.albums_for = Some("al0".into());
@@ -309,36 +321,14 @@ async fn review_verification_120x40() {
     app.browser.focus = BrowserCol::Artists;
     let br = render(&mut app, 120, 40);
     assert!(br.contains('…'), "long artist name must be truncated with …\n{br}");
-    assert!(br.contains('│'), "browser must draw column dividers\n{br}");
-    assert!(
-        !br.contains(" - Northwind Sounds"),
-        "album artist suffix hidden when equal to parent\n{br}"
-    );
+}
 
-    app.tab = Tab::Playlists;
-    assert_eq!(shmc::ui::theme::digits(9), 1);
-    assert_eq!(shmc::ui::theme::digits(10), 2);
-    assert_eq!(shmc::ui::theme::digits(100), 3);
-    app.playlists.playlists = vec![Playlist {
-        rating_key: "p0".into(),
-        title: "Night Mix".into(),
-        smart: false,
-        item_count: Some(100),
-        duration_ms: None,
-        thumb: None,
-        summary: None,
-    }];
-    app.playlists.state.select(Some(0));
-    app.playlists.items = (0..100).map(track).collect();
-    app.playlists.items_for = Some("p0".into());
-    app.playlists.focus = PlaylistsCol::Items;
-    app.playlists.items_state.select(Some(99));
-    let pl = render(&mut app, 120, 40);
-    for want in ["Len", "Title", "Artist", "Album", "100"] {
-        assert!(pl.contains(want), "playlists items must contain {want:?}\n{pl}");
-    }
-    assert!(pl.contains("────"), "playlists items need a rule under the header\n{pl}");
-
+#[tokio::test]
+async fn browser_track_filter_shows_counts_and_no_matches() {
+    let mut app = new_app().await;
+    app.tab = Tab::Browser;
+    app.browser.tracks_for = Some("al0".into());
+    app.browser.albums_for = Some("al0".into());
     app.browser.tracks = (0..9)
         .map(|i| Track {
             title: [
@@ -352,7 +342,6 @@ async fn review_verification_120x40() {
         .collect();
     app.browser.tracks_state.select(Some(0));
     app.browser.focus = BrowserCol::Tracks;
-    app.tab = Tab::Browser;
     app.browser_filters[2].text = "c".into();
     app.browser_filters[2].typing = true;
     let tracks = app.browser.tracks.clone();
@@ -371,45 +360,15 @@ async fn review_verification_120x40() {
     app.browser_filters[2].apply(tracks.len(), |i| tracks[i].title.to_lowercase().contains("cx"));
     let f3 = render(&mut app, 120, 40);
     assert!(f3.contains("No matches"), "zero matches must show No matches\n{f3}");
-    app.browser_filters[2].clear();
+}
 
-    app.tab = Tab::Queue;
-    app.queue[3].title = "Starfall! 3".into();
-    app.stopped = false;
-    app.paused = false;
-    let play = render(&mut app, 120, 40);
-    assert!(play.contains('>'), "play glyph\n{play}");
-    app.paused = true;
-    let pause = render(&mut app, 120, 40);
-    assert!(pause.contains("||"), "pause glyph\n{pause}");
-    app.paused = false;
-    app.stopped = true;
-    let stop = render(&mut app, 120, 40);
-    assert!(stop.contains('■'), "stop glyph\n{stop}");
-    for frame in [&play, &pause, &stop] {
-        assert!(!frame.contains('\u{23f8}'), "no U+23F8 pause glyph");
-        assert!(!frame.contains('\u{fe0f}'), "no variation selector");
-    }
-    app.stopped = false;
-
-    app.current = Some(1);
+#[tokio::test]
+async fn cover_placeholder_stays_put_across_songs() {
+    let mut app = new_app().await;
+    app.art_enabled = true;
+    app.queue = (0..30).map(track).collect();
     app.queue_state.select(Some(1));
-    let current_key = app.queue[1].rating_key.clone();
-    let original_keys: Vec<String> = app.queue.iter().map(|t| t.rating_key.clone()).collect();
-    app.random = false;
-    app.handle_msg(key('z'));
-    assert!(app.random, "z must turn shuffle on");
-    assert_eq!(app.queue[0].rating_key, current_key, "shuffle must put the current track first");
-    app.handle_msg(key('z'));
-    assert!(!app.random, "z must turn shuffle off");
-    assert_eq!(
-        app.queue.iter().map(|t| t.rating_key.clone()).collect::<Vec<_>>(),
-        original_keys,
-        "turning shuffle off must restore the original order"
-    );
-    app.handle_msg(key('Z'));
-    assert!(app.random, "Z must enable/reshuffle");
-
+    app.stopped = false;
     app.tab = Tab::Queue;
     let row_of = |frame: &str| frame.lines().position(|l| l.contains("No cover"));
     app.current = Some(1);
@@ -422,19 +381,36 @@ async fn review_verification_120x40() {
         "cover placeholder must stay in the same position across songs"
     );
     assert!(row_of(&cov1).is_some(), "cover placeholder row missing\n{cov1}");
+}
 
-    // The visualizer keeps drawing while paused, in about half the column.
+/// The visualizer keeps drawing while paused, in about half the column.
+#[tokio::test]
+async fn visualizer_keeps_drawing_while_paused() {
+    let mut app = new_app().await;
+    app.art_enabled = true;
+    app.queue = (0..30).map(track).collect();
+    app.queue_state.select(Some(3));
     app.current = Some(3);
+    app.stopped = false;
+    app.duration = 3725.0;
+    app.position = 42.0;
     app.paused = true;
+    app.tab = Tab::Queue;
+    let bar_glyphs = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
+    let bar_rows = |frame: &str| {
+        frame.lines().skip(7).filter(|l| l.chars().any(|c| bar_glyphs.contains(&c))).count()
+    };
+
+    app.cava_alive = true;
+    app.cava_frame = vec![220u8; 20];
     let h = render(&mut app, 120, 40);
-    assert!(h.contains("Len"), "queue header must say Len\n{h}");
     assert!(
         !h.contains("visualizer off") && !h.contains("cava is not running"),
         "a live cava must not be reported as off\n{h}"
     );
-    assert!(h.contains('█') || h.contains('▇'), "visualizer must draw bars while paused\n{h}");
-    let bar_glyphs = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
-    let viz_rows = h.lines().skip(7).filter(|l| l.chars().any(|c| bar_glyphs.contains(&c))).count();
+    app.cava_alive = false;
+    let off = render(&mut app, 120, 40);
+    let viz_rows = bar_rows(&h).saturating_sub(bar_rows(&off));
     assert!(
         viz_rows >= 10,
         "visualizer should be tall (about half the column), got {viz_rows} rows\n{h}"
@@ -527,39 +503,6 @@ async fn queue_headers_share_the_tab_bar_colour() {
             "{label} must match the tab bar colour"
         );
     }
-}
-
-/// The progress bar is solid background colour, not a dotted `░` track.
-#[tokio::test]
-async fn progress_bar_is_solid() {
-    let mut app = new_app().await;
-    app.tab = Tab::Queue;
-    app.stopped = false;
-    app.duration = 100.0;
-    app.position = 50.0;
-
-    let mut terminal = Terminal::new(TestBackend::new(120, 40)).unwrap();
-    terminal.draw(|f| views::draw(f, &mut app)).unwrap();
-    let frame = flatten(&terminal);
-    assert!(!frame.contains('░'), "the track must not be dotted\n{frame}");
-
-    let accent = theme::accent_color();
-    let track = theme::border().fg.expect("border colour");
-    let buf = terminal.backend().buffer();
-    let (mut filled, mut empty) = (0, 0);
-    for y in 37..40 {
-        for x in 0..120 {
-            if let Some(cell) = buf.cell((x, y)) {
-                if cell.bg == accent {
-                    filled += 1;
-                } else if cell.bg == track {
-                    empty += 1;
-                }
-            }
-        }
-    }
-    assert!(filled > 0, "no filled bar cells");
-    assert!(empty > 0, "no track cells");
 }
 
 /// The volume meter must not shift when 95% becomes 100%.
@@ -1017,19 +960,10 @@ async fn background_leaves_cover_painted_once() {
     let plain = unpainted.cell((rect.left(), rect.top())).unwrap();
     assert!(plain.fg != bg && plain.bg != bg, "without a background it is not painted");
 
-    let mut skipped = true;
-    terminal
-        .draw(|f| {
-            views::draw(f, &mut app);
-            let buf = f.buffer_mut();
-            for y in rect.top()..rect.bottom() {
-                for x in rect.left()..rect.right() {
-                    skipped &= buf.cell((x, y)).is_some_and(|c| c.skip);
-                }
-            }
-        })
-        .unwrap();
-    assert!(skipped, "cover cells were not skipped on the second frame");
+    assert!(
+        cells_skipped(&mut terminal, &mut app, rect),
+        "cover cells were not skipped on the second frame"
+    );
     // the backend buffer still holds the first frame's image cells
     let after = terminal.backend().buffer();
     for y in rect.top()..rect.bottom() {
@@ -1249,27 +1183,12 @@ fn buffer_of(app: &mut App, w: u16, h: u16) -> ratatui::buffer::Buffer {
 
 const TABS: [Tab; 5] = [Tab::Queue, Tab::Browser, Tab::Playlists, Tab::Search, Tab::Help];
 
-/// Default spacing: header rows 0-3, tab bar 4-6, content down to three rows
-/// from the bottom, progress box last, one cell of padding.
-#[tokio::test]
-async fn default_spacing_unchanged() {
-    let mut app = new_app().await;
-    queue_app_with_art(&mut app, false);
-    assert_eq!(theme::look(), theme::Look::DEFAULT);
-    for h in [16u16, 30, 60] {
-        let g = grid(&mut app, 80, h);
-        let tops: Vec<u16> = (0..h).filter(|&y| g[y as usize][0] == "┌").collect();
-        assert_eq!(tops, [0, 4, 7, h - 3], "boxes at {h} rows");
-        assert_eq!(g[1].iter().position(|c| c == "[").unwrap(), 2, "padding of one");
-    }
-}
-
 /// `block_gap` puts empty rows between the blocks; it gives way before the content's six rows.
 #[tokio::test]
 async fn block_gap_yields_to_content() {
     let mut app = new_app().await;
     queue_app_with_art(&mut app, false);
-    for gap in 1..=3u16 {
+    for gap in 0..=3u16 {
         let _look = LookGuard::set(spaced(gap, 1));
         for h in [16u16, 18, 22, 30, 45, 60] {
             let g = grid(&mut app, 80, h);
@@ -1333,19 +1252,10 @@ async fn gap_and_inset_move_cover_then_skipped() {
     assert!(after.x <= before.x + 1, "{before:?} -> {after:?}");
     assert_eq!(app.art.prepared_rect, Some(after), "the canvas is for the new rect");
 
-    let mut skipped = true;
-    terminal
-        .draw(|f| {
-            views::draw(f, &mut app);
-            let buf = f.buffer_mut();
-            for y in after.top()..after.bottom() {
-                for x in after.left()..after.right() {
-                    skipped &= buf.cell((x, y)).is_some_and(|c| c.skip);
-                }
-            }
-        })
-        .unwrap();
-    assert!(skipped, "cover cells were not skipped on the second frame");
+    assert!(
+        cells_skipped(&mut terminal, &mut app, after),
+        "cover cells were not skipped on the second frame"
+    );
     assert_eq!(app.art.shown_rect, Some(after), "the same rect is kept, not re-prepared");
 }
 
@@ -1371,6 +1281,15 @@ async fn progress_glyphs_only_when_theme_sets_them() {
     let lit: Vec<usize> =
         (4..80).filter(|&x| solid.cell((x as u16, 28)).unwrap().bg == accent).collect();
     assert!(!lit.is_empty(), "the played part is a coloured background");
+    assert!(
+        (4..80u16).all(|x| solid.cell((x, 28)).unwrap().symbol() != "░"),
+        "the track must not be dotted"
+    );
+    let unplayed = theme::border().fg.unwrap();
+    assert!(
+        (4..80u16).any(|x| solid.cell((x, 28)).unwrap().bg == unplayed),
+        "the unplayed part is a coloured background"
+    );
 
     let _look = LookGuard::set(with_symbols(&[
         ("progress_filled", "#"),

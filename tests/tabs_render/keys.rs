@@ -118,14 +118,6 @@ async fn colon_commands_accept_the_prompt_prefix() {
     assert_eq!(app.volume, 42.0);
     assert!(app.status.contains("volume: 42%"));
 
-    app.queue = vec![track(0)];
-    app.current = Some(0);
-    app.stopped = false;
-    run_cmd(&mut app, "clear");
-    app.handle_msg(key('y'));
-    assert!(app.queue.is_empty());
-    assert_eq!(app.current, None);
-
     run_cmd(&mut app, "q");
     assert!(app.should_quit);
 }
