@@ -66,7 +66,7 @@
 | `src/redact.rs` | Token redaction |
 | `src/plex/` | The client (`client.rs`) and the XML models (`models.rs`) |
 | `src/playback/` | `mpv.rs` drives mpv; `cava.rs` runs the visualizer |
-| `src/ui/app.rs` | State, keys, actions |
+| `src/ui/app/` | State, keys, actions |
 | `src/ui/queue_seq.rs` | Queue request order |
 | `src/ui/playlist_load.rs` | A playlist replace, streamed page by page |
 | `src/ui/views.rs` | Rendering |
