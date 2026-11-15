@@ -44,11 +44,11 @@ fn parse_command(raw: &str) -> Command<'_> {
     let parts: Vec<&str> = raw.split_whitespace().collect();
     match parts.as_slice() {
         [] => Command::Empty,
-        ["q"] | ["quit"] => Command::Quit,
-        ["n"] | ["next"] => Command::Next,
-        ["p"] | ["prev"] => Command::Prev,
+        ["q" | "quit"] => Command::Quit,
+        ["n" | "next"] => Command::Next,
+        ["p" | "prev"] => Command::Prev,
         ["pause"] => Command::Pause,
-        ["play"] | ["resume"] => Command::Play,
+        ["play" | "resume"] => Command::Play,
         ["stop"] => Command::Stop,
         ["seek", n] => Command::Seek(n),
         ["seek", ..] => Command::BadSeek,
@@ -113,7 +113,7 @@ impl App {
 
         if let Some(pending) = self.pending_playlist.take() {
             match key.code {
-                crossterm::event::KeyCode::Char('y') | crossterm::event::KeyCode::Char('Y') => {
+                crossterm::event::KeyCode::Char('y' | 'Y') => {
                     self.send_resolve_playlist(
                         pending.key,
                         pending.confirm,
@@ -140,7 +140,7 @@ impl App {
             match key.code {
                 // `y` matches the playlist question; the clear key itself is
                 // already under the finger
-                crossterm::event::KeyCode::Char('y') | crossterm::event::KeyCode::Char('Y') => {
+                crossterm::event::KeyCode::Char('y' | 'Y') => {
                     self.supersede_queue();
                     self.clear_queue();
                 }

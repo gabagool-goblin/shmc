@@ -1261,7 +1261,7 @@ fn with_ctrl(c: char) -> KeyEvent {
 
 fn field_text(screen: &Screen) -> String {
     match &screen.editor {
-        Some(Editor::Field { text, .. }) | Some(Editor::Export { text }) => text.text().to_string(),
+        Some(Editor::Field { text, .. } | Editor::Export { text }) => text.text().to_string(),
         _ => panic!("no text input is open"),
     }
 }
