@@ -609,8 +609,7 @@ async fn play_next_large_playlist_inserts_one_track() {
     assert_eq!(app.queue[1].rating_key, "t1");
 }
 
-/// A vanished playlist start must not ride on `Msg::Error`: a pending Browser jump
-/// would report it as "Album not found".
+/// A playlist start that has left the playlist is reported as an error that says so.
 #[tokio::test]
 async fn vanished_playlist_start_reported() {
     let (mut app, mut plex) = new_app_with_plex().await;
