@@ -770,6 +770,15 @@ mod tests {
     }
 
     #[test]
+    fn every_listed_command_parses() {
+        for (cmds, _) in keymap::COMMANDS {
+            for cmd in cmds.split(" / ") {
+                assert!(!matches!(parse_command(cmd), Command::Unknown(_)), "{cmd} does not parse");
+            }
+        }
+    }
+
+    #[test]
     fn command_parser_reports_bad_volume_and_unknown() {
         assert_eq!(parse_command("vol"), Command::BadVolume);
         assert_eq!(parse_command("vol 1 2"), Command::BadVolume);
