@@ -289,18 +289,14 @@ impl App {
                     self.sleep_until = None;
                     self.sleep_mins = None;
                     self.sleep_cancel = None;
-                    // Stop and stay stopped: set `pause` rather than toggle it,
-                    // as mpv's state is what went stale.
-                    self.paused = false;
-                    let _ = self.mpv.tx.send(MpvCmd::SetPause { paused: false });
-                    if !self.stopped {
-                        let _ = self.mpv.tx.send(MpvCmd::Stop);
-                        self.expect_pos = None;
-                        self.stopped = true;
-                        self.position = 0.0;
-                        self.duration = 0.0;
+                    if self.stopped {
+                        self.transient("sleep timer: off".into());
+                    } else {
+                        // Set rather than toggle, which would resume a paused track.
+                        self.paused = true;
+                        let _ = self.mpv.tx.send(MpvCmd::SetPause { paused: true });
+                        self.transient("sleep timer: playback paused".into());
                     }
-                    self.transient("sleep timer: playback stopped".into());
                 }
             }
             Msg::Error(e) => {
