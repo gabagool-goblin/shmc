@@ -43,7 +43,7 @@ pub async fn interactive(path: &PathBuf, existing: Option<Config>) -> Result<Con
     }
     let token = prompt_secret("Plex token", d_token)?;
 
-    print!("checking {} ... ", server);
+    print!("checking {server} ... ");
     io::stdout().flush().ok();
     let client = PlexClient::new(&server, &token);
     match client.identity().await {

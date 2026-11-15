@@ -454,7 +454,7 @@ fn draw_search_detail(f: &mut Frame, app: &mut App, inner: Rect) {
             theme::ellipsize(&clean(&label), inner.width.saturating_sub(14)),
             theme::secondary(),
         ),
-        Span::styled(format!(" ({} tracks)", total), theme::dim()),
+        Span::styled(format!(" ({total} tracks)"), theme::dim()),
     ]);
     f.render_widget(Paragraph::new(label_line), parts[0]);
 
