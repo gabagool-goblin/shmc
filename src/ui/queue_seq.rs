@@ -172,7 +172,7 @@ mod tests {
         drop(QueueReplyGuard::new(tx, 7));
         match rx.try_recv() {
             Ok(Msg::QueueReply { seq: 7, outcome: QueueOutcome::Failed(m) }) => {
-                assert!(m.contains("stopped before it finished"), "{m}")
+                assert!(m.contains("stopped before it finished"), "{m}");
             }
             _ => panic!("the drop guard must send a failure"),
         }

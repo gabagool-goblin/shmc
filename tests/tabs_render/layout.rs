@@ -748,9 +748,9 @@ async fn spread_visualizer_even_bars_and_gaps() {
                 let on = row[x] == "█";
                 let len = row[x..=end].iter().take_while(|c| (*c == "█") == on).count();
                 if on {
-                    bars.push(len)
+                    bars.push(len);
                 } else {
-                    gaps.push(len)
+                    gaps.push(len);
                 }
                 x += len;
             }

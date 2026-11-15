@@ -170,7 +170,7 @@ pub fn spawn_plex_worker(
                                 cancel,
                             },
                         )
-                        .await
+                        .await;
                     }
                     PlexCmd::ResolveTrack { seq, key, confirm, action, rest_of_album } => {
                         let reply = QueueReplyGuard::new(tx, seq);
@@ -193,7 +193,7 @@ pub fn spawn_plex_worker(
                                 reply.send(QueueOutcome::Tracks { tracks, confirm, action });
                             }
                             Err(e) => {
-                                reply.send(QueueOutcome::Failed(format!("resolving track: {e:#}")))
+                                reply.send(QueueOutcome::Failed(format!("resolving track: {e:#}")));
                             }
                         }
                     }
@@ -201,10 +201,11 @@ pub fn spawn_plex_worker(
                         let reply = QueueReplyGuard::new(tx, seq);
                         match client.artist_tracks(&section, &key).await {
                             Ok(tracks) => {
-                                reply.send(QueueOutcome::Tracks { tracks, confirm, action })
+                                reply.send(QueueOutcome::Tracks { tracks, confirm, action });
                             }
                             Err(e) => {
-                                reply.send(QueueOutcome::Failed(format!("resolving artist: {e:#}")))
+                                reply
+                                    .send(QueueOutcome::Failed(format!("resolving artist: {e:#}")));
                             }
                         }
                     }
@@ -212,10 +213,10 @@ pub fn spawn_plex_worker(
                         let reply = QueueReplyGuard::new(tx, seq);
                         match client.album_tracks(&key).await {
                             Ok(tracks) => {
-                                reply.send(QueueOutcome::Tracks { tracks, confirm, action })
+                                reply.send(QueueOutcome::Tracks { tracks, confirm, action });
                             }
                             Err(e) => {
-                                reply.send(QueueOutcome::Failed(format!("resolving album: {e:#}")))
+                                reply.send(QueueOutcome::Failed(format!("resolving album: {e:#}")));
                             }
                         }
                     }

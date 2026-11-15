@@ -623,7 +623,7 @@ async fn long_queue_start_does_not_deadlock() {
             MpvEvent::Property { name, value } => match name.as_str() {
                 "playlist-pos" => last_pos = value.as_ref().and_then(|v| v.as_i64()).unwrap_or(-1),
                 "playlist-count" => {
-                    last_count = value.as_ref().and_then(|v| v.as_i64()).unwrap_or(-1)
+                    last_count = value.as_ref().and_then(|v| v.as_i64()).unwrap_or(-1);
                 }
                 _ => {}
             },

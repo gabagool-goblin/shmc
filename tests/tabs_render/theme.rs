@@ -184,7 +184,7 @@ async fn block_gap_yields_to_content() {
             assert_eq!(tops, [0, 4 + eff, content, h - 3], "gap {gap} at {h} rows");
             assert!(h - 3 - eff - content >= 6, "content keeps six rows at {h}");
             let blank = |ys: std::ops::Range<u16>| {
-                ys.for_each(|y| assert!(g[y as usize].iter().all(|c| c == " "), "row {y} at {h}"))
+                ys.for_each(|y| assert!(g[y as usize].iter().all(|c| c == " "), "row {y} at {h}"));
             };
             blank(4..4 + eff);
             blank(7 + eff..content);
@@ -643,19 +643,19 @@ async fn border_styles_draw_their_glyphs() {
             match style {
                 theme::BorderStyle::None => assert!(found.is_empty(), "none on {tab:?}: {found:?}"),
                 theme::BorderStyle::Rounded => {
-                    assert!(text.contains('╭') && !text.contains('┌'), "{tab:?}")
+                    assert!(text.contains('╭') && !text.contains('┌'), "{tab:?}");
                 }
                 theme::BorderStyle::Double => {
                     assert!(
                         text.contains('╔') && text.contains('╝') && !text.contains('┌'),
                         "{tab:?}"
-                    )
+                    );
                 }
                 theme::BorderStyle::Lines => {
-                    assert!(!text.contains('┌') && text.contains('─'), "{tab:?}")
+                    assert!(!text.contains('┌') && text.contains('─'), "{tab:?}");
                 }
                 theme::BorderStyle::Box => {
-                    assert!(text.contains('┌') && !text.contains('╭'), "{tab:?}")
+                    assert!(text.contains('┌') && !text.contains('╭'), "{tab:?}");
                 }
             }
         }

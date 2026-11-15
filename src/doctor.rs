@@ -180,7 +180,7 @@ pub async fn collect(cfg: &Config, config_path: &Path, with_terminal: bool) -> R
     let client = PlexClient::new(&cfg.plex.server, &cfg.plex.token);
     match client.identity().await {
         Ok((machine, version)) => {
-            b.ok(format!("reachable: Plex Media Server {} ({})", version, short_id(&machine)))
+            b.ok(format!("reachable: Plex Media Server {} ({})", version, short_id(&machine)));
         }
         Err(e) => b.fail(format!("server unreachable or token rejected: {e:#}")),
     }
