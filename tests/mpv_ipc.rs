@@ -164,9 +164,8 @@ async fn mpv_gapless_advances_through_queue() {
     let mut ends = 0;
     let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(20);
     loop {
-        let ev = match tokio::time::timeout_at(deadline, events.recv()).await {
-            Ok(Some(ev)) => ev,
-            _ => panic!("timed out"),
+        let Ok(Some(ev)) = tokio::time::timeout_at(deadline, events.recv()).await else {
+            panic!("timed out");
         };
         if let MpvEvent::Property { name, value } = &ev {
             if name == "playlist-pos" {
@@ -207,9 +206,8 @@ async fn mpv_stop_keeps_the_queue_playable() {
 
     let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(30);
     loop {
-        let ev = match tokio::time::timeout_at(deadline, events.recv()).await {
-            Ok(Some(ev)) => ev,
-            _ => panic!("timed out waiting for playback"),
+        let Ok(Some(ev)) = tokio::time::timeout_at(deadline, events.recv()).await else {
+            panic!("timed out waiting for playback");
         };
         match ev {
             MpvEvent::Property { name, value } if name == "time-pos" => {
@@ -227,9 +225,8 @@ async fn mpv_stop_keeps_the_queue_playable() {
     // playback stops …
     let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(20);
     loop {
-        let ev = match tokio::time::timeout_at(deadline, events.recv()).await {
-            Ok(Some(ev)) => ev,
-            _ => panic!("timed out waiting for the stop"),
+        let Ok(Some(ev)) = tokio::time::timeout_at(deadline, events.recv()).await else {
+            panic!("timed out waiting for the stop");
         };
         match ev {
             MpvEvent::EndFile { reason } => {
@@ -245,9 +242,8 @@ async fn mpv_stop_keeps_the_queue_playable() {
     handle.tx.send(MpvCmd::PlayIndex(1)).expect("send play index");
     let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(20);
     loop {
-        let ev = match tokio::time::timeout_at(deadline, events.recv()).await {
-            Ok(Some(ev)) => ev,
-            _ => panic!("timed out waiting for entry 1"),
+        let Ok(Some(ev)) = tokio::time::timeout_at(deadline, events.recv()).await else {
+            panic!("timed out waiting for entry 1");
         };
         match ev {
             MpvEvent::Property { name, value } if name == "playlist-pos" => {
@@ -267,9 +263,8 @@ async fn mpv_stop_keeps_the_queue_playable() {
     handle.tx.send(MpvCmd::Clear).expect("send clear");
     let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(20);
     loop {
-        let ev = match tokio::time::timeout_at(deadline, events.recv()).await {
-            Ok(Some(ev)) => ev,
-            _ => panic!("timed out waiting for the playlist to empty"),
+        let Ok(Some(ev)) = tokio::time::timeout_at(deadline, events.recv()).await else {
+            panic!("timed out waiting for the playlist to empty");
         };
         match ev {
             MpvEvent::Property { name, value } if name == "playlist-count" => {
@@ -386,9 +381,8 @@ async fn mpv_replaces_the_playing_queue() {
     let mut pos = -1i64;
     let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(20);
     loop {
-        let ev = match tokio::time::timeout_at(deadline, events.recv()).await {
-            Ok(Some(ev)) => ev,
-            _ => panic!("timed out waiting for the old queue: count={count} pos={pos}"),
+        let Ok(Some(ev)) = tokio::time::timeout_at(deadline, events.recv()).await else {
+            panic!("timed out waiting for the old queue: count={count} pos={pos}");
         };
         match ev {
             MpvEvent::Property { name, value } if name == "playlist-count" => {
@@ -411,9 +405,8 @@ async fn mpv_replaces_the_playing_queue() {
 
     let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(20);
     loop {
-        let ev = match tokio::time::timeout_at(deadline, events.recv()).await {
-            Ok(Some(ev)) => ev,
-            _ => panic!("timed out waiting for the new queue: count={count} pos={pos}"),
+        let Ok(Some(ev)) = tokio::time::timeout_at(deadline, events.recv()).await else {
+            panic!("timed out waiting for the new queue: count={count} pos={pos}");
         };
         match ev {
             MpvEvent::Property { name, value } if name == "playlist-count" => {
