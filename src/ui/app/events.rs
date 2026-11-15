@@ -190,7 +190,7 @@ impl App {
                 }
             }
             Msg::PlaylistPage { load_id, tracks, last } => {
-                self.apply_playlist_page(load_id, tracks, last)
+                self.apply_playlist_page(load_id, tracks, last);
             }
             Msg::PlaylistLoadStopped { load_id, error } => {
                 let Some(l) = self.playlist_load.take_if(|l| l.id == load_id) else { return };

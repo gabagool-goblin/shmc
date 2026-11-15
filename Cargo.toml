@@ -29,6 +29,7 @@ unicode-width = "0.2"
 unicode-normalization = "0.1"
 
 [lints.clippy]
+semicolon_if_nothing_returned = "warn"
 uninlined_format_args = "warn"
 
 [dev-dependencies]

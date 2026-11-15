@@ -516,7 +516,7 @@ impl App {
                     match arg.parse::<u32>() {
                         Ok(m) => self.set_sleep_timer(Some(m)),
                         Err(_) => {
-                            self.transient_err(format!("usage: :sleep minutes|off (got {arg:?})"))
+                            self.transient_err(format!("usage: :sleep minutes|off (got {arg:?})"));
                         }
                     }
                 }
