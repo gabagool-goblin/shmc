@@ -1,3 +1,6 @@
+//! shmc's modules as a library, so the integration tests can reach them. Not a
+//! stable API.
+
 pub mod cache;
 pub mod config;
 pub mod doctor;
