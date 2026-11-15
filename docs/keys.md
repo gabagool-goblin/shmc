@@ -27,6 +27,8 @@ Consume removes a track after it plays. Skipping with `>` also removes the track
 
 The sleep timer pauses playback when it expires. The header shows the remaining time. Use `:sleep 20` for a custom duration or `:sleep off` to cancel it.
 
+On macOS, the media keys and the Control Center buttons work like shmc's own keys: play/pause like `Space`, next and previous like `>` and `<`, fast-forward and rewind seek 5 seconds, and stop like `:stop`. To leave the media keys alone, add `--input-media-keys=no` to `mpv.extra_args`.
+
 ## Lists
 
 These keys work in all tab lists and Help, except where noted.

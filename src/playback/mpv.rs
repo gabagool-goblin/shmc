@@ -72,6 +72,33 @@ pub enum MpvCmd {
     },
 }
 
+/// A media key or Control Center button, rebound inside mpv.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MediaKey {
+    Toggle,
+    Play,
+    Pause,
+    Stop,
+    Next,
+    Prev,
+    Forward,
+    Rewind,
+}
+
+/// mpv key name, message word, key.
+const MEDIA_KEYS: [(&str, &str, MediaKey); 10] = [
+    ("PLAY", "toggle", MediaKey::Toggle),
+    ("PAUSE", "toggle", MediaKey::Toggle),
+    ("PLAYPAUSE", "toggle", MediaKey::Toggle),
+    ("PLAYONLY", "play", MediaKey::Play),
+    ("PAUSEONLY", "pause", MediaKey::Pause),
+    ("STOP", "stop", MediaKey::Stop),
+    ("NEXT", "next", MediaKey::Next),
+    ("PREV", "prev", MediaKey::Prev),
+    ("FORWARD", "forward", MediaKey::Forward),
+    ("REWIND", "rewind", MediaKey::Rewind),
+];
+
 #[derive(Debug, Clone)]
 pub enum MpvEvent {
     /// An observed property: time-pos, pause, playlist-pos, volume,
@@ -84,6 +111,8 @@ pub enum MpvEvent {
         reason: String,
     },
     Ready,
+    /// A media key pressed, reported through a `script-message`.
+    MediaKey(MediaKey),
     Shutdown,
 }
 
@@ -290,6 +319,19 @@ pub async fn spawn(cfg: &MpvConfig) -> Result<(MpvHandle, UnboundedReceiver<MpvE
                 format!("{}\n", json!({"command": ["set_property", "volume", volume]})).as_bytes(),
             )
             .await;
+        // mpv's own media key bindings would act behind shmc's back, and STOP quits mpv.
+        let section: String = MEDIA_KEYS
+            .iter()
+            .map(|(key, word, _)| format!("{key} script-message shmc-media {word}\n"))
+            .collect();
+        for command in [
+            json!(["define-section", "shmc-media", section, "force"]),
+            json!(["enable-section", "shmc-media"]),
+        ] {
+            let _ = write_half
+                .write_all(format!("{}\n", json!({ "command": command })).as_bytes())
+                .await;
+        }
         let _ = etx.send(MpvEvent::Ready);
 
         // Reads run on their own task: mpv answers every command, and a long
@@ -727,6 +769,14 @@ fn parse_event(line: &str) -> Option<MpvEvent> {
         "end-file" => Some(MpvEvent::EndFile {
             reason: v.get("reason").and_then(|r| r.as_str()).unwrap_or("unknown").to_string(),
         }),
+        "client-message" => {
+            let args = v.get("args")?.as_array()?;
+            if args.first()?.as_str()? != "shmc-media" {
+                return None;
+            }
+            let word = args.get(1)?.as_str()?;
+            MEDIA_KEYS.iter().find(|(_, w, _)| *w == word).map(|(_, _, k)| MpvEvent::MediaKey(*k))
+        }
         "shutdown" => Some(MpvEvent::Shutdown),
         _ => None,
     }

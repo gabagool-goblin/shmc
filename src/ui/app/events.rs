@@ -468,6 +468,7 @@ impl App {
                 self.mpv_exited = true;
             }
             MpvEvent::Ready => {}
+            MpvEvent::MediaKey(key) => self.media_key(key),
         }
     }
 

@@ -14,6 +14,7 @@ All notable changes to shmc are documented here. The format follows
 
 - Help and the key reference list the `:quit`, `:next`, `:prev` and `:resume` aliases.
 - The sleep timer pauses playback instead of stopping it, so playback resumes where it left off.
+- On macOS, the media keys act like shmc's own keys: previous restarts the track, next removes the skipped track when consume is on, and stop stops playback instead of quitting mpv.
 
 ## 0.1.1 — 2026-11-14
 
