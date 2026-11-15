@@ -136,6 +136,14 @@ pub const ALL: &[Setting] = &[
         applies: None,
     },
     Setting {
+        key: "plex.report_playback",
+        label: "Report playback",
+        help: "Send plays to Plex for play counts, last played and Now Playing.",
+        kind: Kind::Bool,
+        group: "Plex",
+        applies: None,
+    },
+    Setting {
         key: "mpv.extra_args",
         label: "mpv arguments",
         help: "Extra mpv arguments, one per row; mpv ignores your mpv.conf, and a --log-file is dropped.",

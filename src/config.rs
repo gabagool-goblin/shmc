@@ -29,6 +29,8 @@ pub struct PlexConfig {
     pub music_section: String,
     /// Let `r` change a track's rating on the server.
     pub set_ratings: bool,
+    /// Send plays to Plex for play counts, last played and Now Playing.
+    pub report_playback: bool,
 }
 
 impl std::fmt::Debug for PlexConfig {
@@ -39,6 +41,7 @@ impl std::fmt::Debug for PlexConfig {
             .field("token", &token_label(&self.token))
             .field("music_section", &self.music_section)
             .field("set_ratings", &self.set_ratings)
+            .field("report_playback", &self.report_playback)
             .finish()
     }
 }

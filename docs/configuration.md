@@ -59,6 +59,7 @@ server = "http://192.168.1.100:32400"
 token = "your-plex-token"
 music_section = ""            # Library ID; empty uses the first music library
 set_ratings = false           # Let r rate tracks on the server
+report_playback = false       # Send plays to Plex: play counts, last played
 
 [mpv]
 path = "mpv"                  # Executable path or name on $PATH
@@ -119,6 +120,10 @@ name = "default"              # See themes.md for available themes
 `[keys]` is covered in [keys.md](keys.md), and the remaining `[theme]` settings are in [themes.md](themes.md).
 
 Invalid or out-of-range values are reported by `shmc config --check` and replaced with their defaults.
+
+### Plex
+
+With `report_playback = true`, shmc reports what it plays to Plex, so play counts, last played and smart playlists include it. A track counts once it has played for 30 seconds, or 90% of a shorter track.
 
 ### mpv
 
@@ -197,7 +202,7 @@ cava -p ~/.cache/shmc/cava/config
 | Cache (album art, mpv socket) | `~/Library/Caches/shmc/` | `~/.cache/shmc/` |
 | Logs (`shmc.log`, `mpv.log`) | `~/Library/Logs/shmc/` | `~/.local/state/shmc/` |
 
-Audio is never written to disk. Album art is cached up to `album_art.cache_mb`, with least recently used covers removed first.
+With `report_playback` on, `client-id` beside the config file identifies shmc to Plex. Audio is never written to disk. Album art is cached up to `album_art.cache_mb`, with least recently used covers removed first.
 
 `shmc.log` rotates at 2 MB. `mpv.log` is replaced on each start. The Plex token is stripped from both logs before they're written and when displayed by `shmc log`.
 
