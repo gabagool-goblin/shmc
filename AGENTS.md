@@ -71,7 +71,7 @@
 | `src/ui/playlist_load.rs` | A playlist replace, streamed page by page |
 | `src/ui/views.rs` | Rendering |
 | `src/ui/keymap.rs` | The one keybinding registry; Help is generated from it |
-| `src/ui/config_screen.rs` | The config screen (`text_input.rs` is its line editor) |
+| `src/ui/config_screen/` | The config screen (`text_input.rs` is its line editor) |
 | `src/ui/theme.rs`, `themes.rs` | Colour accessors; built-in themes from `themes/*.toml` |
 | `src/ui/scroll.rs`, `scrollbar.rs` | List scrolling (`ScrollStore`) and the custom scrollbar |
 | `src/ui/filter.rs`, `icons.rs` | The list filter; the glyph sets for `ui.icons` |
