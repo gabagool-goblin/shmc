@@ -48,7 +48,7 @@ Run the installer:
 curl -fsSL https://raw.githubusercontent.com/gabagool-goblin/shmc/main/scripts/install.sh | sh
 ```
 
-The installer downloads a prebuilt binary for macOS on Apple Silicon or Linux on x86_64 and arm64. Downloads are verified against the release's `SHA256SUMS` file.
+The installer downloads a prebuilt binary for macOS on Apple Silicon or Linux on x86_64 and arm64. Downloads are verified against the release's `SHA256SUMS` file. To check that a downloaded tarball was built by this repository's release workflow, run `gh attestation verify shmc-*.tar.gz --repo gabagool-goblin/shmc`.
 
 On other platforms, or when using `--source`, the installer builds from source. This requires Rust, git and a C compiler. On macOS, install the compiler tools with `xcode-select --install`. On Debian or Ubuntu, install `build-essential`; on Fedora, install `gcc`.
 

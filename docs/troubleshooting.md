@@ -14,8 +14,6 @@ shmc log
 
 A binary downloaded with a browser is quarantined, and macOS blocks it because it is not notarized. The installer downloads with curl, which does not quarantine. For a manual download, clear the flag with `xattr -d com.apple.quarantine shmc` or allow it in System Settings > Privacy & Security.
 
-To check that a release tarball was built by this repository's release workflow, run `gh attestation verify shmc-*.tar.gz --repo gabagool-goblin/shmc`.
-
 ## Icons show as boxes
 
 The default icons require a [Nerd Font](https://www.nerdfonts.com). shmc cannot detect which font your terminal uses, so install one or set `ui.icons = "ascii"`. ASCII icons are also used automatically with non-UTF-8 locales.
