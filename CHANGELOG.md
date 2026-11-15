@@ -6,6 +6,10 @@ All notable changes to shmc are documented here. The format follows
 
 ## Unreleased
 
+### Added
+
+- `-v` prints the version, like `-V` and `--version`.
+
 ### Changed
 
 - Help and the key reference list the `:quit`, `:next`, `:prev` and `:resume` aliases.

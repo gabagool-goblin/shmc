@@ -81,7 +81,7 @@ fn run() -> Result<()> {
     let explicit = config_arg(&args);
     let config_path = explicit.or_else(config::config_path);
 
-    if args.iter().any(|a| a == "--version" || a == "-V") {
+    if args.iter().any(|a| matches!(a.as_str(), "--version" | "-V" | "-v")) {
         println!("shmc {} ({})", env!("CARGO_PKG_VERSION"), env!("SHMC_GIT_SHA"));
         return Ok(());
     }

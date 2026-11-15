@@ -48,3 +48,16 @@ fn runtime_error_has_the_usage_error_prefix() {
     assert_eq!(out.status.code(), Some(1), "{stderr}");
     assert!(stderr.starts_with("shmc: "), "{stderr}");
 }
+
+#[test]
+fn version_flags_print_the_version() {
+    for flag in ["--version", "-V", "-v"] {
+        let out = Command::new(env!("CARGO_BIN_EXE_shmc")).arg(flag).output().unwrap();
+        let stdout = String::from_utf8_lossy(&out.stdout);
+        assert!(out.status.success(), "{flag}: {:?}", out.status);
+        assert!(
+            stdout.starts_with(concat!("shmc ", env!("CARGO_PKG_VERSION"))),
+            "{flag}: {stdout}"
+        );
+    }
+}
