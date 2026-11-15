@@ -130,6 +130,8 @@ With `album_art.backend = "auto"`, shmc tries Kitty, iTerm2, Sixel and half-bloc
 
 Set `backend = "none"` or `art_pct = 0` to hide album art and give the Queue more space. Set `cava.enabled = false` or `visualizer_pct = 0` to hide the visualizer.
 
+On macOS, the cover also appears in Now Playing in Control Center. This needs album art to be on and `album_art.cache_mb` above 0.
+
 The visualizer's bar width and gap are minimums. Narrow panes show fewer bars rather than shrinking them.
 
 - **adaptive:** Shows as many bars as fit, up to cava's limit of 96. Bars widen once all fit.

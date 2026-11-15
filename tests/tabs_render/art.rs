@@ -72,7 +72,11 @@ async fn new_cover_is_immediate_and_resize_holds() {
     assert!(!cover_drawn(&mut terminal, &mut app));
 
     let img = Arc::new(DynamicImage::ImageRgba8(RgbaImage::new(8, 8)));
-    app.handle_msg(Msg::ArtReady { thumb_path: "/library/metadata/al1/thumb".into(), img });
+    app.handle_msg(Msg::ArtReady {
+        thumb_path: "/library/metadata/al1/thumb".into(),
+        img,
+        file: None,
+    });
     assert!(cover_drawn(&mut terminal, &mut app), "a new cover waited for the dwell");
 }
 
@@ -91,7 +95,7 @@ async fn app_showing_album_cover(
     app.handle_msg(playlist_pos(0));
     assert_eq!(thumb_requests(&mut plex), [AL1_THUMB]);
     let img = Arc::new(DynamicImage::ImageRgba8(RgbaImage::new(8, 8)));
-    app.handle_msg(Msg::ArtReady { thumb_path: AL1_THUMB.into(), img });
+    app.handle_msg(Msg::ArtReady { thumb_path: AL1_THUMB.into(), img, file: None });
     let mut terminal = Terminal::new(TestBackend::new(80, 30)).unwrap();
     terminal.draw(|f| views::draw(f, &mut app)).unwrap();
     assert!(app.art.shown_rect.is_some(), "cover was not painted");
@@ -127,7 +131,7 @@ async fn cover_for_shown_path_is_noop() {
     let hold = Some(std::time::Instant::now() + std::time::Duration::from_secs(5));
     app.art.hold_until = hold;
     let img = Arc::new(DynamicImage::ImageRgba8(RgbaImage::new(8, 8)));
-    app.handle_msg(Msg::ArtReady { thumb_path: AL1_THUMB.into(), img });
+    app.handle_msg(Msg::ArtReady { thumb_path: AL1_THUMB.into(), img, file: None });
     assert!(app.art.protocol.is_some());
     assert_eq!((app.art.shown_rect, app.art.prepared_rect), (shown, prepared));
     assert_eq!(app.art.hold_until, hold);
@@ -255,4 +259,79 @@ async fn cover_box_fills_height_limited_pane() {
         }
     }
     assert!(checked > 0, "no frame had a cover box to measure");
+}
+
+/// Track 0 playing with a thumb, art not loaded; mpv commands go to the receiver.
+async fn app_awaiting_cover() -> (TestApp, tokio::sync::mpsc::UnboundedReceiver<mpv::MpvCmd>) {
+    let (mut app, _plex) = new_app_with_plex().await;
+    app.tab = Tab::Queue;
+    app.art_enabled = true;
+    app.now_playing_cover = true;
+    app.queue = (0..4).map(track).collect();
+    app.queue[2].parent_rating_key = Some("al2".into());
+    app.handle_msg(playlist_pos(0));
+    let (tx, rx) = unbounded_channel();
+    app.mpv.tx = tx;
+    (app, rx)
+}
+
+fn file_loaded() -> Msg {
+    Msg::Mpv(mpv::MpvEvent::FileLoaded)
+}
+
+fn art_ready(thumb: &str, file: Option<&str>) -> Msg {
+    let img = Arc::new(DynamicImage::ImageRgba8(RgbaImage::new(8, 8)));
+    Msg::ArtReady { thumb_path: thumb.into(), img, file: file.map(Into::into) }
+}
+
+/// The paths of the covers sent to mpv so far.
+fn covers_sent(
+    rx: &mut tokio::sync::mpsc::UnboundedReceiver<mpv::MpvCmd>,
+) -> Vec<std::path::PathBuf> {
+    let mut paths = Vec::new();
+    while let Ok(cmd) = rx.try_recv() {
+        if let mpv::MpvCmd::AddCover(p) = cmd {
+            paths.push(p);
+        }
+    }
+    paths
+}
+
+/// Each loaded file gets the cover once, and only when its own art is ready.
+#[tokio::test]
+async fn cover_goes_to_mpv_once_per_file() {
+    let (mut app, mut rx) = app_awaiting_cover().await;
+    let p = std::path::PathBuf::from("/cache/al1.img");
+
+    app.handle_msg(file_loaded());
+    assert!(covers_sent(&mut rx).is_empty(), "sent before the art was ready");
+
+    app.handle_msg(art_ready(AL1_THUMB, Some("/cache/al1.img")));
+    assert_eq!(covers_sent(&mut rx), std::slice::from_ref(&p));
+
+    app.handle_msg(file_loaded());
+    assert_eq!(covers_sent(&mut rx), [p]);
+
+    app.handle_msg(playlist_pos(2));
+    app.handle_msg(file_loaded());
+    assert!(covers_sent(&mut rx).is_empty(), "the old album's cover went to the new file");
+}
+
+/// A cover that is not cached in a file cannot be handed to mpv.
+#[tokio::test]
+async fn cover_needs_a_cached_file() {
+    let (mut app, mut rx) = app_awaiting_cover().await;
+    app.handle_msg(file_loaded());
+    app.handle_msg(art_ready(AL1_THUMB, None));
+    assert!(covers_sent(&mut rx).is_empty(), "no file, yet a cover was sent");
+}
+
+/// With the cover off, as on Linux, nothing reaches mpv.
+#[tokio::test]
+async fn cover_not_sent_when_off() {
+    let (mut app, mut rx) = app_awaiting_cover().await;
+    app.now_playing_cover = false;
+    app.handle_msg(file_loaded());
+    app.handle_msg(art_ready(AL1_THUMB, Some("/cache/al1.img")));
+    assert!(covers_sent(&mut rx).is_empty(), "sent with the cover off");
 }

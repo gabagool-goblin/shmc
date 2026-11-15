@@ -10,6 +10,7 @@ use image::DynamicImage;
 use ratatui::widgets::{ListState, TableState};
 use ratatui_image::picker::Picker;
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::sync::mpsc::{self, RecvTimeoutError, Sender};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -180,6 +181,8 @@ pub enum Msg {
     ArtReady {
         thumb_path: String,
         img: Arc<DynamicImage>,
+        /// The cached cover file, if there is one.
+        file: Option<PathBuf>,
     },
     /// The cover's dwell is over; draw again.
     ArtDue,
@@ -324,6 +327,8 @@ pub struct ArtState {
     pub emitted: bool,
     /// The path `img` came from; the same path is never loaded again.
     pub thumb: Option<String>,
+    /// The file `img` is cached in, if any.
+    pub file: Option<PathBuf>,
     /// A path with a `LoadThumb` in flight.
     pub requested: Option<String>,
 }
@@ -335,6 +340,7 @@ impl ArtState {
         self.shown_rect = None;
         self.prepared_rect = None;
         self.thumb = None;
+        self.file = None;
         self.requested = None;
         self.hold_until = None;
     }
@@ -468,6 +474,10 @@ pub struct App {
 
     pub picker: Option<Picker>,
     pub art_enabled: bool,
+    /// Hand the cover to mpv for Now Playing; macOS only.
+    pub now_playing_cover: bool,
+    /// mpv's playing file has no cover yet.
+    cover_due: bool,
     /// [0, 0] = unlimited.
     pub art_max_px: [u32; 2],
 
@@ -592,6 +602,8 @@ impl App {
             cava_note: "visualizer off".into(),
             picker,
             art_enabled,
+            now_playing_cover: cfg!(target_os = "macos"),
+            cover_due: false,
             art_max_px,
             scroll: ScrollStore::default(),
             scrolloff: ui.scrolloff,
