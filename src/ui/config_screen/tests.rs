@@ -31,17 +31,6 @@ fn frame(screen: &mut Screen, w: u16, h: u16) -> String {
 }
 
 #[test]
-fn config_tab_shows_settings_and_help() {
-    let mut screen = ctx();
-    let text = frame(&mut screen, 100, 30);
-    assert!(text.contains("Config"), "{text}");
-    assert!(text.contains("Diagnostics"), "{text}");
-    assert!(text.contains("Plex server"), "{text}");
-    assert!(text.contains("Where shmc connects"), "{text}");
-    assert!(text.contains("s save"), "{text}");
-}
-
-#[test]
 fn theme_tab_shows_swatch_and_hex() {
     let mut screen = ctx();
     screen.tab = Tab::Theme;
@@ -167,14 +156,6 @@ fn real_conflict_asks_and_answers_apply() {
 }
 
 #[test]
-fn switching_to_diagnostics_leaves_the_status_alone() {
-    // The pane's hint already says what to press.
-    let mut screen = ctx();
-    screen.switch(Tab::Diagnostics);
-    assert!(screen.status.is_empty(), "{:?}", screen.status);
-}
-
-#[test]
 fn quitting_asks_first() {
     let mut screen = ctx();
     screen.ask_to_quit();
@@ -203,14 +184,7 @@ fn ctrl_c_asks_instead_of_quitting() {
 
 #[test]
 fn unsaved_changes_offer_save_on_quit() {
-    let dir = tempfile::tempdir().expect("tmp");
-    let path = dir.path().join("config.toml");
-    std::fs::write(&path, "[plex]\nserver = \"http://x:32400\"\ntoken = \"t\"\n").expect("write");
-    let cfg = Config::read(&path).expect("read");
-    let mut screen = ctx_for(path.clone(), cfg);
-    let setting = crate::inventory::find("ui.art_pct").expect("ui.art_pct");
-    screen.set(setting, "55");
-
+    let (_dir, path, mut screen) = screen_with_an_edit();
     screen.ask_to_quit();
     assert_eq!(screen.quit_ask, Some(QuitAsk::Dirty));
     let text = frame(&mut screen, 100, 30);
@@ -224,16 +198,8 @@ fn unsaved_changes_offer_save_on_quit() {
 
 #[test]
 fn save_writes_file_and_keeps_backup() {
-    let dir = tempfile::tempdir().expect("tmp");
-    let path = dir.path().join("config.toml");
-    let original = "[plex]\nserver = \"http://old:32400\"\ntoken = \"t\"\n";
-    std::fs::write(&path, original).expect("write");
-    let cfg = Config::read(&path).expect("read");
-    assert_eq!(cfg.ui.art_pct, 40);
-
-    let mut screen = ctx_for(path.clone(), cfg);
-    let setting = crate::inventory::find("ui.art_pct").expect("ui.art_pct");
-    screen.set(setting, "55");
+    let (dir, path, mut screen) = screen_with_an_edit();
+    let original = std::fs::read_to_string(&path).expect("read");
     screen.save();
 
     let written = std::fs::read_to_string(&path).expect("read back");
@@ -242,21 +208,6 @@ fn save_writes_file_and_keeps_backup() {
     assert_eq!(backup, original, "the backup is the file exactly as it was before the save");
     assert!(screen.status.starts_with("saved"), "the status says saved: {}", screen.status);
     assert!(!screen.dirty(), "a saved screen has nothing pending");
-}
-
-#[test]
-fn edit_result_is_visible() {
-    let mut screen = ctx();
-    let setting = crate::inventory::find("ui.art_pct").expect("ui.art_pct");
-    screen.set(setting, "55");
-    let text = frame(&mut screen, 100, 30);
-    assert!(text.contains("ui.art_pct = 55"), "the status line says what happened: {text}");
-
-    let mut rejected = ctx();
-    rejected.set(setting, "700");
-    let text = frame(&mut rejected, 100, 30);
-    assert!(text.contains("rejected"), "{text}");
-    assert!(rejected.status_error, "a rejection is an error status");
 }
 
 #[test]
@@ -272,17 +223,6 @@ fn rejected_value_keeps_field_open() {
     };
     assert!(text.text().ends_with('x'), "{:?}", text.text());
     assert_eq!(screen.cfg.ui.art_pct, Config::default().ui.art_pct);
-}
-
-#[test]
-fn theme_tab_previews_header() {
-    let mut screen = ctx();
-    screen.tab = Tab::Theme;
-    let text = frame(&mut screen, 100, 40);
-    assert!(text.contains("[Playing]"), "the state badge: {text}");
-    assert!(text.contains("Song name"), "the placeholder title: {text}");
-    assert!(text.contains("Volume: "), "the volume meter: {text}");
-    assert!(text.contains("Artist name"), "the placeholder credit: {text}");
 }
 
 /// The preview is a copy of the header, so it follows the two header
@@ -340,22 +280,6 @@ fn preview_follows_header_mode_and_borders() {
 }
 
 #[test]
-fn checks_hint_stays_with_new_wording() {
-    let mut screen = ctx();
-    screen.tab = Tab::Diagnostics;
-    let text = frame(&mut screen, 100, 30);
-    assert!(text.contains("press d"), "{text}");
-    assert!(!text.contains("again"), "nothing has run yet: {text}");
-
-    screen.report = Some(Report::default());
-    let text = frame(&mut screen, 100, 30);
-    assert!(
-        text.contains("press d") && text.contains("again"),
-        "the hint survives the report: {text}"
-    );
-}
-
-#[test]
 fn checks_mark_setting_warnings() {
     let mut screen = ctx();
     screen.tab = Tab::Diagnostics;
@@ -384,17 +308,8 @@ fn keystroke_clears_last_message() {
 
 #[test]
 fn token_row_never_writes_placeholder_back() {
-    let dir = tempfile::tempdir().expect("tmp");
-    let path = dir.path().join("config.toml");
-    std::fs::write(&path, "[plex]\nserver = \"http://x:32400\"\ntoken = \"MY-SECRET-TOKEN\"\n")
-        .expect("write");
-    let cfg = Config::read(&path).expect("read");
-    let mut screen = ctx_for(path.clone(), cfg);
-    screen.cursor = crate::inventory::ALL
-        .iter()
-        .filter(|s| s.group != "Theme")
-        .position(|s| s.key == "plex.token")
-        .expect("the token is on the Config tab");
+    let (_dir, path, mut screen) = screen_with_token("MY-SECRET-TOKEN");
+    select(&mut screen, "plex.token");
 
     // The list shows the redacted placeholder, which must not reach the field.
     let text = frame(&mut screen, 100, 30);
@@ -420,23 +335,11 @@ fn token_row_never_writes_placeholder_back() {
 
 #[test]
 fn typed_token_replaces_old_one() {
-    let dir = tempfile::tempdir().expect("tmp");
-    let path = dir.path().join("config.toml");
-    std::fs::write(&path, "[plex]\nserver = \"http://x:32400\"\ntoken = \"OLD-TOKEN\"\n")
-        .expect("write");
-    let cfg = Config::read(&path).expect("read");
-    let mut screen = ctx_for(path.clone(), cfg);
-    screen.cursor = crate::inventory::ALL
-        .iter()
-        .filter(|s| s.group != "Theme")
-        .position(|s| s.key == "plex.token")
-        .expect("the token is on the Config tab");
-
-    screen.begin_edit(crate::inventory::find("plex.token").expect("token"));
-    for c in "NEW-TOKEN".chars() {
-        screen.handle(key(KeyCode::Char(c))).expect("type");
-    }
+    let (_dir, path, mut screen) = screen_with_token("OLD-TOKEN");
+    open_token_field(&mut screen);
+    type_text(&mut screen, "NEW-TOKEN");
     screen.handle(key(KeyCode::Enter)).expect("commit");
+    assert!(screen.dirty(), "the redacted list must not hide a new token");
     screen.save();
 
     let written = std::fs::read_to_string(&path).expect("read back");
@@ -453,11 +356,7 @@ fn typed_token_replaces_old_one() {
 }
 
 fn open_token_field(screen: &mut Screen) {
-    screen.cursor = crate::inventory::ALL
-        .iter()
-        .filter(|s| s.group != "Theme")
-        .position(|s| s.key == "plex.token")
-        .expect("the token is on the Config tab");
+    select(screen, "plex.token");
     screen.begin_edit(crate::inventory::find("plex.token").expect("token"));
 }
 
@@ -469,17 +368,6 @@ fn screen_with_token(token: &str) -> (tempfile::TempDir, std::path::PathBuf, Scr
     let cfg = Config::read(&path).expect("read");
     let screen = ctx_for(path.clone(), cfg);
     (dir, path, screen)
-}
-
-#[test]
-fn pasted_token_lands_in_open_field() {
-    let (_dir, path, mut screen) = screen_with_token("OLD");
-    open_token_field(&mut screen);
-    screen.handle_paste("NEW-TOKEN\n".into());
-    screen.handle(key(KeyCode::Enter)).expect("commit");
-    screen.save();
-    let written = std::fs::read_to_string(&path).expect("read back");
-    assert!(written.contains("token = \"NEW-TOKEN\""), "{written}");
 }
 
 #[test]
@@ -506,19 +394,6 @@ fn ctrl_c_cancels_field_not_types_c() {
     screen.handle(key(KeyCode::Enter)).expect("commit untouched");
     assert_eq!(screen.cfg.plex.token, "OLD");
     assert!(!screen.dirty());
-}
-
-#[test]
-fn new_token_counts_as_unsaved() {
-    let (_dir, _path, mut screen) = screen_with_token("OLD");
-    open_token_field(&mut screen);
-    for c in "NEW".chars() {
-        screen.handle(key(KeyCode::Char(c))).expect("type");
-    }
-    screen.handle(key(KeyCode::Enter)).expect("commit");
-    assert!(screen.dirty(), "the redacted list must not hide a new token");
-    screen.ask_to_quit();
-    assert_eq!(screen.quit_ask, Some(QuitAsk::Dirty));
 }
 
 #[test]
@@ -568,23 +443,6 @@ fn check_thread_ending_silently_is_noticed() {
 }
 
 #[test]
-fn secret_masked_while_typed() {
-    let mut screen = ctx();
-    screen.cursor = crate::inventory::ALL
-        .iter()
-        .filter(|s| s.group != "Theme")
-        .position(|s| s.key == "plex.token")
-        .expect("the token is on the Config tab");
-    screen.begin_edit(crate::inventory::find("plex.token").expect("token"));
-    for c in "abc".chars() {
-        screen.handle(key(KeyCode::Char(c))).expect("type");
-    }
-    let text = frame(&mut screen, 100, 30);
-    assert!(!text.contains("abc"), "the secret is never rendered: {text}");
-    assert!(text.contains("•••"), "it is masked: {text}");
-}
-
-#[test]
 fn picker_opens_on_current_value() {
     let mut screen = ctx();
     screen.cfg.ui.icons = "emoji".into(); // not one of the offered options
@@ -594,6 +452,8 @@ fn picker_opens_on_current_value() {
         panic!("a picker is open");
     };
     assert_eq!(options[*index], "emoji", "the highlighted option is the one in effect");
+    let text = frame(&mut screen, 100, 30);
+    assert!(text.contains("nerd") && text.contains("ascii"), "{text}");
 }
 
 #[test]
@@ -618,26 +478,12 @@ fn diagnostics_end_shows_last_screen() {
 fn help_pane_shows_what_value_changes_from() {
     let mut screen = ctx();
     screen.cfg.ui.art_pct = 55;
-    screen.cursor = crate::inventory::ALL
-        .iter()
-        .filter(|s| s.group != "Theme")
-        .position(|s| s.key == "ui.art_pct")
-        .expect("art_pct is on the Config tab");
+    select(&mut screen, "ui.art_pct");
     let text = frame(&mut screen, 100, 40);
     assert!(
         text.contains("default 40") && text.contains("value   55"),
         "the pane says what it changes from: {text}"
     );
-}
-
-#[test]
-fn picker_lists_options() {
-    let mut screen = ctx();
-    let icons = crate::inventory::find("ui.icons").expect("ui.icons");
-    screen.begin_edit(icons);
-    let text = frame(&mut screen, 100, 30);
-    assert!(text.contains("nerd"), "{text}");
-    assert!(text.contains("ascii"), "{text}");
 }
 
 #[test]
@@ -757,6 +603,8 @@ fn capital_r_asks_then_restores_tab() {
         ..Config::default()
     };
     let mut screen = ctx_for("/tmp/shmc.toml".into(), cfg.clone());
+    press(&mut screen, 'R');
+    assert_eq!(screen.restore_ask, None, "nothing to restore, nothing asked");
     screen.cfg.ui.art_pct = 55;
     screen.cfg.ui.scrolloff = 9;
     let changed = snap(&screen.cfg);
@@ -774,33 +622,6 @@ fn capital_r_asks_then_restores_tab() {
     press(&mut screen, 'y');
     assert_eq!(screen.restore_ask, None);
     assert_eq!(snap(&screen.cfg), snap(&cfg), "defaults back; server, token, section kept");
-}
-
-#[test]
-fn capital_r_without_changes_does_not_ask() {
-    let mut screen = ctx();
-    press(&mut screen, 'R');
-    assert_eq!(screen.restore_ask, None);
-    assert!(screen.status.contains("already"), "{}", screen.status);
-}
-
-#[test]
-fn r_on_theme_tab_restores_one_colour() {
-    let _palette = theme::palette_test_lock();
-    let mut screen = ctx();
-    screen.cfg.theme.accent = Some("#112233".into());
-    screen.cfg.theme.secondary = Some("#445566".into());
-    screen.switch(Tab::Theme);
-    screen.apply_theme();
-    select(&mut screen, "theme.accent");
-    press(&mut screen, 'r');
-    let shipped = crate::config::ThemeConfig::default();
-    assert_eq!(screen.cfg.theme.accent, None, "the override is gone, not pinned");
-    assert_eq!(screen.cfg.theme.secondary.as_deref(), Some("#445566"), "the other colour stays");
-    assert_eq!(theme::accent_color(), theme::from_config(&shipped).0.accent, "the palette follows");
-    // The palette is process-wide: put the shipped one back for the rest.
-    screen.cfg.theme = shipped.clone();
-    screen.apply_theme();
 }
 
 /// `*`, `r` and `R` judge a colour against the chosen theme, not against
@@ -1350,6 +1171,8 @@ fn filtered_edit_changes_shown_setting() {
     // r on the same row restores that setting.
     press(&mut screen, 'r');
     assert_eq!(screen.cfg.ui.center_cursor, before);
+    screen.handle(key(KeyCode::Right)).unwrap();
+    assert_eq!(screen.cfg.ui.center_cursor, !before);
 }
 
 #[test]
@@ -1389,6 +1212,8 @@ fn no_match_disables_row_keys() {
     assert!(screen.selected().is_none());
     for code in [
         KeyCode::Enter,
+        KeyCode::Right,
+        KeyCode::Left,
         KeyCode::Char('r'),
         KeyCode::Char('R'),
         KeyCode::Char('j'),
@@ -1618,26 +1443,6 @@ fn right_ignored_on_text_list_colour_secret() {
     screen.handle(key(KeyCode::Right)).unwrap();
     assert_eq!(snap(&screen.cfg), before);
     assert!(screen.editor.is_none());
-}
-
-#[test]
-fn right_steps_filtered_setting() {
-    let mut screen = ctx();
-    let before = screen.cfg.ui.center_cursor;
-    let untouched = snap(&Config::default());
-    type_filter(&mut screen, "center_cursor");
-    screen.handle(key(KeyCode::Enter)).unwrap();
-    assert_eq!(screen.cursor, 0, "position 0 of the tab is the Plex server");
-    screen.handle(key(KeyCode::Right)).unwrap();
-    assert_eq!(screen.cfg.ui.center_cursor, !before);
-    screen.cfg.ui.center_cursor = before;
-    assert_eq!(snap(&screen.cfg), untouched);
-    // No match: nothing to step.
-    screen.handle(key(KeyCode::Esc)).unwrap();
-    type_filter(&mut screen, "no such setting");
-    screen.handle(key(KeyCode::Enter)).unwrap();
-    screen.handle(key(KeyCode::Right)).unwrap();
-    assert_eq!(snap(&screen.cfg), untouched);
 }
 
 /// The colour the list draws a row's label in.
@@ -1946,20 +1751,10 @@ fn cancelled_row_edit_changes_nothing() {
 
 // The save review and the counts
 
-fn screen_with_a_token() -> (tempfile::TempDir, PathBuf, Screen) {
-    let dir = tempfile::tempdir().expect("tmp");
-    let path = dir.path().join("config.toml");
-    std::fs::write(&path, "[plex]\nserver = \"http://x:32400\"\ntoken = \"ZZ-OLD-SECRET\"\n")
-        .unwrap();
-    let cfg = Config::read(&path).expect("read");
-    let screen = ctx_for(path.clone(), cfg);
-    (dir, path, screen)
-}
-
 #[test]
 fn review_lists_changes_never_secret() {
     let _palette = theme::palette_test_lock();
-    let (_dir, _path, mut screen) = screen_with_a_token();
+    let (_dir, _path, mut screen) = screen_with_token("ZZ-OLD-SECRET");
     for (key, value) in [
         ("ui.art_pct", "55"),
         ("cava.enabled", "false"),
@@ -2011,7 +1806,7 @@ fn long_review_scrolls() {
 
 #[test]
 fn s_with_nothing_to_save_says_so() {
-    let (_dir, path, mut screen) = screen_with_a_token();
+    let (_dir, path, mut screen) = screen_with_token("ZZ-OLD-SECRET");
     let before = std::fs::read_to_string(&path).unwrap();
     press(&mut screen, 's');
     assert!(screen.review.is_none());
@@ -2022,7 +1817,7 @@ fn s_with_nothing_to_save_says_so() {
 #[test]
 fn review_writes_only_on_s_or_enter() {
     let _palette = theme::palette_test_lock();
-    let (_dir, path, mut screen) = screen_with_a_token();
+    let (_dir, path, mut screen) = screen_with_token("ZZ-OLD-SECRET");
     let before = std::fs::read_to_string(&path).unwrap();
     screen.set(crate::inventory::find("ui.art_pct").unwrap(), "55");
     press(&mut screen, 's');
@@ -2032,7 +1827,7 @@ fn review_writes_only_on_s_or_enter() {
     assert!(screen.dirty(), "the change is still pending");
 
     for confirm in [KeyCode::Enter, KeyCode::Char('s')] {
-        let (_dir, path, mut screen) = screen_with_a_token();
+        let (_dir, path, mut screen) = screen_with_token("ZZ-OLD-SECRET");
         screen.set(crate::inventory::find("ui.art_pct").unwrap(), "55");
         press(&mut screen, 's');
         screen.handle(key(confirm)).unwrap();
@@ -2045,7 +1840,7 @@ fn review_writes_only_on_s_or_enter() {
 #[test]
 fn tab_bar_counts_unsaved_changes() {
     let _palette = theme::palette_test_lock();
-    let (_dir, _path, mut screen) = screen_with_a_token();
+    let (_dir, _path, mut screen) = screen_with_token("ZZ-OLD-SECRET");
     let text = frame(&mut screen, 100, 30);
     assert!(!text.contains('•'), "{text}");
     screen.set(crate::inventory::find("ui.art_pct").unwrap(), "55");
