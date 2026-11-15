@@ -20,6 +20,7 @@ mod keys;
 mod layout;
 mod queue;
 mod queue_requests;
+mod theme;
 
 fn track(i: usize) -> Track {
     Track {
@@ -323,4 +324,8 @@ fn cells_skipped(
         })
         .unwrap();
     all_skipped
+}
+
+fn row_text(g: &[Vec<String>], y: u16) -> String {
+    g[y as usize].concat()
 }
