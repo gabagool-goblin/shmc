@@ -25,7 +25,7 @@ Shuffle reorders the queue, keeping the playing track first. Turning it off rest
 
 Consume removes a track after it plays. Skipping with `>` also removes the track.
 
-The sleep timer stops playback when it expires. The header shows the remaining time. Use `:sleep 20` for a custom duration or `:sleep off` to cancel it.
+The sleep timer pauses playback when it expires. The header shows the remaining time. Use `:sleep 20` for a custom duration or `:sleep off` to cancel it.
 
 ## Lists
 

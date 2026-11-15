@@ -460,7 +460,7 @@ async fn g_letter_jumps_to_first_matching_title() {
 }
 
 #[tokio::test]
-async fn sleep_timer_cycles_and_stops_at_deadline() {
+async fn sleep_timer_cycles_and_pauses_at_deadline() {
     let mut app = new_app().await;
     app.handle_msg(key('S'));
     assert!(
@@ -474,12 +474,18 @@ async fn sleep_timer_cycles_and_stops_at_deadline() {
     app.handle_msg(key('S'));
     assert!(app.sleep_timer_label().is_none());
 
-    // firing the posted timer stops playback and clears it
-    app.handle_msg(key('S'));
+    // firing the posted timer pauses playback and clears it
+    app.queue = (0..3).map(track).collect();
+    app.current = Some(1);
     app.stopped = false;
+    let (tx, mut rx) = unbounded_channel();
+    app.mpv.tx = tx;
+    app.handle_msg(key('S'));
     app.handle_msg(Msg::SleepTimer { epoch: 5 });
-    assert!(app.stopped);
-    assert_eq!(app.status, "sleep timer: playback stopped");
+    assert!(matches!(rx.try_recv(), Ok(mpv::MpvCmd::SetPause { paused: true })));
+    assert!(rx.try_recv().is_err(), "nothing but the pause is sent");
+    assert!(app.paused && !app.stopped);
+    assert_eq!(app.current, Some(1));
     assert!(app.sleep_timer_label().is_none());
 }
 
@@ -511,20 +517,22 @@ async fn g_keeps_non_letter_bindings() {
     assert_eq!(app.playlists.state.selected(), Some(0), "'gg' goes to the top");
 }
 
-/// The sleep timer firing while paused must not leave `paused` set.
+/// A timer that fires while paused leaves the track paused.
 #[tokio::test]
-async fn sleep_timer_clears_a_pending_pause() {
+async fn sleep_timer_keeps_a_paused_track_paused() {
     let mut app = new_app().await;
     app.queue = (0..3).map(track).collect();
     app.current = Some(0);
     app.stopped = false;
     app.paused = true;
+    let (tx, mut rx) = unbounded_channel();
+    app.mpv.tx = tx;
 
     app.handle_msg(key('S'));
     app.handle_msg(Msg::SleepTimer { epoch: 1 });
 
-    assert!(app.stopped, "the timer stops playback");
-    assert!(!app.paused, "the timer must not leave the player paused");
+    assert!(matches!(rx.try_recv(), Ok(mpv::MpvCmd::SetPause { paused: true })));
+    assert!(app.paused && !app.stopped);
 }
 
 /// The `:` line, the `/` filter and the search input keep the caret and the
