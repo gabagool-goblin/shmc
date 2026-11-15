@@ -31,6 +31,8 @@ pub enum MpvCmd {
     /// leave the playing entry behind, so the first is `loadfile replace`).
     Play(Vec<LoadItem>),
     Append(Vec<LoadItem>),
+    /// An image added to the playing file as a video track, for Now Playing.
+    AddCover(PathBuf),
     /// mpv 0.36 has no `playlist-insert`: append, then move into place
     /// (`append_at` is the playlist length before the append).
     Insert {
@@ -113,6 +115,8 @@ pub enum MpvEvent {
     Ready,
     /// A media key pressed, reported through a `script-message`.
     MediaKey(MediaKey),
+    /// A file finished loading.
+    FileLoaded,
     Shutdown,
 }
 
@@ -720,6 +724,9 @@ fn cmd_to_lines(cmd: MpvCmd) -> Vec<String> {
             }
             return lines;
         }
+        MpvCmd::AddCover(path) => {
+            json!({"command": ["video-add", path.to_string_lossy(), "auto"]})
+        }
         MpvCmd::PlayIndex(i) => json!({"command": ["playlist-play-index", i]}),
         MpvCmd::Remove(i) => json!({"command": ["playlist-remove", i]}),
         MpvCmd::Clear => json!({"command": ["playlist-clear"]}),
@@ -777,6 +784,7 @@ fn parse_event(line: &str) -> Option<MpvEvent> {
             let word = args.get(1)?.as_str()?;
             MEDIA_KEYS.iter().find(|(_, w, _)| *w == word).map(|(_, _, k)| MpvEvent::MediaKey(*k))
         }
+        "file-loaded" => Some(MpvEvent::FileLoaded),
         "shutdown" => Some(MpvEvent::Shutdown),
         _ => None,
     }

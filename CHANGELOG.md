@@ -9,6 +9,7 @@ All notable changes to shmc are documented here. The format follows
 ### Added
 
 - `-v` prints the version, like `-V` and `--version`.
+- On macOS, Now Playing in Control Center shows the album cover.
 
 ### Changed
 

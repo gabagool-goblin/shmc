@@ -139,7 +139,7 @@ async fn mpv_plays_queue_and_reports_state() {
                 break;
             }
             MpvEvent::Shutdown => panic!("mpv shut down early"),
-            MpvEvent::Ready | MpvEvent::MediaKey(_) => {}
+            MpvEvent::Ready | MpvEvent::MediaKey(_) | MpvEvent::FileLoaded => {}
         }
     }
 
@@ -733,6 +733,59 @@ async fn media_title_is_the_queue_entry_title() {
         assert!(tokio::time::Instant::now() < until, "media-title stayed {last:?}");
         tokio::time::sleep(std::time::Duration::from_millis(50)).await;
     }
+
+    handle.shutdown().await;
+}
+
+/// An image handed to `AddCover` becomes an external video track on the playing file.
+#[tokio::test]
+async fn cover_attaches_to_the_playing_file() {
+    let _guard = MPV_TEST_LOCK.lock().await;
+
+    let cfg = MpvConfig {
+        path: "mpv".into(),
+        extra_args: vec!["--ao=null".into(), "--no-video".into(), "--audio-display=no".into()],
+        volume: 50.0,
+    };
+    let (handle, mut events) = mpv::spawn(&cfg).await.expect("spawn mpv");
+    let _ = events.recv().await; // Ready
+
+    let url = "av://lavfi:sine=frequency=440:duration=60".to_string();
+    handle.tx.send(MpvCmd::Play(vec![item(url)])).expect("send play");
+    let mut seen = Seen::default();
+    let deadline = std::time::Duration::from_secs(30);
+    wait_for_property(&handle, &mut events, &mut seen, "playlist-pos", 0, false, deadline).await;
+
+    let dir = tempfile::tempdir().unwrap();
+    let cover = dir.path().join("cover.img");
+    image::DynamicImage::new_rgb8(8, 8)
+        .write_to(
+            &mut std::io::BufWriter::new(std::fs::File::create(&cover).unwrap()),
+            image::ImageFormat::Jpeg,
+        )
+        .unwrap();
+    handle.tx.send(MpvCmd::AddCover(cover)).expect("send cover");
+
+    let until = tokio::time::Instant::now() + std::time::Duration::from_secs(3);
+    let mut attached = false;
+    while !attached && tokio::time::Instant::now() < until {
+        let tracks = handle.get_property("track-list").await.expect("track-list");
+        attached = tracks.as_array().is_some_and(|list| {
+            list.iter()
+                .any(|t| t["type"] == "video" && t["external"] == serde_json::Value::Bool(true))
+        });
+        if !attached {
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        }
+    }
+    assert!(attached, "no external video track after AddCover");
+
+    let paused = handle.get_property("pause").await.expect("pause");
+    assert_eq!(paused.as_bool(), Some(false), "the cover paused playback");
+    let first = handle.get_property("time-pos").await.expect("time-pos").as_f64().unwrap();
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+    let later = handle.get_property("time-pos").await.expect("time-pos").as_f64().unwrap();
+    assert!(later > first, "time-pos did not advance: {first} -> {later}");
 
     handle.shutdown().await;
 }

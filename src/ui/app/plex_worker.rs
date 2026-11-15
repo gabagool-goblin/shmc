@@ -243,8 +243,8 @@ pub fn spawn_plex_worker(
                     }
                     PlexCmd::LoadThumb { path } => {
                         match load_thumb(&client, &path, art_cache_mb, art_max_size_px).await {
-                            Ok(img) => {
-                                let _ = tx.send(Msg::ArtReady { thumb_path: path, img });
+                            Ok((img, file)) => {
+                                let _ = tx.send(Msg::ArtReady { thumb_path: path, img, file });
                             }
                             Err(e) => {
                                 tracing::warn!("album art: {e:#}");
@@ -270,7 +270,7 @@ async fn load_thumb(
     path: &str,
     cache_mb: u64,
     max_size_px: [u32; 2],
-) -> anyhow::Result<Arc<DynamicImage>> {
+) -> anyhow::Result<(Arc<DynamicImage>, Option<std::path::PathBuf>)> {
     // no private cache dir means no art cache, never a shared one
     let cache_mb = match crate::cache::try_ensure_cache_dir() {
         Ok(_) => cache_mb,
@@ -280,23 +280,21 @@ async fn load_thumb(
         }
     };
     // None only without a home directory, when the cache is already off.
-    load_cached_art(
-        &crate::cache::art_path(path).unwrap_or_default(),
-        cache_mb,
-        max_size_px,
-        || client.thumb_bytes(path),
-    )
-    .await
+    let cache_file = crate::cache::art_path(path).unwrap_or_default();
+    let (img, cached) =
+        load_cached_art(&cache_file, cache_mb, max_size_px, || client.thumb_bytes(path)).await?;
+    Ok((img, cached.then_some(cache_file)))
 }
 
 /// Decoded before it is cached, so a bad response never lands there; a cached
 /// file that fails to decode is fetched again. `cache_mb == 0` disables it.
+/// The flag says whether the image is in `cache_file`.
 async fn load_cached_art<F, Fut>(
     cache_file: &std::path::Path,
     cache_mb: u64,
     max_size_px: [u32; 2],
     fetch: F,
-) -> anyhow::Result<Arc<DynamicImage>>
+) -> anyhow::Result<(Arc<DynamicImage>, bool)>
 where
     F: Fn() -> Fut,
     Fut: std::future::Future<Output = anyhow::Result<Vec<u8>>>,
@@ -310,7 +308,7 @@ where
             match decode(bytes, max_size_px).await {
                 Ok(img) => {
                     crate::cache::touch(cache_file); // LRU: keep recently used art
-                    return Ok(Arc::new(img));
+                    return Ok((Arc::new(img), true));
                 }
                 Err(e) => {
                     tracing::warn!("cached cover is unusable, fetching it again: {e:#}");
@@ -321,24 +319,27 @@ where
     }
     let bytes = fetch().await?;
     if cache_mb == 0 {
-        return Ok(Arc::new(decode(bytes, max_size_px).await?));
+        return Ok((Arc::new(decode(bytes, max_size_px).await?), false));
     }
     let to_cache = bytes.clone();
     let img = decode(bytes, max_size_px).await?;
+    let mut cached = false;
     if let Some(dir) = cache_file.parent() {
         let dest = cache_file.to_path_buf();
         let dir = dir.to_path_buf();
-        let _ = tokio::task::spawn_blocking(move || {
+        cached = tokio::task::spawn_blocking(move || {
             let written = crate::cache::ensure_private_dir(&dir)
                 .and_then(|()| crate::cache::write_private_atomic(&dest, &to_cache));
-            if let Err(e) = written {
+            if let Err(e) = &written {
                 tracing::warn!("cannot cache the cover: {e}");
             }
             crate::cache::prune_art_at(&dir, cache_mb);
+            written.is_ok()
         })
-        .await;
+        .await
+        .unwrap_or(false);
     }
-    Ok(Arc::new(img))
+    Ok((Arc::new(img), cached))
 }
 
 /// The decoder's allocation ceiling, applied before it allocates: a hostile
@@ -437,13 +438,14 @@ mod tests {
         std::fs::write(&cache_file, b"<html>proxy page</html>").unwrap();
 
         let good = tiny_png();
-        let img = load_cached_art(&cache_file, 10, [0, 0], || {
+        let (img, cached) = load_cached_art(&cache_file, 10, [0, 0], || {
             let good = good.clone();
             async move { Ok(good) }
         })
         .await
         .expect("fetched again after the cached copy failed to decode");
         assert_eq!(img.width(), 4);
+        assert!(cached);
         assert_eq!(std::fs::read(&cache_file).unwrap(), good);
         #[cfg(unix)]
         {
@@ -457,6 +459,16 @@ mod tests {
         let res =
             load_cached_art(&other, 10, [0, 0], || async { Ok(b"not an image".to_vec()) }).await;
         assert!(res.is_err());
+        assert!(!other.exists());
+
+        // a disabled cache never reports a file
+        let (_, cached) = load_cached_art(&other, 0, [0, 0], || {
+            let good = good.clone();
+            async move { Ok(good) }
+        })
+        .await
+        .unwrap();
+        assert!(!cached);
         assert!(!other.exists());
     }
 }

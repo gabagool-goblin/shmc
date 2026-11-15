@@ -218,7 +218,7 @@ impl App {
                 self.browser.artists_state.select(pos);
                 self.load_albums(key);
             }
-            Msg::ArtReady { thumb_path, img } => {
+            Msg::ArtReady { thumb_path, img, file } => {
                 let wanted = self.current_thumb_path();
                 if wanted.as_deref() != Some(thumb_path.as_str()) {
                     // Playback moved on. Without this the path stays "in
@@ -242,6 +242,8 @@ impl App {
                     self.art.prepared_rect = None;
                     // A new cover is drawn at once, not after a dwell.
                     self.art.hold_until = None;
+                    self.art.file = file;
+                    self.attach_cover();
                 }
             }
             Msg::ArtDue => {}
@@ -469,6 +471,10 @@ impl App {
             }
             MpvEvent::Ready => {}
             MpvEvent::MediaKey(key) => self.media_key(key),
+            MpvEvent::FileLoaded => {
+                self.cover_due = true;
+                self.attach_cover();
+            }
         }
     }
 
@@ -478,6 +484,20 @@ impl App {
                 .and_then(|t| t.parent_rating_key.clone())
                 .map(|k| format!("/library/metadata/{k}/thumb"))
         })
+    }
+
+    /// The cover goes to mpv once per file, when both the file and its art are ready.
+    fn attach_cover(&mut self) {
+        if !(self.now_playing_cover && self.cover_due && !self.stopped) {
+            return;
+        }
+        let thumb = self.current_thumb_path();
+        if thumb.is_none() || thumb != self.art.thumb || self.art.img.is_none() {
+            return;
+        }
+        let Some(file) = self.art.file.clone() else { return };
+        let _ = self.mpv.tx.send(MpvCmd::AddCover(file));
+        self.cover_due = false;
     }
 
     pub(super) fn fetch_art_for_current(&mut self) {
@@ -596,12 +616,12 @@ mod tests {
         let cover = || Arc::new(DynamicImage::new_rgba8(2, 2));
         play_pos(&mut app, 0);
         assert_eq!(loads(&mut plex_rx), [thumb(0)]);
-        app.handle_msg(Msg::ArtReady { thumb_path: thumb(0), img: cover() });
+        app.handle_msg(Msg::ArtReady { thumb_path: thumb(0), img: cover(), file: None });
         play_pos(&mut app, 1);
         assert_eq!(loads(&mut plex_rx), [thumb(1)]);
         // back on the cover that is showing, then the other one lands too late
         play_pos(&mut app, 0);
-        app.handle_msg(Msg::ArtReady { thumb_path: thumb(1), img: cover() });
+        app.handle_msg(Msg::ArtReady { thumb_path: thumb(1), img: cover(), file: None });
         play_pos(&mut app, 1);
         assert_eq!(loads(&mut plex_rx), [thumb(1)]);
     }
