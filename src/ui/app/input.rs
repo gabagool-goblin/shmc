@@ -1,5 +1,5 @@
 use super::{move_sel, App, ListRef, PlexCmd, QueueAction, Tab};
-use crate::playback::MpvCmd;
+use crate::playback::{MediaKey, MpvCmd};
 use crate::ui::keymap::{self, Act, KeyCtx};
 use std::time::Duration;
 
@@ -455,24 +455,7 @@ impl App {
                     self.transient("already playing".into());
                 }
             }
-            Command::Stop => {
-                // A replace still in flight would start playing over the stop.
-                let cancelled = self.queue_seq.pending() || self.playlist_load.is_some();
-                self.supersede_queue();
-                let was_stopped = self.stopped;
-                if !was_stopped {
-                    let _ = self.mpv.tx.send(MpvCmd::Stop);
-                    self.expect_pos = None;
-                    self.stopped = true;
-                    self.position = 0.0;
-                    self.duration = 0.0;
-                }
-                self.transient(match (was_stopped, cancelled) {
-                    (_, true) => "stopped; cancelled the pending queue change".into(),
-                    (true, false) => "already stopped".into(),
-                    (false, false) => "stopped".into(),
-                });
-            }
+            Command::Stop => self.stop(),
             Command::Seek(n) => match n.parse::<f64>() {
                 Ok(secs) if secs.is_finite() => {
                     let _ = self.mpv.tx.send(MpvCmd::SeekRel(secs));
@@ -536,6 +519,42 @@ impl App {
             Command::Unknown(raw) => {
                 self.transient_err(format!("unknown command: :{raw}"));
             }
+        }
+    }
+
+    fn stop(&mut self) {
+        // A replace still in flight would start playing over the stop.
+        let cancelled = self.queue_seq.pending() || self.playlist_load.is_some();
+        self.supersede_queue();
+        let was_stopped = self.stopped;
+        if !was_stopped {
+            let _ = self.mpv.tx.send(MpvCmd::Stop);
+            self.expect_pos = None;
+            self.stopped = true;
+            self.position = 0.0;
+            self.duration = 0.0;
+        }
+        self.transient(match (was_stopped, cancelled) {
+            (_, true) => "stopped; cancelled the pending queue change".into(),
+            (true, false) => "already stopped".into(),
+            (false, false) => "stopped".into(),
+        });
+    }
+
+    pub(super) fn media_key(&mut self, key: MediaKey) {
+        match key {
+            MediaKey::Toggle => self.exec(Act::TogglePause),
+            // Set rather than toggle, so the play-only key never pauses a playing track.
+            MediaKey::Play | MediaKey::Pause => {
+                if !self.stopped {
+                    let _ = self.mpv.tx.send(MpvCmd::SetPause { paused: key == MediaKey::Pause });
+                }
+            }
+            MediaKey::Stop => self.stop(),
+            MediaKey::Next => self.exec(Act::NextTrack),
+            MediaKey::Prev => self.exec(Act::PrevTrack),
+            MediaKey::Forward => self.exec(Act::SeekFwd),
+            MediaKey::Rewind => self.exec(Act::SeekBack),
         }
     }
 

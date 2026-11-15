@@ -1163,6 +1163,57 @@ async fn prev_restarts_track_past_threshold() {
     assert!(matches!(rx.try_recv(), Ok(mpv::MpvCmd::Prev)));
 }
 
+/// The Prev media key restarts a track past the threshold, like `<`.
+#[tokio::test]
+async fn media_prev_restarts_the_track() {
+    let (mut app, mut rx) = playing_app(2, 10.0).await;
+    app.handle_msg(Msg::Mpv(mpv::MpvEvent::MediaKey(mpv::MediaKey::Prev)));
+    assert!(matches!(rx.try_recv(), Ok(mpv::MpvCmd::SeekAbs(t)) if t == 0.0));
+    assert_eq!(app.current, Some(2));
+}
+
+/// The Next media key removes the skipped track under consume, like `>`.
+#[tokio::test]
+async fn media_next_with_consume_removes_the_skipped_track() {
+    let mut app = new_app().await;
+    app.tab = Tab::Queue;
+    app.queue = (0..4).map(track).collect();
+    app.current = Some(1);
+    app.consume = true;
+    app.stopped = false;
+
+    app.handle_msg(Msg::Mpv(mpv::MpvEvent::MediaKey(mpv::MediaKey::Next)));
+    let keys: Vec<_> = app.queue.iter().map(|t| t.rating_key.as_str()).collect();
+    assert_eq!(keys, ["t0", "t2", "t3"]);
+    assert_eq!(app.current, Some(1), "current is the entry that was next");
+}
+
+/// The Stop media key stops playback and keeps the queue; mpv keeps running.
+#[tokio::test]
+async fn media_stop_stops_without_quitting() {
+    let (mut app, mut rx) = playing_app(2, 10.0).await;
+    app.handle_msg(Msg::Mpv(mpv::MpvEvent::MediaKey(mpv::MediaKey::Stop)));
+    assert!(matches!(rx.try_recv(), Ok(mpv::MpvCmd::Stop)));
+    assert!(app.stopped);
+    assert_eq!(app.queue.len(), 5);
+    assert!(!app.should_quit);
+}
+
+/// Play and Pause set the state, so the play-only key never pauses; stopped, they do nothing.
+#[tokio::test]
+async fn media_play_and_pause_set_the_state() {
+    let (mut app, mut rx) = playing_app(2, 10.0).await;
+    app.handle_msg(Msg::Mpv(mpv::MpvEvent::MediaKey(mpv::MediaKey::Play)));
+    assert!(matches!(rx.try_recv(), Ok(mpv::MpvCmd::SetPause { paused: false })));
+    app.handle_msg(Msg::Mpv(mpv::MpvEvent::MediaKey(mpv::MediaKey::Pause)));
+    assert!(matches!(rx.try_recv(), Ok(mpv::MpvCmd::SetPause { paused: true })));
+
+    app.stopped = true;
+    app.handle_msg(Msg::Mpv(mpv::MpvEvent::MediaKey(mpv::MediaKey::Play)));
+    app.handle_msg(Msg::Mpv(mpv::MpvEvent::MediaKey(mpv::MediaKey::Pause)));
+    assert!(rx.try_recv().is_err());
+}
+
 /// Early in a track, or with the threshold at 0, `<` goes back.
 #[tokio::test]
 async fn prev_goes_back_early_or_threshold_off() {

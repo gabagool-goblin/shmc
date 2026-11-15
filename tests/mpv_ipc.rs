@@ -139,7 +139,7 @@ async fn mpv_plays_queue_and_reports_state() {
                 break;
             }
             MpvEvent::Shutdown => panic!("mpv shut down early"),
-            MpvEvent::Ready => {}
+            MpvEvent::Ready | MpvEvent::MediaKey(_) => {}
         }
     }
 
@@ -360,6 +360,49 @@ async fn mpv_answers_get_property_requests() {
         handle.get_property("shmc-no-such-property").await.is_err(),
         "an unknown property must come back as an error"
     );
+
+    handle.shutdown().await;
+}
+
+/// Media keys are rebound so each press reaches shmc, and STOP no longer quits mpv.
+#[tokio::test]
+async fn media_keys_come_back_as_events() {
+    use std::io::Write;
+    let _guard = MPV_TEST_LOCK.lock().await;
+
+    let cfg = MpvConfig { path: "mpv".into(), extra_args: vec!["--ao=null".into()], volume: 50.0 };
+    let (handle, mut events) = mpv::spawn(&cfg).await.expect("spawn mpv");
+    // The section commands precede this request on shmc's socket.
+    handle.get_property("pause").await.expect("get_property pause");
+
+    let mut other = std::os::unix::net::UnixStream::connect(handle.socket_path())
+        .expect("connect a second client");
+    use mpv::MediaKey::*;
+    for (name, want) in [
+        ("PREV", Prev),
+        ("NEXT", Next),
+        ("STOP", Stop),
+        ("PLAYPAUSE", Toggle),
+        ("PLAYONLY", Play),
+        ("PAUSEONLY", Pause),
+        ("FORWARD", Forward),
+        ("REWIND", Rewind),
+    ] {
+        writeln!(other, "{}", serde_json::json!({"command": ["keypress", name]}))
+            .expect("send keypress");
+        let got = tokio::time::timeout(std::time::Duration::from_secs(3), async {
+            loop {
+                match events.recv().await {
+                    Some(MpvEvent::MediaKey(key)) => return Some(key),
+                    Some(_) => {}
+                    None => return None,
+                }
+            }
+        })
+        .await;
+        assert_eq!(got, Ok(Some(want)), "{name}");
+    }
+    assert!(handle.get_property("pause").await.is_ok(), "STOP must not quit mpv");
 
     handle.shutdown().await;
 }
