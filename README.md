@@ -133,7 +133,7 @@ Run `shmc config` to edit settings and check your setup. Use `shmc config --chec
 
 ## Credits
 
-shmc's layout closely follows the default layout of [rmpc](https://github.com/mierak/rmpc), but the code is an independent implementation. Theme credits are listed in [themes.md](docs/themes.md).
+shmc's layout is based on the preview screenshot from [rmpc](https://github.com/mierak/rmpc), but the code is an independent implementation. Theme credits are listed in [themes.md](docs/themes.md).
 
 ## License
 
