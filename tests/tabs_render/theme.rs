@@ -130,10 +130,10 @@ async fn background_leaves_cover_painted_once() {
 }
 
 /// Restores the process-wide look when a test ends; tests hold `TAB_TEST_LOCK`.
-struct LookGuard(theme::Look);
+pub(super) struct LookGuard(theme::Look);
 
 impl LookGuard {
-    fn set(look: theme::Look) -> Self {
+    pub(super) fn set(look: theme::Look) -> Self {
         let previous = theme::look();
         theme::set_look(look);
         LookGuard(previous)
@@ -536,14 +536,14 @@ async fn progress_bar_takes_fill_and_track_styles() {
     assert_eq!(fg_of("-"), Some(track));
 }
 
-fn with_borders(style: theme::BorderStyle) -> theme::Look {
+pub(super) fn with_borders(style: theme::BorderStyle) -> theme::Look {
     theme::Look {
         spacing: theme::Spacing { borders: style, ..theme::Spacing::DEFAULT },
         ..theme::Look::DEFAULT
     }
 }
 
-const STYLES: [theme::BorderStyle; 5] = [
+pub(super) const STYLES: [theme::BorderStyle; 5] = [
     theme::BorderStyle::Box,
     theme::BorderStyle::Rounded,
     theme::BorderStyle::Double,

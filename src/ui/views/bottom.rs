@@ -10,9 +10,22 @@ use ratatui::widgets::Paragraph;
 use ratatui::Frame;
 
 /// `Title - Artist`, ellipsized to `width`: the title bold, the artist secondary.
+/// The rating follows the title while the title fits whole beside it.
 pub(super) fn now_playing(app: &App, width: u16) -> Option<Line<'static>> {
     let t = app.current_track()?;
     let (title, artist) = (clean(&t.title), clean(&t.artist));
+    if let Some(rating) = app.rating_label() {
+        let used = theme::str_width(&title) + 1 + theme::str_width(&rating) + 3;
+        if let Some(room) = (width as usize).checked_sub(used).filter(|r| *r > 0) {
+            return Some(Line::from(vec![
+                Span::styled(title, theme::text().add_modifier(Modifier::BOLD)),
+                Span::styled(" ", theme::text()),
+                Span::styled(rating, theme::accent()),
+                Span::styled(" - ", theme::text()),
+                Span::styled(theme::ellipsize(&artist, room as u16), theme::secondary()),
+            ]));
+        }
+    }
     let whole = theme::ellipsize(&format!("{title} - {artist}"), width);
     let (n_title, n_sep) = (title.chars().count(), 3);
     let part =

@@ -240,11 +240,17 @@ fn draw_art_meta(f: &mut Frame, app: &App, area: Rect) -> bool {
     if text_area.width == 0 || text_area.height == 0 {
         return false;
     }
+    let title = theme::ellipsize(&clean(&t.title), text_area.width);
+    let mut title_line =
+        vec![Span::styled(title.clone(), theme::text().add_modifier(Modifier::BOLD))];
+    // Without the header, this is the only place the playing track's rating shows.
+    if let Some(rating) = app.rating_label().filter(|_| app.header_compact) {
+        if theme::str_width(&title) + 1 + theme::str_width(&rating) <= text_area.width as usize {
+            title_line.push(Span::styled(format!(" {rating}"), theme::accent()));
+        }
+    }
     let lines = vec![
-        Line::from(Span::styled(
-            theme::ellipsize(&clean(&t.title), text_area.width),
-            theme::text().add_modifier(Modifier::BOLD),
-        )),
+        Line::from(title_line),
         Line::from(Span::styled(
             theme::ellipsize(&clean(&t.artist), text_area.width),
             theme::secondary(),

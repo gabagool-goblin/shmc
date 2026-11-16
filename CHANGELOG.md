@@ -4,6 +4,12 @@ All notable changes to shmc are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+### Fixed
+
+- The compact layout showed no rating for the playing track. It now shows it after the title on the now-playing line, and under the cover when `ui.art_metadata` is on.
+
 ## 0.2.0 — 2026-11-15
 
 ### Added

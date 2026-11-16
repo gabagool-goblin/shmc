@@ -171,3 +171,48 @@ async fn rating_never_moves_the_title() {
         assert_eq!(title_row(&mut app, w), bare, "a full-width title drops the rating at {w}");
     }
 }
+
+/// The compact layout has no header: the now-playing line carries the rating
+/// in every border style, and drops it when the title would be cut.
+#[tokio::test]
+async fn compact_line_shows_the_rating_after_the_title() {
+    use super::theme::{with_borders, LookGuard, STYLES};
+    let (mut app, _plex) = playing(RatingStyle::Five).await;
+    app.header_compact = true;
+    app.tab = Tab::Help;
+    app.ratings.insert("t1".into(), Some(7));
+    for style in STYLES {
+        let _look = LookGuard::set(with_borders(style));
+        let screen = render(&mut app, 80, 24);
+        assert!(screen.contains("Starfall! 1 ****. - Northwind Sounds"), "{style:?}\n{screen}");
+
+        app.queue[1].title = "x".repeat(40);
+        let rated = render(&mut app, 50, 24);
+        app.ratings.remove("t1");
+        assert_eq!(rated, render(&mut app, 50, 24), "{style:?}");
+        app.queue[1].title = "Starfall! 1".into();
+        app.ratings.insert("t1".into(), Some(7));
+    }
+}
+
+/// Where the cover's metadata replaces the now-playing line, its title carries
+/// the rating; the full layout leaves it to the header.
+#[tokio::test]
+async fn cover_metadata_shows_the_rating_in_compact_only() {
+    let (mut app, _plex) = playing(RatingStyle::Five).await;
+    queue_app_with_art(&mut app, true);
+    app.art_metadata = true;
+    app.ratings.insert("t2".into(), Some(7));
+    let meta_title = |app: &mut App| {
+        render(app, 80, 30)
+            .lines()
+            .find(|l| l.contains("│ Starfall! 2 ") && !l.contains("4:17"))
+            .map(str::to_string)
+    };
+    app.header_compact = true;
+    let row = meta_title(&mut app).expect("cover metadata");
+    assert!(row.contains("│ Starfall! 2 ****. "), "{row}");
+    app.header_compact = false;
+    let row = meta_title(&mut app).expect("cover metadata");
+    assert!(!row.contains('*'), "{row}");
+}
