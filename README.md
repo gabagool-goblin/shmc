@@ -2,11 +2,10 @@
 
 A terminal music player for Plex, written in Rust and built with [Ratatui](https://ratatui.rs/). Inspired by [rmpc](https://github.com/mierak/rmpc). Not affiliated with or endorsed by Plex Inc.
 
-- Browse artists, albums, tracks and playlists; search your music library.
-- Gapless playback, shuffle, repeat, single and consume modes.
-- Queue undo, range selection and saving queues as Plex playlists with `:save`.
-- Album art via Kitty, iTerm2, Sixel or half-block graphics.
-- Custom themes, key bindings and an interactive config editor.
+- Browse, search and play your Plex music library through mpv.
+- Album art, a cava visualizer and themes.
+
+See [Features](#features) for details.
 
 ## Preview
 
@@ -17,6 +16,37 @@ A terminal music player for Plex, written in Rust and built with [Ratatui](https
 Compact layout with the `gruvbox-dark` theme and track details below the cover:
 
 [![Compact layout](docs/images/compact.webp)](docs/images/compact.webp)
+
+## Features
+
+### Library
+- Browse artists, albums, tracks and playlists.
+- Search and filter your library.
+- Play now, play next or add to the queue; select ranges and jump by letter.
+
+### Queue and playback
+- Gapless playback through mpv.
+- Shuffle, repeat, single-track repeat and consume modes.
+- Reorder tracks, undo removals and save queues as Plex playlists.
+- Sleep timer and automatic skipping of failed tracks.
+
+### Plex
+- View track ratings and optionally update them on Plex.
+- Optionally report playback to Plex, including play counts and last played dates.
+
+### Appearance
+- Album art via Kitty, iTerm2, Sixel or half-blocks.
+- Optional cava visualizer.
+- Built-in themes, with support for custom themes.
+- Full and compact header layouts, configurable queue columns and Nerd Font or ASCII icons.
+
+### Configuration
+- Run `shmc config` to edit settings, preview themes and check your setup.
+- Key bindings are configurable.
+
+### Platform support
+- macOS: media keys, Control Center controls and Now Playing with album art.
+- Linux: MPRIS and media keys aren't supported yet.
 
 ## Requirements
 
