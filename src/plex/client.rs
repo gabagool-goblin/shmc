@@ -250,7 +250,7 @@ impl PlexClient {
         Ok(joined)
     }
 
-    async fn get_xml(&self, path: &str) -> Result<MediaContainer> {
+    pub(super) async fn get_xml(&self, path: &str) -> Result<MediaContainer> {
         let url = self.url_for(path)?;
         let bytes = self.send(url.as_str(), "application/xml", MAX_XML_BYTES).await?;
         quick_xml::de::from_reader::<_, MediaContainer>(&bytes[..])

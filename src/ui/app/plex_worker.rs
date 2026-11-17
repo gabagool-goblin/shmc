@@ -1,9 +1,11 @@
+use super::similar::SimilarOutcome;
+use crate::plex::sonic::Features;
 use crate::plex::PlexClient;
 use crate::ui::playlist_load::PlaylistRequest;
 use crate::ui::queue_seq::{QueueOutcome, QueueReplyGuard};
 use image::DynamicImage;
 use std::sync::atomic::AtomicBool;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc::UnboundedSender;
 
 #[derive(Debug)]
@@ -58,6 +60,13 @@ pub enum PlexCmd {
         key: String,
         label: String,
     },
+    /// Replies once with `Msg::SimilarLoaded`, never `Msg::Error`.
+    LoadSimilar {
+        key: String,
+        /// The album artist whose own tracks are left out.
+        exclude: Option<String>,
+        label: String,
+    },
     LoadThumb {
         path: String,
     },
@@ -82,11 +91,13 @@ pub fn spawn_plex_worker(
     art_max_size_px: [u32; 2],
 ) -> UnboundedSender<PlexCmd> {
     let (ctx, mut crx) = tokio::sync::mpsc::unbounded_channel::<PlexCmd>();
+    let features: Arc<Mutex<Option<Features>>> = Arc::default();
     tokio::spawn(async move {
         while let Some(cmd) = crx.recv().await {
             let client = client.clone();
             let tx = tx.clone();
             let section = section.clone();
+            let features = features.clone();
             tokio::spawn(async move {
                 match cmd {
                     PlexCmd::LoadArtists => match client.artists(&section).await {
@@ -246,6 +257,10 @@ pub fn spawn_plex_worker(
                             }
                         }
                     }
+                    PlexCmd::LoadSimilar { key, exclude, label } => {
+                        let outcome = find_similar(&client, &features, &key, exclude).await;
+                        let _ = tx.send(Msg::SimilarLoaded { key, label, outcome });
+                    }
                     PlexCmd::LoadThumb { path } => {
                         match load_thumb(&client, &path, art_cache_mb, art_max_size_px).await {
                             Ok((img, file)) => {
@@ -280,6 +295,43 @@ pub fn spawn_plex_worker(
         }
     });
     ctx
+}
+
+async fn find_similar(
+    client: &PlexClient,
+    features: &Mutex<Option<Features>>,
+    key: &str,
+    exclude: Option<String>,
+) -> SimilarOutcome {
+    let known = *features.lock().unwrap_or_else(|e| e.into_inner());
+    let known = match known {
+        Some(f) => Some(f),
+        None => match client.features().await {
+            Ok(f) => {
+                *features.lock().unwrap_or_else(|e| e.into_inner()) = Some(f);
+                Some(f)
+            }
+            // A failed feature read is unknown, not "no Plex Pass": /nearest decides.
+            Err(e) => {
+                tracing::warn!("server features: {e:#}");
+                None
+            }
+        },
+    };
+    if known.is_some_and(|f| !f.sonic_analysis) {
+        return SimilarOutcome::NoSonic;
+    }
+    match client.similar(key, exclude.as_deref()).await {
+        Ok(rows) if !rows.is_empty() => SimilarOutcome::Tracks(rows),
+        Ok(_) => match client.is_analysed(key).await {
+            Ok(false) => SimilarOutcome::NotAnalysed,
+            _ => SimilarOutcome::NoneFound,
+        },
+        Err(e) => {
+            tracing::warn!("similar tracks: {e:#}");
+            SimilarOutcome::NoneFound
+        }
+    }
 }
 
 async fn load_thumb(

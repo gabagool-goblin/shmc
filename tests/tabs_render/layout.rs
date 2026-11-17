@@ -168,6 +168,7 @@ async fn all_tabs_render_at_several_sizes() {
         label: "Evening Satellite".into(),
         tracks: (0..12).map(track).collect(),
         state: ds,
+        matches: None,
     });
     let sd = render(&mut app, 120, 40);
     assert!(
@@ -915,6 +916,7 @@ fn render_table(app: &mut App, table: Table, w: u16, h: u16) -> String {
             label: "Evening Satellite".into(),
             tracks: (0..12).map(track).collect(),
             state,
+            matches: None,
         });
     }
     render(app, w, h)

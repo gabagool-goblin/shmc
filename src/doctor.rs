@@ -3,6 +3,7 @@
 
 use crate::config::{plain_http_warning, token_label, Config};
 use crate::playback::cava;
+use crate::plex::sonic::Features;
 use crate::plex::PlexClient;
 use std::path::Path;
 
@@ -184,6 +185,10 @@ pub async fn collect(cfg: &Config, config_path: &Path, with_terminal: bool) -> R
         }
         Err(e) => b.fail(format!("server unreachable or token rejected: {e:#}")),
     }
+    match client.features().await {
+        Ok(f) => b.ok(features_line(f)),
+        Err(e) => b.warn(format!("could not read the server's Plex Pass features: {e:#}")),
+    }
     match client.music_sections().await {
         Ok(sections) if sections.is_empty() => b.fail("no music library on the server"),
         Ok(sections) => {
@@ -304,6 +309,17 @@ impl Builder {
 
 /// The first 8 characters of the server's machine id. Not a byte slice: the
 /// id comes from the server and may not be ASCII.
+/// A missing Plex Pass feature is not a problem, so the line is never a warning.
+fn features_line(f: Features) -> String {
+    let yes = |on: bool| if on { "yes" } else { "no" };
+    format!(
+        "Plex Pass features: sonic analysis {}, radio {}, loudness {}",
+        yes(f.sonic_analysis),
+        yes(f.radio),
+        yes(f.loudness)
+    )
+}
+
 pub fn short_id(machine: &str) -> String {
     machine.chars().take(8).collect()
 }
@@ -323,6 +339,12 @@ fn summary(failures: u32, warnings: u32) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn features_line_names_each_feature_the_server_has() {
+        let line = features_line(Features { sonic_analysis: true, radio: false, loudness: true });
+        assert_eq!(line, "Plex Pass features: sonic analysis yes, radio no, loudness yes");
+    }
 
     #[test]
     fn non_ascii_machine_id_shortens_safely() {

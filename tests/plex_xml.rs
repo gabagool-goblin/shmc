@@ -230,3 +230,40 @@ fn unparsable_number_does_not_fail_listing() {
     assert_eq!((t[2].index, t[2].duration), (Some(4), Some(2000)));
     assert_eq!(c.directories[0].year, None);
 }
+
+/// Plex's order is kept, and the match rounds up: 0.0412 is 95.88%, 0.05 exactly 95%.
+#[test]
+fn parse_nearest_fixture_keeps_order_and_rounds_matches_up() {
+    let c: MediaContainer = quick_xml::de::from_str(include_str!("fixtures/nearest.xml")).unwrap();
+    let rows = shmc::plex::sonic::similar_from(c);
+    let got: Vec<_> = rows.iter().map(|(t, p)| (t.title.as_str(), *p)).collect();
+    assert_eq!(
+        got,
+        [
+            ("Lantern Road", Some(96)),
+            ("Glass Orchard", Some(95)),
+            ("Slow Meridian", Some(90)),
+            ("No Distance", None),
+        ]
+    );
+    assert_eq!(rows[1].0.user_rating, Some(8));
+    assert_eq!(rows[0].0.grandparent_rating_key.as_deref(), Some("5001"));
+}
+
+/// A distance outside 0..=1 stays a percentage.
+#[test]
+fn match_percent_is_clamped() {
+    assert_eq!(shmc::plex::sonic::match_percent(0.0), 100);
+    assert_eq!(shmc::plex::sonic::match_percent(1.0), 0);
+    assert_eq!(shmc::plex::sonic::match_percent(-0.2), 100);
+    assert_eq!(shmc::plex::sonic::match_percent(1.7), 0);
+}
+
+#[test]
+fn parse_root_fixture_reads_owner_features() {
+    let c: MediaContainer = quick_xml::de::from_str(include_str!("fixtures/root.xml")).unwrap();
+    let f = shmc::plex::sonic::Features::from_container(&c);
+    assert!(f.sonic_analysis);
+    assert!(f.radio);
+    assert!(!f.loudness);
+}

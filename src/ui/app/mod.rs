@@ -25,9 +25,11 @@ mod queue;
 mod rating;
 mod report;
 mod shuffle;
+mod similar;
 
 pub use plex_worker::{spawn_plex_worker, PlexCmd, PlexHandle};
 use queue::PosGuard;
+pub use similar::SimilarOutcome;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Tab {
@@ -144,6 +146,11 @@ pub enum Msg {
         key: String,
         label: String,
         tracks: Vec<Track>,
+    },
+    SimilarLoaded {
+        key: String,
+        label: String,
+        outcome: SimilarOutcome,
     },
     PlaylistsLoaded(Vec<crate::plex::Playlist>),
     PlaylistSaved(crate::plex::SaveOutcome),
@@ -290,6 +297,8 @@ pub struct SearchDetail {
     pub label: String,
     pub tracks: Vec<Track>,
     pub state: TableState,
+    /// Set on a similar-tracks list: the match percentage of each track.
+    pub matches: Option<Vec<Option<u8>>>,
 }
 
 #[derive(Default)]
@@ -304,6 +313,8 @@ pub struct SearchState {
     history_pos: Option<usize>,
     /// The album being loaded for the drill-in.
     pub detail_request: Option<String>,
+    /// The track whose similar list is being loaded.
+    pub similar_request: Option<String>,
     pub detail: Option<SearchDetail>,
 }
 

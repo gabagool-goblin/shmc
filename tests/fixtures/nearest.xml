@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MediaContainer size="4" identifier="com.plexapp.plugins.library" librarySectionTitle="Music">
+<Track ratingKey="7001" key="/library/metadata/7001" parentRatingKey="6001" grandparentRatingKey="5001" type="track" title="Lantern Road" grandparentTitle="Paper Harbour" parentTitle="Low Tide" originalTitle="Paper Harbour &amp; Co" index="3" duration="201000" distance="0.0412">
+<Media id="9001" duration="201000" bitrate="320" audioChannels="2" audioCodec="mp3" container="mp3">
+<Part id="9001" key="/library/parts/9001/1/file.mp3" duration="201000" container="mp3"/>
+</Media>
+</Track>
+<Track ratingKey="7002" key="/library/metadata/7002" parentRatingKey="6002" grandparentRatingKey="5002" type="track" title="Glass Orchard" grandparentTitle="Violet Ferry" parentTitle="Soft Machines" index="1" duration="188000" distance="0.05" userRating="8.0">
+<Media id="9002" duration="188000" bitrate="900" audioChannels="2" audioCodec="flac" container="flac">
+<Part id="9002" key="/library/parts/9002/1/file.flac" duration="188000" container="flac"/>
+</Media>
+</Track>
+<Track ratingKey="7003" key="/library/metadata/7003" parentRatingKey="6003" grandparentRatingKey="5003" type="track" title="Slow Meridian" grandparentTitle="Orchid Static" parentTitle="Night Shift" index="7" duration="244000" distance="0.1001">
+<Media id="9003" duration="244000" bitrate="256" audioChannels="2" audioCodec="aac" container="mp4">
+<Part id="9003" key="/library/parts/9003/1/file.m4a" duration="244000" container="mp4"/>
+</Media>
+</Track>
+<Track ratingKey="7004" key="/library/metadata/7004" parentRatingKey="6004" grandparentRatingKey="5004" type="track" title="No Distance" grandparentTitle="Orchid Static" parentTitle="Night Shift" index="8" duration="120000">
+<Media id="9004" duration="120000" bitrate="256" audioChannels="2" audioCodec="aac" container="mp4">
+<Part id="9004" key="/library/parts/9004/1/file2.m4a" duration="120000" container="mp4"/>
+</Media>
+</Track>
+</MediaContainer>

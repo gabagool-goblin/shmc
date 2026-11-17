@@ -4,6 +4,12 @@ All notable changes to shmc are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+### Added
+
+- `m` lists tracks that sound like the selected one, from Plex's sonic analysis (needs Plex Pass).
+
 ## 0.2.1 — 2026-11-16
 
 ### Fixed
