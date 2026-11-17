@@ -3,7 +3,7 @@
 use super::plex_worker::PlexCmd;
 use super::App;
 use crate::config::RatingStyle;
-use crate::ui::views::rating_glyphs;
+use crate::ui::views::{rating_glyphs, rating_short};
 use std::time::{Duration, Instant};
 
 /// A "rate the track?" question. The key is fixed when it opens, so a track
@@ -14,14 +14,29 @@ pub(super) struct PendingRating {
 }
 
 impl App {
-    /// The rating of the playing track: a known value for its key, else what
-    /// its own metadata carried.
-    pub(crate) fn playing_rating(&self) -> Option<u8> {
-        let t = self.current_track()?;
-        match self.ratings.get(&t.rating_key) {
+    /// The rating of a track: a known value for its key, else what its own
+    /// metadata carried.
+    pub(crate) fn rating_of(&self, t: &crate::plex::Track) -> Option<u8> {
+        self.rating_for(&t.rating_key, t.user_rating)
+    }
+
+    /// `own` is the rating a list row carried; a cached None is a rating cleared
+    /// with r, so the row's own value must not come back.
+    pub(crate) fn rating_for(&self, key: &str, own: Option<u8>) -> Option<u8> {
+        match self.ratings.get(key) {
             Some(known) => *known,
-            None => t.user_rating,
+            None => own,
         }
+    }
+
+    /// The rating shown after a list row's title.
+    pub(crate) fn rating_text(&self, key: &str, own: Option<u8>) -> Option<String> {
+        rating_short(self.rating_style, self.rating_for(key, own)?, self.icons_ascii)
+    }
+
+    /// The rating of the playing track.
+    pub(crate) fn playing_rating(&self) -> Option<u8> {
+        self.rating_of(self.current_track()?)
     }
 
     /// The header's rating glyphs for the playing track.

@@ -2,6 +2,8 @@
 
 use super::*;
 use shmc::config::RatingStyle;
+use shmc::plex::models::{HitKind, SearchHit};
+use shmc::ui::app::BrowserCol;
 
 /// Three tracks with `t1` playing and writes allowed.
 async fn playing(style: RatingStyle) -> (TestApp, tokio::sync::mpsc::UnboundedReceiver<PlexCmd>) {
@@ -215,4 +217,132 @@ async fn cover_metadata_shows_the_rating_in_compact_only() {
     app.header_compact = false;
     let row = meta_title(&mut app).expect("cover metadata");
     assert!(!row.contains('*'), "{row}");
+}
+
+/// The row that shows `title`, as text.
+fn row_of(screen: &str, title: &str) -> String {
+    screen.lines().find(|l| l.contains(title)).unwrap_or_else(|| panic!("{title}\n{screen}")).into()
+}
+
+/// Track 0 rated 7 (four stars) and track 2 unrated, in every list a track is shown in.
+fn rated_lists(app: &mut App) {
+    let rated = Track { user_rating: Some(7), ..track(0) };
+    let list = || vec![rated.clone(), track(2)];
+    app.queue = list();
+    app.browser.tracks = list();
+    app.browser.focus = BrowserCol::Tracks;
+    app.playlists.playlists = vec![playlist(0)];
+    app.playlists.items_for = Some("p0".into());
+    app.playlists.items = list();
+    app.playlists.focus = PlaylistsCol::Items;
+    let hit = |t: &Track, rating| SearchHit {
+        kind: HitKind::Track,
+        rating_key: t.rating_key.clone(),
+        title: t.title.clone(),
+        artist: t.artist.clone(),
+        subtitle: t.album.clone(),
+        duration_ms: t.duration_ms,
+        album_key: None,
+        artist_key: None,
+        user_rating: rating,
+    };
+    app.search.hits = vec![hit(&rated, Some(7)), hit(&track(2), None)];
+}
+
+fn search_detail(app: &mut App) {
+    app.search.detail = Some(shmc::ui::app::SearchDetail {
+        key: "al1".into(),
+        label: "Album".into(),
+        tracks: vec![Track { user_rating: Some(7), ..track(0) }, track(2)],
+        state: Default::default(),
+        matches: Some(vec![Some(96), Some(95)]),
+    });
+}
+
+/// A rated track shows its rating after its title in every track list; an unrated one shows none.
+#[tokio::test]
+async fn every_track_list_shows_the_rating_after_the_title() {
+    let (mut app, _plex) = playing(RatingStyle::Five).await;
+    rated_lists(&mut app);
+    for tab in [Tab::Queue, Tab::Browser, Tab::Playlists, Tab::Search] {
+        app.tab = tab;
+        let screen = render(&mut app, 120, 30);
+        assert!(row_of(&screen, "Starfall! 0").contains("Starfall! 0 4*"), "{tab:?}\n{screen}");
+        assert!(!row_of(&screen, "Starfall! 2").contains('*'), "{tab:?}\n{screen}");
+    }
+    search_detail(&mut app);
+    let screen = render(&mut app, 120, 30);
+    assert!(row_of(&screen, "Starfall! 0").contains("Starfall! 0 4*"), "detail\n{screen}");
+    assert!(!row_of(&screen, "Starfall! 2").contains('*'), "detail\n{screen}");
+}
+
+/// A rating set with `r` shows at once, and a cleared one hides the track's own.
+#[tokio::test]
+async fn rated_message_changes_the_queue_row() {
+    let (mut app, _plex) = playing(RatingStyle::Five).await;
+    app.queue[0].user_rating = Some(7);
+    assert!(row_of(&render(&mut app, 120, 30), "Starfall! 0").contains("Starfall! 0 4*"));
+    app.handle_msg(Msg::Rated { rating_key: "t0".into(), rating: Some(10) });
+    assert!(row_of(&render(&mut app, 120, 30), "Starfall! 0").contains("Starfall! 0 5*"));
+    app.handle_msg(Msg::Rated { rating_key: "t0".into(), rating: None });
+    assert!(!row_of(&render(&mut app, 120, 30), "Starfall! 0").contains('*'));
+}
+
+/// A long title is cut earlier so the rating shows; a column too narrow for both drops the rating.
+#[tokio::test]
+async fn long_title_keeps_the_rating_and_a_narrow_column_drops_it() {
+    let (mut app, _plex) = playing(RatingStyle::Five).await;
+    app.queue[0].title = "A very long title that cannot fit".into();
+    app.queue[0].user_rating = Some(7);
+    let row = row_of(&render(&mut app, 100, 30), "A very");
+    assert!(row.contains("… 4*"), "{row}");
+
+    app.queue[0].title = "Starfall! 0".into();
+    app.column_weights = [1, 1, 1];
+    let (rated, unrated) = {
+        let rated = render(&mut app, 25, 30);
+        app.ratings.insert("t0".into(), None);
+        (rated, render(&mut app, 25, 30))
+    };
+    assert!(rated.contains("Sta"), "{rated}");
+    assert_eq!(rated, unrated);
+}
+
+/// `one` shows a single star and `off` none.
+#[tokio::test]
+async fn one_style_shows_a_star_and_off_shows_none() {
+    let (mut app, _plex) = playing(RatingStyle::One).await;
+    app.queue[0].user_rating = Some(7);
+    let row = row_of(&render(&mut app, 120, 30), "Starfall! 0");
+    assert!(row.contains("Starfall! 0 *") && !row.contains("**"), "{row}");
+    app.rating_style = RatingStyle::Off;
+    assert!(!row_of(&render(&mut app, 120, 30), "Starfall! 0").contains('*'));
+}
+
+/// The playing row's rating takes the row's style; an ordinary row's is dim.
+#[tokio::test]
+async fn rating_is_dim_except_on_the_playing_row() {
+    let (mut app, _plex) = playing(RatingStyle::Five).await;
+    app.queue[0].user_rating = Some(7);
+    app.queue[1].user_rating = Some(7);
+    let buf = super::theme::buffer_of(&mut app, 120, 30);
+    let style_at = |row: &str, text: &str| {
+        let y = (0..buf.area.height)
+            .find(|y| {
+                let line: String = (0..120).map(|x| buf.cell((x, *y)).unwrap().symbol()).collect();
+                line.contains(row)
+            })
+            .expect(row);
+        let line: Vec<String> =
+            (0..120).map(|x| buf.cell((x, y)).unwrap().symbol().to_string()).collect();
+        let x = (0..line.len()).find(|x| line[*x..].concat().starts_with(text)).expect(text);
+        let c = buf.cell((x as u16, y)).unwrap();
+        (c.fg, c.modifier)
+    };
+    for row in ["Starfall! 0 4*", "Starfall! 1 4*"] {
+        assert_eq!(style_at(row, "4*"), style_at(row, "4:17"), "{row}: the Len cell's style");
+    }
+    let (ordinary, playing) = (style_at("Starfall! 0 4*", "4*"), style_at("Starfall! 1 4*", "4*"));
+    assert_ne!(ordinary, style_at("Starfall! 0 4*", "Starfall! 0"), "dim, not the title's");
+    assert_ne!(ordinary, playing);
 }

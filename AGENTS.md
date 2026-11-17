@@ -64,7 +64,7 @@
 | `src/doctor.rs` | The `shmc config --check` checks |
 | `src/cache.rs` | Private dirs and files |
 | `src/redact.rs` | Token redaction |
-| `src/plex/` | The client (`client.rs`) and the XML models (`models.rs`) |
+| `src/plex/` | The client (`client.rs`), the XML models (`models.rs`) and sonic analysis (`sonic.rs`) |
 | `src/playback/` | `mpv.rs` drives mpv; `cava.rs` runs the visualizer |
 | `src/ui/app/` | State, keys, actions |
 | `src/ui/queue_seq.rs` | Queue request order |

@@ -4,7 +4,7 @@ use super::tables::{
 };
 use super::widgets::{
     begin_list, build_range, clean, hl, indicator_text, no_matches, placeholder, render_bar,
-    render_list, spans_clean, spans_for, window,
+    render_list, spans_clean, title_spans, window,
 };
 use super::{draw_block, draw_vdivider};
 use crate::ui::app::{App, BrowserCol, PlaylistsCol};
@@ -156,7 +156,9 @@ pub(super) fn draw_browser_tab(f: &mut Frame, app: &mut App, area: Rect) {
                     theme::text()
                 };
                 let dim = if playing { base } else { theme::dim() };
-                let mut spans = spans_for(&t.title, needle, base);
+                let rating = app.rating_text(&t.rating_key, t.user_rating);
+                let mut spans =
+                    title_spans(&t.title, rating.as_deref(), frame.col_w[1], needle, base, dim);
                 let artist = clean(&t.artist);
                 if !artist.is_empty() && Some(artist.as_str()) != parent_artist.as_deref() {
                     spans.push(Span::styled(" - ", theme::text()));
@@ -327,7 +329,18 @@ pub(super) fn draw_playlists_tab(f: &mut Frame, app: &mut App, area: Rect) {
         cur_key.as_deref(),
         app.visual_range(),
         |t, real, base, playing| {
-            plain_track_cells(t, real, base, playing, &frame.col_w, num_w, &tc, needle)
+            let rating = app.rating_text(&t.rating_key, t.user_rating);
+            plain_track_cells(
+                t,
+                real,
+                base,
+                playing,
+                &frame.col_w,
+                num_w,
+                &tc,
+                needle,
+                rating.as_deref(),
+            )
         },
     );
     let col_w: Vec<Constraint> = frame.col_w.iter().map(|w| Constraint::Length(*w)).collect();
@@ -411,13 +424,18 @@ fn draw_search_results(f: &mut Frame, app: &mut App, inner: Rect) {
             ));
             cells.push(Cell::from(Line::from(spans)));
         }
-        for (col, text) in [(1, &hit.title), (2, &hit.subtitle)] {
-            if let Some(slot) = tc.slot(col) {
-                cells.push(
-                    Cell::from(Line::from(theme::ellipsize(&clean(text), frame.col_w[slot])))
-                        .style(base),
-                );
-            }
+        let rating = (hit.kind == crate::plex::HitKind::Track)
+            .then(|| app.rating_text(&hit.rating_key, hit.user_rating))
+            .flatten();
+        let dim = if playing { base } else { theme::dim() };
+        if let Some(slot) = tc.slot(1) {
+            let spans =
+                title_spans(&hit.title, rating.as_deref(), frame.col_w[slot], "", base, dim);
+            cells.push(Cell::from(Line::from(spans)).style(base));
+        }
+        if let Some(slot) = tc.slot(2) {
+            let album = theme::ellipsize(&clean(&hit.subtitle), frame.col_w[slot]);
+            cells.push(Cell::from(Line::from(album)).style(base));
         }
         let dur =
             hit.duration_ms.map(|ms| theme::format_time(ms as f64 / 1000.0)).unwrap_or_default();
@@ -502,8 +520,16 @@ fn draw_search_detail(f: &mut Frame, app: &mut App, inner: Rect) {
         let dur =
             t.duration_ms.map(|ms| theme::format_time(ms as f64 / 1000.0)).unwrap_or_default();
         let mut cells: Vec<Cell> = Vec::with_capacity(4);
+        let rating = app.rating_text(&t.rating_key, t.user_rating);
+        let dim = if playing { base } else { theme::dim() };
         for (col, text) in [&t.title, &t.artist, &t.album].into_iter().enumerate() {
             if let Some(slot) = tc.slot(col) {
+                if col == 0 {
+                    let w = frame.col_w[slot];
+                    let spans = title_spans(text, rating.as_deref(), w, "", base, dim);
+                    cells.push(Cell::from(Line::from(spans)).style(base));
+                    continue;
+                }
                 cells.push(
                     Cell::from(Line::from(theme::ellipsize(&clean(text), frame.col_w[slot])))
                         .style(base),

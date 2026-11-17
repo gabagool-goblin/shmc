@@ -54,8 +54,25 @@ pub(super) fn cell(text: &str, w: u16, needle: &str, base: Style) -> Cell<'stati
     Cell::from(Line::from(spans_clean(shown, needle, base)))
 }
 
-pub(super) fn spans_for(text: &str, needle: &str, base: Style) -> Vec<Span<'static>> {
-    spans_clean(clean(text), needle, base)
+/// The title's spans, then its rating when the cell has room for it and at
+/// least three cells of title; otherwise the title alone, as `cell` draws it.
+pub(super) fn title_spans(
+    text: &str,
+    rating: Option<&str>,
+    w: u16,
+    needle: &str,
+    base: Style,
+    rating_style: Style,
+) -> Vec<Span<'static>> {
+    let title = clean(text);
+    let rating = rating.filter(|r| w as usize >= theme::str_width(r) + 1 + 3);
+    let Some(r) = rating else {
+        return spans_clean(theme::ellipsize(&title, w), needle, base);
+    };
+    let room = w - theme::str_width(r) as u16 - 1;
+    let mut spans = spans_clean(theme::ellipsize(&title, room), needle, base);
+    spans.push(Span::styled(format!(" {r}"), rating_style));
+    spans
 }
 
 pub(super) fn spans_clean(text: String, needle: &str, base: Style) -> Vec<Span<'static>> {

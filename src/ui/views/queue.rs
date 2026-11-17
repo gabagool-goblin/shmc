@@ -399,7 +399,10 @@ fn draw_queue_table(f: &mut Frame, app: &mut App, area: Rect) {
         total,
         current_key.as_deref(),
         app.visual_range(),
-        |t, _, base, playing| qc.cells(t, base, playing, &frame.col_w, needle),
+        |t, _, base, playing| {
+            let rating = app.rating_text(&t.rating_key, t.user_rating);
+            qc.cells(t, base, playing, &frame.col_w, needle, rating.as_deref())
+        },
     );
 
     let col_w: Vec<Constraint> = frame.col_w.iter().map(|w| Constraint::Length(*w)).collect();

@@ -1,4 +1,4 @@
-use super::widgets::cell;
+use super::widgets::{cell, title_spans};
 use crate::config::QueueColumn;
 use crate::ui::filter::ListFilter;
 use crate::ui::scrollbar::list_split;
@@ -210,6 +210,7 @@ impl QueueCols {
         playing: bool,
         col_w: &[u16],
         needle: &str,
+        rating: Option<&str>,
     ) -> Vec<Cell<'static>> {
         let dim = if playing { base } else { theme::dim() };
         let right = |n: Option<u32>| {
@@ -220,7 +221,9 @@ impl QueueCols {
             .iter()
             .zip(col_w)
             .map(|(c, w)| match c {
-                QueueColumn::Title => cell(&t.title, *w, needle, base),
+                QueueColumn::Title => {
+                    Cell::from(Line::from(title_spans(&t.title, rating, *w, needle, base, dim)))
+                }
                 QueueColumn::Artist => cell(&t.artist, *w, needle, base),
                 QueueColumn::Album => cell(&t.album, *w, needle, base),
                 QueueColumn::Len => len_cell(t, dim),
@@ -278,6 +281,7 @@ pub(super) fn plain_track_cells(
     num_w: Option<u16>,
     tc: &TrackCols,
     needle: &str,
+    rating: Option<&str>,
 ) -> Vec<Cell<'static>> {
     let base_idx = if num_w.is_some() { 1 } else { 0 };
     let dim = if playing { base } else { theme::dim() };
@@ -290,7 +294,12 @@ pub(super) fn plain_track_cells(
     }
     for (col, text) in [&t.title, &t.artist, &t.album].into_iter().enumerate() {
         if let Some(slot) = tc.slot(col) {
-            cells.push(cell(text, col_w[base_idx + slot], needle, base));
+            let w = col_w[base_idx + slot];
+            cells.push(if col == 0 {
+                Cell::from(Line::from(title_spans(text, rating, w, needle, base, dim)))
+            } else {
+                cell(text, w, needle, base)
+            });
         }
     }
     cells.push(len_cell(t, dim));

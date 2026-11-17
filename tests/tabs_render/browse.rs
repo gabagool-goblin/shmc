@@ -262,6 +262,7 @@ fn hit(kind: HitKind, key: &str, album: Option<&str>, artist: Option<&str>) -> S
         duration_ms: None,
         album_key: album.map(Into::into),
         artist_key: artist.map(Into::into),
+        user_rating: None,
     }
 }
 
@@ -667,6 +668,7 @@ async fn search_track_enter_replaces_with_album_remainder() {
         duration_ms: Some(1000),
         album_key: None,
         artist_key: None,
+        user_rating: None,
     }];
     app.search.state.select(Some(0));
     app.tab = Tab::Search;

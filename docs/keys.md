@@ -28,7 +28,7 @@ Consume removes a track after it plays. Skipping with `>` also removes the track
 
 The sleep timer pauses playback when it expires. The header shows the remaining time. Use `:sleep 20` for a custom duration or `:sleep off` to cancel it.
 
-The header shows the playing track's rating: five stars, one star or none, set by `ui.rating_style`. The compact layout shows it after the title on the now-playing line, and under the cover when `ui.art_metadata` is on. With `plex.set_ratings = true`, `r` rates it: `1` to `5`, or `0` to clear; with one star, `r` toggles the star. Ratings live in Plex, so other Plex apps see them.
+The header shows the playing track's rating: five stars, one star or none, set by `ui.rating_style`. The compact layout shows it after the title on the now-playing line, and under the cover when `ui.art_metadata` is on. Track lists show a rated track's rating after its title, `4★` or, with one star, `★`. With `plex.set_ratings = true`, `r` rates it: `1` to `5`, or `0` to clear; with one star, `r` toggles the star. Ratings live in Plex, so other Plex apps see them.
 
 `m` on a track lists tracks that sound like it, from Plex's sonic analysis, which needs Plex Pass. The list opens in the Search tab, closest first, with a Match column. `Enter` plays from the selected track, `a` and `i` add it, and `Esc` goes back to the search results.
 

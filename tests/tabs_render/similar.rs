@@ -96,6 +96,7 @@ async fn album_and_similar_requests_replace_each_other() {
         duration_ms: None,
         album_key: None,
         artist_key: None,
+        user_rating: None,
     }];
     app.search.state.select(Some(0));
     app.handle_msg(key('m'));
@@ -129,6 +130,7 @@ async fn m_on_a_search_track_hit_asks_for_it() {
         duration_ms: Some(200_000),
         album_key: Some("al9".into()),
         artist_key: Some("ar9".into()),
+        user_rating: None,
     }];
     app.search.state.select(Some(0));
     app.handle_msg(key('m'));
