@@ -753,8 +753,20 @@ async fn cover_attaches_to_the_playing_file() {
     let url = "av://lavfi:sine=frequency=440:duration=60".to_string();
     handle.tx.send(MpvCmd::Play(vec![item(url)])).expect("send play");
     let mut seen = Seen::default();
-    let deadline = std::time::Duration::from_secs(30);
-    wait_for_property(&handle, &mut events, &mut seen, "playlist-pos", 0, false, deadline).await;
+    // The app adds the cover on file-loaded, so the test does too.
+    let until = tokio::time::Instant::now() + std::time::Duration::from_secs(30);
+    loop {
+        let ev = tokio::time::timeout_at(until, events.recv())
+            .await
+            .unwrap_or_else(|_| panic!("no FileLoaded; {}", seen.tail()))
+            .expect("mpv events closed");
+        seen.push(&ev);
+        match ev {
+            MpvEvent::FileLoaded => break,
+            MpvEvent::EndFile { reason } => panic!("playback ended: {reason}; {}", seen.tail()),
+            _ => {}
+        }
+    }
 
     let dir = tempfile::tempdir().unwrap();
     let cover = dir.path().join("cover.img");
@@ -768,8 +780,9 @@ async fn cover_attaches_to_the_playing_file() {
 
     let until = tokio::time::Instant::now() + std::time::Duration::from_secs(3);
     let mut attached = false;
+    let mut tracks = serde_json::Value::Null;
     while !attached && tokio::time::Instant::now() < until {
-        let tracks = handle.get_property("track-list").await.expect("track-list");
+        tracks = handle.get_property("track-list").await.expect("track-list");
         attached = tracks.as_array().is_some_and(|list| {
             list.iter()
                 .any(|t| t["type"] == "video" && t["external"] == serde_json::Value::Bool(true))
@@ -778,7 +791,10 @@ async fn cover_attaches_to_the_playing_file() {
             tokio::time::sleep(std::time::Duration::from_millis(50)).await;
         }
     }
-    assert!(attached, "no external video track after AddCover");
+    while let Ok(ev) = events.try_recv() {
+        seen.push(&ev);
+    }
+    assert!(attached, "no external video track after AddCover: {tracks}; {}", seen.tail());
 
     let paused = handle.get_property("pause").await.expect("pause");
     assert_eq!(paused.as_bool(), Some(false), "the cover paused playback");
