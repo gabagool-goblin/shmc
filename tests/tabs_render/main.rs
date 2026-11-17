@@ -22,6 +22,7 @@ mod queue;
 mod queue_requests;
 mod rating;
 mod report;
+mod similar;
 mod theme;
 
 fn track(i: usize) -> Track {

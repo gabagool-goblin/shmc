@@ -245,6 +245,7 @@ impl App {
                         self.transient("loading…".into());
                     }
                     HitKind::Album => {
+                        self.search.similar_request = None;
                         self.search.detail_request = Some(hit.rating_key.clone());
                         let _ = self.plex.tx.send(PlexCmd::LoadAlbumDetail {
                             key: hit.rating_key,

@@ -91,6 +91,7 @@ impl App {
                     });
                     self.search.detail = None;
                     self.search.detail_request = None;
+                    self.search.similar_request = None;
                     self.transient(format!("{} results for {:?}", self.search.hits.len(), query));
                 }
             }
@@ -101,10 +102,12 @@ impl App {
                     if !tracks.is_empty() {
                         state.select(Some(0));
                     }
-                    self.search.detail = Some(SearchDetail { key, label, tracks, state });
+                    self.search.detail =
+                        Some(SearchDetail { key, label, tracks, state, matches: None });
                     self.search.focused = false;
                 }
             }
+            Msg::SimilarLoaded { key, label, outcome } => self.similar_loaded(key, label, outcome),
             Msg::PlaylistsLoaded(list) => {
                 self.playlists.playlists = list;
                 self.playlists.preview_cache.clear();

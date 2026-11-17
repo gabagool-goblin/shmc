@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MediaContainer size="2" allowMediaDeletion="1" friendlyName="Example Server" machineIdentifier="0000000000000000000000000000000000000000" ownerFeatures="adaptive_bitrate,music-analysis,radio,hardware_transcoding" version="1.0.0.0-example">
+<Directory count="1" key="actions" title="actions"/>
+<Directory count="1" key="library" title="library"/>
+</MediaContainer>

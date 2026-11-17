@@ -367,11 +367,37 @@ async fn search_album_view_reveals_the_selected_track() {
         label: "Album".into(),
         tracks: vec![track(0), track(1)],
         state,
+        matches: None,
     });
     app.tab = Tab::Search;
     app.handle_msg(key('b'));
     assert!(matches!(sent(&mut plex).as_slice(), [PlexCmd::ResolveArtist(k)] if k == "ar1"));
     assert_eq!(app.tab, Tab::Browser);
+}
+
+/// In the similar list `b` opens the selected track's own album, not the seed's key.
+#[tokio::test]
+async fn similar_list_reveals_the_tracks_album() {
+    let (mut app, mut plex) = new_app_with_plex().await;
+    let mut state = ratatui::widgets::TableState::default();
+    state.select(Some(1));
+    app.search.detail = Some(shmc::ui::app::SearchDetail {
+        key: "t2".into(),
+        label: "Sonically similar to Starfall! 2 — Northwind Sounds".into(),
+        tracks: vec![track(10), track(11)],
+        state,
+        matches: Some(vec![Some(96), Some(95)]),
+    });
+    app.tab = Tab::Search;
+    app.handle_msg(key('b'));
+    assert!(matches!(sent(&mut plex).as_slice(), [PlexCmd::ResolveArtist(k)] if k == "ar1"));
+    app.handle_msg(Msg::GotoArtist(artist_ar1()));
+    app.handle_msg(Msg::AlbumsLoaded {
+        artist_key: "ar1".into(),
+        albums: vec![album_by("al1", "Evening Satellite", "Northwind Sounds", None)],
+    });
+    assert_eq!(app.tab, Tab::Browser);
+    assert_eq!(app.browser.focus, BrowserCol::Tracks, "{}", app.status);
 }
 
 #[tokio::test]

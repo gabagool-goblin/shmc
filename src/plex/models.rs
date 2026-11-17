@@ -19,6 +19,9 @@ pub struct MediaContainer {
     /// Size of the whole result, reported beside a page.
     #[serde(rename = "@totalSize", default, deserialize_with = "lenient")]
     pub total_size: Option<usize>,
+    /// Comma-separated, on the server root `/` only.
+    #[serde(rename = "@ownerFeatures", default)]
+    pub owner_features: Option<String>,
     #[serde(rename = "Directory", default)]
     pub directories: Vec<WireDirectory>,
     #[serde(rename = "Track", default)]
@@ -94,6 +97,12 @@ pub struct WireTrack {
     /// A float such as "6.0"; absent when unrated.
     #[serde(rename = "@userRating", default, deserialize_with = "lenient")]
     pub user_rating: Option<f64>,
+    /// `/nearest` rows only: a float such as "0.0412", 0 for identical.
+    #[serde(rename = "@distance", default, deserialize_with = "lenient")]
+    pub distance: Option<f64>,
+    /// A track's own metadata only; present once sonic analysis has run.
+    #[serde(rename = "@musicAnalysisVersion", default)]
+    pub music_analysis_version: Option<String>,
     #[serde(rename = "Media", default)]
     pub media: Vec<WireMedia>,
 }

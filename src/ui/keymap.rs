@@ -86,6 +86,7 @@ pub enum Act {
     ToggleConsume,
     SleepTimer,
     Rate,
+    Similar,
 }
 
 /// One name per action, shared by the parser, `--list`, `--check` and Help.
@@ -136,6 +137,7 @@ const ACT_NAMES: &[(&str, Act)] = &[
     ("toggle_consume", Act::ToggleConsume),
     ("sleep_timer", Act::SleepTimer),
     ("rate", Act::Rate),
+    ("similar", Act::Similar),
 ];
 
 impl Act {
@@ -193,6 +195,7 @@ pub const BINDINGS: &[Binding] = &[
     Binding { ctx: KeyCtx::Queue, keys: &["u"], act: Act::UndoRemove, desc: "undo a removal (repeat for older ones)" },
     Binding { ctx: KeyCtx::Queue, keys: &["D"], act: Act::ClearQueue, desc: "clear queue" },
     Binding { ctx: KeyCtx::Queue, keys: &["b"], act: Act::GotoAlbum, desc: "show track in Browser" },
+    Binding { ctx: KeyCtx::Queue, keys: &["m"], act: Act::Similar, desc: "sonically similar tracks" },
     Binding { ctx: KeyCtx::Queue, keys: &["o"], act: Act::JumpToPlaying, desc: "jump to the playing track and resume follow" },
     Binding { ctx: KeyCtx::Queue, keys: &["J"], act: Act::MoveQueueDown, desc: "move track down" },
     Binding { ctx: KeyCtx::Queue, keys: &["K"], act: Act::MoveQueueUp, desc: "move track up" },
@@ -209,6 +212,7 @@ pub const BINDINGS: &[Binding] = &[
     Binding { ctx: KeyCtx::Browser, keys: &["a"], act: Act::AddToQueue, desc: "add artist, album or track to queue" },
     Binding { ctx: KeyCtx::Browser, keys: &["i"], act: Act::PlayNext, desc: "insert artist, album or track after the playing track" },
     Binding { ctx: KeyCtx::Browser, keys: &["v"], act: Act::VisualMode, desc: "select tracks (visual mode)" },
+    Binding { ctx: KeyCtx::Browser, keys: &["m"], act: Act::Similar, desc: "sonically similar tracks" },
     Binding { ctx: KeyCtx::Browser, keys: &["o"], act: Act::JumpToPlaying, desc: "jump to playing track" },
     Binding { ctx: KeyCtx::Browser, keys: &["/"], act: Act::StartFilter, desc: "filter this column" },
     Binding { ctx: KeyCtx::Browser, keys: &["Esc", "BSpace"], act: Act::Back, desc: "back one column, or to the Queue from the artists" },
@@ -224,6 +228,7 @@ pub const BINDINGS: &[Binding] = &[
     Binding { ctx: KeyCtx::Playlists, keys: &["a"], act: Act::AddToQueue, desc: "add playlist, or the rest of it, to queue" },
     Binding { ctx: KeyCtx::Playlists, keys: &["i"], act: Act::PlayNext, desc: "insert playlist or track after the playing track" },
     Binding { ctx: KeyCtx::Playlists, keys: &["v"], act: Act::VisualMode, desc: "select tracks (visual mode)" },
+    Binding { ctx: KeyCtx::Playlists, keys: &["m"], act: Act::Similar, desc: "sonically similar tracks" },
     Binding { ctx: KeyCtx::Playlists, keys: &["o"], act: Act::JumpToPlaying, desc: "jump to playing track" },
     Binding { ctx: KeyCtx::Playlists, keys: &["/"], act: Act::StartFilter, desc: "filter this list" },
     Binding { ctx: KeyCtx::Search, keys: &["k", "Up"], act: Act::MoveUp, desc: "move up" },
@@ -235,6 +240,7 @@ pub const BINDINGS: &[Binding] = &[
     Binding { ctx: KeyCtx::Search, keys: &["Enter"], act: Act::Activate, desc: "play track and the rest, or open album" },
     Binding { ctx: KeyCtx::Search, keys: &["a"], act: Act::AddToQueue, desc: "add track or album to queue" },
     Binding { ctx: KeyCtx::Search, keys: &["i"], act: Act::PlayNext, desc: "insert track or album after the playing track" },
+    Binding { ctx: KeyCtx::Search, keys: &["m"], act: Act::Similar, desc: "sonically similar tracks" },
     Binding { ctx: KeyCtx::Search, keys: &["b"], act: Act::GotoAlbum, desc: "show result in Browser" },
     Binding { ctx: KeyCtx::Search, keys: &["/"], act: Act::StartSearch, desc: "new search" },
     Binding { ctx: KeyCtx::Search, keys: &["Esc"], act: Act::Back, desc: "close album view" },

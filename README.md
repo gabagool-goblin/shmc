@@ -33,6 +33,7 @@ Compact layout with the `gruvbox-dark` theme and track details below the cover:
 ### Plex
 - View track ratings and optionally update them on Plex.
 - Optionally report playback to Plex, including play counts and last played dates.
+- List sonically similar tracks (Plex Pass).
 
 ### Appearance
 - Album art via Kitty, iTerm2, Sixel or half-blocks.

@@ -462,7 +462,13 @@ fn draw_search_detail(f: &mut Frame, app: &mut App, inner: Rect) {
         app.column_weights,
         [Constraint::Percentage(34), Constraint::Percentage(24), Constraint::Min(12)],
     );
+    // Match gives way first on a narrow pane, so Len and the text keep their room.
+    let show_match = inner.width >= MATCH_MIN_WIDTH
+        && app.search.detail.as_ref().is_some_and(|d| d.matches.is_some());
     let mut cols = tc.constraints();
+    if show_match {
+        cols.push(Constraint::Length(MATCH_COL_WIDTH));
+    }
     cols.push(Constraint::Length(len_col_width(
         app.search
             .detail
@@ -470,6 +476,9 @@ fn draw_search_detail(f: &mut Frame, app: &mut App, inner: Rect) {
             .and_then(|d| d.tracks.iter().filter_map(|t| t.duration_ms).max()),
     )));
     let mut headers = tc.headers(["Title", "Artist", "Album"]);
+    if show_match {
+        headers.push(HeaderSpec::right("Match"));
+    }
     headers.push(HeaderSpec::right("Len"));
     let frame = table_frame(f, parts[1], total, &cols, Some(&headers), None);
     let visible = frame.rows.height as usize;
@@ -501,6 +510,11 @@ fn draw_search_detail(f: &mut Frame, app: &mut App, inner: Rect) {
                 );
             }
         }
+        if show_match {
+            let pct = d.matches.as_ref().and_then(|m| m.get(i).copied().flatten());
+            let text = pct.map(|p| format!("{p}%")).unwrap_or_default();
+            cells.push(Cell::from(Line::from(text).right_aligned()).style(theme::dim()));
+        }
         cells.push(Cell::from(Line::from(dur).right_aligned()).style(theme::dim()));
         rows.push(Row::new(cells));
     }
@@ -516,6 +530,12 @@ fn draw_search_detail(f: &mut Frame, app: &mut App, inner: Rect) {
         render_scrollbar(f, bar, total, offset, visible);
     }
 }
+
+/// Room for the "Match" header, which also fits "100%".
+const MATCH_COL_WIDTH: u16 = 5;
+
+/// The similar list drops its Match column below this pane width.
+const MATCH_MIN_WIDTH: u16 = 60;
 
 /// The widest the Help tab's key column grows, and the gap after it.
 const HELP_KEY_COL_MAX: usize = 22;

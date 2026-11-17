@@ -68,8 +68,12 @@ impl App {
         use crate::plex::HitKind;
         if let Some(d) = self.search.detail.as_ref() {
             let Some(t) = d.state.selected().and_then(|i| d.tracks.get(i)) else { return };
-            let (artist, album, track) =
-                (t.grandparent_rating_key.clone(), Some(d.key.clone()), Some(t.rating_key.clone()));
+            // The track's own album: a similar list's key is the seed track.
+            let (artist, album, track) = (
+                t.grandparent_rating_key.clone(),
+                t.parent_rating_key.clone(),
+                Some(t.rating_key.clone()),
+            );
             self.reveal(artist, album, track);
             return;
         }
@@ -510,6 +514,7 @@ impl App {
             Tab::Search => {
                 self.search.detail = None;
                 self.search.detail_request = None;
+                self.search.similar_request = None;
             }
             Tab::Help => {
                 let t = self.help_prev;
