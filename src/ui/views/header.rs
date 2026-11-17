@@ -159,6 +159,24 @@ fn format_rate(hz: u32) -> String {
     format!("{s}k")
 }
 
+fn star_count(rating: u8) -> usize {
+    usize::from(rating.min(10) + 1) / 2
+}
+
+/// A rating as the short form after a list title: `4★`, or `★` for one star.
+/// None when unrated or when the style shows nothing.
+pub(crate) fn rating_short(style: RatingStyle, rating: u8, ascii: bool) -> Option<String> {
+    if rating == 0 {
+        return None;
+    }
+    let star = if ascii { '*' } else { '★' };
+    match style {
+        RatingStyle::Off => None,
+        RatingStyle::One => Some(star.to_string()),
+        RatingStyle::Five => Some(format!("{}{star}", star_count(rating))),
+    }
+}
+
 /// A rating (Plex's 0 to 10, a star is 2) as stars; an odd value rounds up.
 /// None when unrated or when the style shows nothing.
 pub(crate) fn rating_glyphs(style: RatingStyle, rating: u8, ascii: bool) -> Option<String> {
@@ -170,7 +188,7 @@ pub(crate) fn rating_glyphs(style: RatingStyle, rating: u8, ascii: bool) -> Opti
         RatingStyle::Off => None,
         RatingStyle::One => Some(full.to_string()),
         RatingStyle::Five => {
-            let stars = usize::from(rating.min(10) + 1) / 2;
+            let stars = star_count(rating);
             Some(format!(
                 "{}{}",
                 full.to_string().repeat(stars),

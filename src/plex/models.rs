@@ -296,6 +296,8 @@ pub struct SearchHit {
     /// Tracks only; an album hit's own key is its album.
     pub album_key: Option<String>,
     pub artist_key: Option<String>,
+    /// Tracks only: the user's rating, Plex's 0 to 10 scale.
+    pub user_rating: Option<u8>,
 }
 
 // Wire to domain
@@ -430,6 +432,7 @@ impl MediaContainer {
                 duration_ms: t.duration_ms,
                 album_key: t.parent_rating_key,
                 artist_key: t.grandparent_rating_key,
+                user_rating: t.user_rating,
             });
         }
         for d in albums {
@@ -442,6 +445,7 @@ impl MediaContainer {
                 duration_ms: d.duration,
                 album_key: None,
                 artist_key: d.parent_rating_key,
+                user_rating: None,
             });
         }
         for d in artists {
@@ -454,6 +458,7 @@ impl MediaContainer {
                 duration_ms: None,
                 album_key: None,
                 artist_key: None,
+                user_rating: None,
             });
         }
         hits

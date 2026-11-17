@@ -161,7 +161,7 @@ fn with_symbols(set: &[(&str, &str)]) -> theme::Look {
     look
 }
 
-fn buffer_of(app: &mut App, w: u16, h: u16) -> ratatui::buffer::Buffer {
+pub(super) fn buffer_of(app: &mut App, w: u16, h: u16) -> ratatui::buffer::Buffer {
     let mut terminal = Terminal::new(TestBackend::new(w, h)).unwrap();
     terminal.draw(|f| views::draw(f, app)).unwrap();
     terminal.backend().buffer().clone()
