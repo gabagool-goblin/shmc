@@ -204,7 +204,11 @@ impl App {
                         return;
                     }
                     Some(
-                        Act::StartFilter | Act::ColumnLeft | Act::ColumnRight | Act::JumpToPlaying,
+                        Act::StartFilter
+                        | Act::StartSearch
+                        | Act::ColumnLeft
+                        | Act::ColumnRight
+                        | Act::JumpToPlaying,
                     ) => self.visual = None,
                     _ => {}
                 }
@@ -295,7 +299,7 @@ impl App {
                         }
                     }
                     self.search.last_query = q.clone();
-                    self.search.detail = None;
+                    self.set_search_detail(None);
                     self.search.detail_request = None;
                     self.search.similar_request = None;
                     let _ = self.plex.tx.send(PlexCmd::Search(q));

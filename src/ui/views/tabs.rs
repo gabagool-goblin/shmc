@@ -508,6 +508,7 @@ fn draw_search_detail(f: &mut Frame, app: &mut App, inner: Rect) {
         app.scrolloff,
     );
 
+    let selected = app.visual_range();
     let Some(d) = app.search.detail.as_ref() else { return };
     let end = (offset + visible).min(total);
     let cur_key = app.current_track().map(|t| t.rating_key.clone());
@@ -542,7 +543,11 @@ fn draw_search_detail(f: &mut Frame, app: &mut App, inner: Rect) {
             cells.push(Cell::from(Line::from(text).right_aligned()).style(theme::dim()));
         }
         cells.push(Cell::from(Line::from(dur).right_aligned()).style(theme::dim()));
-        rows.push(Row::new(cells));
+        let row = Row::new(cells);
+        rows.push(match selected {
+            Some((lo, hi)) if (lo..=hi).contains(&i) => row.style(theme::current_unfocused()),
+            _ => row,
+        });
     }
     let constraints: Vec<Constraint> = frame.col_w.iter().map(|w| Constraint::Length(*w)).collect();
     let mut state = TableState::default();

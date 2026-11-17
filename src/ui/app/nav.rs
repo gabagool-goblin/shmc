@@ -277,6 +277,7 @@ impl App {
                 (ListRef::Queue, Tab::Queue)
                     | (ListRef::BTracks, Tab::Browser)
                     | (ListRef::PlItems, Tab::Playlists)
+                    | (ListRef::SearchDetail, Tab::Search)
             )
         }) {
             self.visual = None;
@@ -512,7 +513,7 @@ impl App {
                 }
             },
             Tab::Search => {
-                self.search.detail = None;
+                self.set_search_detail(None);
                 self.search.detail_request = None;
                 self.search.similar_request = None;
             }

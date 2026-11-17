@@ -47,7 +47,7 @@ These keys work in all tab lists and Help, except where noted.
 | `h`, `l`, `Left`, `Right` | Switch columns (Browser, Playlists) |
 | `/` | Filter; starts a new search in Search. Not available in Help |
 | `o` | Jump to the playing track (Queue, Browser, Playlists) |
-| `v` | Select a range (Queue, Browser, Playlists tracks) |
+| `v` | Select a range (Queue, Browser, Playlists and Search tracks) |
 
 After `g`, the next letter always triggers a jump, even if it's bound to another action. For example, `g a` jumps rather than adding. Other keys keep their normal bindings, so `g 2` still switches tabs.
 
@@ -179,7 +179,7 @@ If `[keys]` contains an invalid section, action, key name or duplicate binding w
 | `activate` | `Enter` | browser, playlists, search |
 | `add` | `a` | browser, playlists, search |
 | `play_next` | `i` | browser, playlists, search |
-| `visual` | `v` | queue, browser, playlists |
+| `visual` | `v` | queue, browser, playlists, search |
 | `jump_to_playing` | `o` | queue, browser, playlists |
 | `filter` | `/` | queue, browser, playlists |
 | `play` | `Enter` | queue |

@@ -68,6 +68,12 @@ impl App {
         self.transient("finding similar tracks…".into());
     }
 
+    /// Replaces or closes the Search tab's detail list, ending any selection in it.
+    pub(super) fn set_search_detail(&mut self, d: Option<SearchDetail>) {
+        self.search.detail = d;
+        self.drop_visual(ListRef::SearchDetail);
+    }
+
     pub(super) fn similar_loaded(&mut self, key: String, label: String, outcome: SimilarOutcome) {
         if self.search.similar_request.as_deref() != Some(key.as_str()) {
             return;
@@ -80,8 +86,13 @@ impl App {
                 if !tracks.is_empty() {
                     state.select(Some(0));
                 }
-                self.search.detail =
-                    Some(SearchDetail { key, label, tracks, state, matches: Some(matches) });
+                self.set_search_detail(Some(SearchDetail {
+                    key,
+                    label,
+                    tracks,
+                    state,
+                    matches: Some(matches),
+                }));
                 self.search.focused = false;
                 self.goto_tab(Tab::Search);
             }
