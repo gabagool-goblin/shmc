@@ -58,7 +58,7 @@
 | `src/main.rs` | Startup, wiring and the UI loop |
 | `src/cli.rs` | Command-line validation, before anything has a side effect |
 | `src/lifecycle.rs` | How a run ends: exit status, the last message, signals |
-| `src/config.rs` | Schema and defaults |
+| `src/config/` | Schema and defaults (`mod.rs`); paths (`paths.rs`); reading and writing the file (`file.rs`); the settings list (`settings.rs`) |
 | `src/inventory.rs` | Every setting described once, for the config screen; `every_setting_is_described` keeps it in step with the schema |
 | `src/setup.rs` | Setup wizard and `set_by_key` |
 | `src/doctor.rs` | The `shmc config --check` checks |
