@@ -1517,6 +1517,67 @@ async fn browser_visual_mode_shows_range_and_label() {
     }
 }
 
+/// Six tracks t0..t5 as the Search tab's album view, the cursor on row 1.
+fn on_search_detail(app: &mut App) {
+    app.tab = Tab::Search;
+    app.search.focused = false;
+    let mut state = ratatui::widgets::TableState::default();
+    state.select(Some(1));
+    app.search.detail = Some(shmc::ui::app::SearchDetail {
+        key: "al1".into(),
+        label: "Evening Satellite".into(),
+        tracks: (0..6).map(track).collect(),
+        state,
+        matches: None,
+    });
+}
+
+#[tokio::test]
+async fn visual_range_adds_search_detail_tracks() {
+    let mut app = new_app().await;
+    on_search_detail(&mut app);
+
+    keys(&mut app, "vjj");
+    app.handle_msg(key('a'));
+    assert_eq!(queue_keys(&app), ["t1", "t2", "t3"]);
+    assert!(app.visual.is_none());
+}
+
+#[tokio::test]
+async fn visual_anchor_dropped_on_new_search_detail() {
+    let mut app = new_app().await;
+    on_search_detail(&mut app);
+    app.handle_msg(key('v'));
+    assert!(app.visual.is_some());
+
+    app.search.detail_request = Some("al2".into());
+    app.handle_msg(Msg::SearchAlbumLoaded {
+        key: "al2".into(),
+        label: "Other".into(),
+        tracks: (20..25).map(track).collect(),
+    });
+    assert!(app.visual.is_none());
+    app.handle_msg(key('j'));
+    app.handle_msg(key('a'));
+    assert_eq!(queue_keys(&app), ["t21"], "only the row under the cursor is added");
+}
+
+#[tokio::test]
+async fn search_detail_visual_mode_shows_range_and_label() {
+    let mut app = new_app().await;
+    on_search_detail(&mut app);
+    app.stopped = true;
+    keys(&mut app, "vjj");
+
+    let mut terminal = Terminal::new(TestBackend::new(120, 30)).unwrap();
+    terminal.draw(|f| views::draw(f, &mut app)).unwrap();
+    assert!(flatten(&terminal).contains("-- VISUAL --"));
+    let (x, inside) = locate(&terminal, "Starfall! 2").expect("row");
+    let (_, outside) = locate(&terminal, "Starfall! 5").expect("row");
+    let buf = terminal.backend().buffer();
+    assert_ne!(buf.cell((x, inside)).unwrap().bg, buf.cell((x, outside)).unwrap().bg);
+}
+
 #[tokio::test]
 async fn g_letter_in_visual_jumps_not_adds() {
     let mut app = new_app().await;

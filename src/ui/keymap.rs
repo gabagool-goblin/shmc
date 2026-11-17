@@ -240,6 +240,7 @@ pub const BINDINGS: &[Binding] = &[
     Binding { ctx: KeyCtx::Search, keys: &["Enter"], act: Act::Activate, desc: "play track and the rest, or open album" },
     Binding { ctx: KeyCtx::Search, keys: &["a"], act: Act::AddToQueue, desc: "add track or album to queue" },
     Binding { ctx: KeyCtx::Search, keys: &["i"], act: Act::PlayNext, desc: "insert track or album after the playing track" },
+    Binding { ctx: KeyCtx::Search, keys: &["v"], act: Act::VisualMode, desc: "select tracks (visual mode)" },
     Binding { ctx: KeyCtx::Search, keys: &["m"], act: Act::Similar, desc: "sonically similar tracks" },
     Binding { ctx: KeyCtx::Search, keys: &["b"], act: Act::GotoAlbum, desc: "show result in Browser" },
     Binding { ctx: KeyCtx::Search, keys: &["/"], act: Act::StartSearch, desc: "new search" },

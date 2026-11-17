@@ -338,8 +338,11 @@ impl App {
 
     pub(super) fn start_visual(&mut self) {
         let l = self.active_list();
-        if !matches!(l, ListRef::Queue | ListRef::BTracks | ListRef::PlItems) {
-            self.transient("visual mode works in the tracks column".into());
+        if !matches!(
+            l,
+            ListRef::Queue | ListRef::BTracks | ListRef::PlItems | ListRef::SearchDetail
+        ) {
+            self.transient("visual mode works in track lists".into());
             return;
         }
         if self.cursor_of(l).is_none() {
@@ -376,7 +379,10 @@ impl App {
         if v.list != self.active_list() {
             return None;
         }
-        let a = self.filter(v.list)?.cursor_of(v.anchor)?;
+        let a = match self.filter(v.list) {
+            Some(f) => f.cursor_of(v.anchor)?,
+            None => (v.anchor < self.total_len(v.list)).then_some(v.anchor)?,
+        };
         let c = self.cursor_of(v.list)?;
         Some((a.min(c), a.max(c)))
     }
@@ -391,8 +397,8 @@ impl App {
         self.remove_indices(&indices);
     }
 
-    /// Queues the Browser or Playlists selection and leaves visual mode; a
-    /// refused add keeps it.
+    /// Queues a track-list selection and leaves visual mode; a refused add
+    /// keeps it.
     pub(super) fn queue_visual_range(&mut self, action: QueueAction) {
         if action != QueueAction::Replace && self.refuse_while_loading() {
             return;
@@ -402,13 +408,15 @@ impl App {
             return;
         };
         let Some(l) = self.visual.map(|v| v.list) else { return };
-        let (items, filter) = match l {
-            ListRef::BTracks => (&self.browser.tracks, &self.browser_filters[2]),
-            ListRef::PlItems => (&self.playlists.items, &self.pl_items_filter),
+        let (items, filter) = match (l, self.search.detail.as_ref()) {
+            (ListRef::BTracks, _) => (&self.browser.tracks, Some(&self.browser_filters[2])),
+            (ListRef::PlItems, _) => (&self.playlists.items, Some(&self.pl_items_filter)),
+            (ListRef::SearchDetail, Some(d)) => (&d.tracks, None),
             _ => return,
         };
-        let tracks: Vec<Track> =
-            (lo..=hi).map(|fi| items[filter.real(fi, items.len())].clone()).collect();
+        let tracks: Vec<Track> = (lo..=hi)
+            .map(|fi| items[filter.map_or(fi, |f| f.real(fi, items.len()))].clone())
+            .collect();
         self.visual = None;
         let confirm = match tracks.as_slice() {
             [t] => Confirm::Track { title: t.title.clone() },
