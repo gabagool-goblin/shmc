@@ -348,7 +348,8 @@ async fn album_view_has_no_match_column() {
     assert!(frame.contains("Len") && !frame.contains("Match"), "{frame}");
 }
 
-/// A similar albums list shows its label and Match, and drops Match on a narrow pane.
+/// A similar albums list has Artist, Album and Year columns and Match; a narrow
+/// pane keeps only the names.
 #[tokio::test]
 async fn similar_albums_show_label_and_match() {
     let (mut app, _plex) = on_browser().await;
@@ -356,23 +357,66 @@ async fn similar_albums_show_label_and_match() {
     app.handle_msg(found_albums("al1"));
     for (w, h) in [(80, 24), (100, 60)] {
         let g = grid(&mut app, w, h);
-        let (header_end, _) = end_of(&g, "Match").expect("Match header");
-        let (value_end, _) = end_of(&g, "96%").expect("96%");
-        assert_eq!(header_end, value_end, "values align under the header at {w}x{h}");
+        for (header, value) in [("Year", "2016"), ("Match", "96%")] {
+            let (header_end, _) = end_of(&g, header).expect("header");
+            let (value_end, _) = end_of(&g, value).expect("value");
+            assert_eq!(header_end, value_end, "{value} sits under {header} at {w}x{h}");
+        }
         let frame = render(&mut app, w, h);
         assert!(
             frame
                 .contains("▸ Sonically similar to Evening Satellite — Northwind Sounds (3 albums)"),
             "{frame}"
         );
+        assert!(!frame.contains("[Album]") && !frame.contains("Title"), "{frame}");
     }
     let narrow = render(&mut app, 50, 24);
-    assert!(!narrow.contains("Match") && !narrow.contains("96%"), "{narrow}");
+    for gone in ["Year", "Match", "96%", "Len"] {
+        assert!(!narrow.contains(gone), "{gone} at 50 columns:\n{narrow}");
+    }
     assert!(narrow.contains("(3 albums)"), "{narrow}");
-    assert!(narrow.contains("Len"), "{narrow}");
-    for name in ["Salt Flats", "Night Ledger", "Low Signal"] {
+    for name in ["Violet Ferry", "Salt Flats", "Night Ledger", "Low Signal"] {
         assert!(narrow.contains(name), "{name} is clipped at 50 columns:\n{narrow}");
     }
+}
+
+/// A similar artists list is the names and Match, without the results' other columns.
+#[tokio::test]
+async fn similar_artists_show_names_and_match() {
+    let (mut app, _plex) = on_browser().await;
+    app.browser.focus = BrowserCol::Artists;
+    app.handle_msg(key('m'));
+    let artist = |key: &str, name: &str| SearchHit {
+        kind: HitKind::Artist,
+        rating_key: key.into(),
+        title: String::new(),
+        artist: name.into(),
+        subtitle: String::new(),
+        duration_ms: None,
+        album_key: None,
+        artist_key: None,
+        user_rating: None,
+    };
+    let rows =
+        vec![(artist("ar2", "Glass Harbour"), Some(96)), (artist("ar3", "Violet Ferry"), Some(95))];
+    app.handle_msg(Msg::SimilarLoaded {
+        key: "ar1".into(),
+        label: "Sonically similar to Northwind Sounds".into(),
+        outcome: SimilarOutcome::Hits(rows),
+    });
+    for (w, h) in [(80, 24), (100, 60)] {
+        let g = grid(&mut app, w, h);
+        let (header_end, _) = end_of(&g, "Match").expect("Match header");
+        let (value_end, _) = end_of(&g, "96%").expect("96%");
+        assert_eq!(header_end, value_end, "values align under the header at {w}x{h}");
+        let frame = render(&mut app, w, h);
+        assert!(frame.contains("Glass Harbour") && frame.contains("(2 artists)"), "{frame}");
+        for gone in ["[Artist]", "Title", "Album", "Len"] {
+            assert!(!frame.contains(gone), "{gone} at {w}x{h}:\n{frame}");
+        }
+    }
+    let narrow = render(&mut app, 50, 24);
+    assert!(narrow.contains("Violet Ferry") && !narrow.contains("Match"), "{narrow}");
 }
 
 fn album_loaded(key: &str) -> Msg {
