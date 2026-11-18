@@ -24,11 +24,13 @@ mod plex_worker;
 mod queue;
 mod rating;
 mod report;
+mod search_back;
 mod shuffle;
 mod similar;
 
 pub use plex_worker::{spawn_plex_worker, PlexCmd, PlexHandle};
 use queue::PosGuard;
+pub use search_back::{SavedResults, SearchBack};
 pub use similar::{SimilarHits, SimilarKind, SimilarOutcome, SimilarRequest};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -316,6 +318,8 @@ pub struct SearchState {
     pub similar_request: Option<SimilarRequest>,
     /// Set while `hits` are a similar albums or artists list, not a search result.
     pub similar: Option<SimilarHits>,
+    /// What Esc steps back through, oldest first.
+    pub back: Vec<SearchBack>,
     pub detail: Option<SearchDetail>,
 }
 

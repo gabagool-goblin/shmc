@@ -30,7 +30,7 @@ The sleep timer pauses playback when it expires. The header shows the remaining 
 
 The header shows the playing track's rating: five stars, one star or none, set by `ui.rating_style`. The compact layout shows it after the title on the now-playing line, and under the cover when `ui.art_metadata` is on. Track lists show a rated track's rating after its title, `4★` or, with one star, `★`. With `plex.set_ratings = true`, `r` rates it: `1` to `5`, or `0` to clear; with one star, `r` toggles the star. Ratings live in Plex, so other Plex apps see them.
 
-`m` on a track, album or artist lists the ones that sound like it, from Plex's sonic analysis, which needs Plex Pass. The list opens in the Search tab, closest first, with a Match column, and the usual keys work on it. Similar albums include the artist's own.
+`m` on a track, album or artist lists the ones that sound like it, from Plex's sonic analysis, which needs Plex Pass. The list opens in the Search tab, closest first, with a Match column, and the usual keys work on it. Similar albums include the artist's own. `Esc` goes back a step at a time, ending at the tab where `m` was pressed.
 
 On macOS, the media keys and the Control Center buttons work like shmc's own keys: play/pause like `Space`, next and previous like `>` and `<`, fast-forward and rewind seek 5 seconds, and stop like `:stop`. To leave the media keys alone, add `--input-media-keys=no` to `mpv.extra_args`.
 
@@ -81,7 +81,7 @@ Tracks that fail to play are skipped. After three consecutive failures, playback
 | `i` | Insert after the playing track |
 | `b` | Open Search result in Browser |
 | `Esc`, `Backspace` | Browser: go back one column; from artists, return to Queue |
-| `Esc` | Search: close an album opened from a result |
+| `Esc` | Search: go back a step |
 
 `Enter` behaviour depends on the selection:
 
