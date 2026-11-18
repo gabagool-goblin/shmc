@@ -244,7 +244,7 @@ pub const BINDINGS: &[Binding] = &[
     Binding { ctx: KeyCtx::Search, keys: &["m"], act: Act::Similar, desc: "sonically similar tracks, albums or artists" },
     Binding { ctx: KeyCtx::Search, keys: &["b"], act: Act::GotoAlbum, desc: "show result in Browser" },
     Binding { ctx: KeyCtx::Search, keys: &["/"], act: Act::StartSearch, desc: "new search" },
-    Binding { ctx: KeyCtx::Search, keys: &["Esc"], act: Act::Back, desc: "close album view" },
+    Binding { ctx: KeyCtx::Search, keys: &["Esc"], act: Act::Back, desc: "back" },
     Binding { ctx: KeyCtx::Help, keys: &["k", "Up"], act: Act::MoveUp, desc: "scroll up" },
     Binding { ctx: KeyCtx::Help, keys: &["j", "Down"], act: Act::MoveDown, desc: "scroll down" },
     Binding { ctx: KeyCtx::Help, keys: &["PgUp"], act: Act::PageUp, desc: "page up" },

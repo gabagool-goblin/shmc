@@ -374,3 +374,129 @@ async fn similar_albums_show_label_and_match() {
         assert!(narrow.contains(name), "{name} is clipped at 50 columns:\n{narrow}");
     }
 }
+
+fn album_loaded(key: &str) -> Msg {
+    Msg::SearchAlbumLoaded {
+        key: key.into(),
+        label: "Salt Flats".into(),
+        tracks: vec![track(0), track(1)],
+    }
+}
+
+/// Esc undoes each step from the Browser's `m` through an album and a similar tracks list.
+#[tokio::test]
+async fn esc_walks_back_through_similar_lists_to_the_browser() {
+    let (mut app, _plex) = on_browser().await;
+    app.handle_msg(key('m'));
+    app.handle_msg(found_albums("al1"));
+    app.handle_msg(enter());
+    app.handle_msg(album_loaded("al21"));
+    assert_eq!(app.search.detail.as_ref().map(|d| d.key.as_str()), Some("al21"));
+    app.handle_msg(key('m'));
+    app.handle_msg(found("t0"));
+    assert_eq!(app.search.detail.as_ref().map(|d| d.key.as_str()), Some("t0"));
+
+    app.handle_msg(key_code(KeyCode::Esc));
+    assert_eq!(app.search.detail.as_ref().map(|d| d.key.as_str()), Some("al21"));
+    app.handle_msg(key_code(KeyCode::Esc));
+    assert!(app.search.detail.is_none());
+    assert_eq!(app.search.hits.len(), 3, "the similar albums are shown");
+    assert_eq!(app.tab, Tab::Search);
+    app.handle_msg(key_code(KeyCode::Esc));
+    assert_eq!(app.tab, Tab::Browser);
+}
+
+/// Esc from a similar list made from search results brings the results back.
+#[tokio::test]
+async fn esc_restores_the_results_a_similar_list_replaced() {
+    let (mut app, _plex) = new_app_with_plex().await;
+    app.tab = Tab::Search;
+    app.search.hits = vec![album_hit("al8", "Evening Satellite"), album_hit("al9", "Low Tides")];
+    app.search.state.select(Some(1));
+    app.handle_msg(key('m'));
+    app.handle_msg(found_albums("al9"));
+    assert_eq!(app.search.hits.len(), 3);
+    assert!(app.search.similar.is_some());
+
+    app.handle_msg(key_code(KeyCode::Esc));
+    let keys: Vec<_> = app.search.hits.iter().map(|h| h.rating_key.as_str()).collect();
+    assert_eq!(keys, ["al8", "al9"]);
+    assert_eq!(app.search.state.selected(), Some(1));
+    assert!(app.search.similar.is_none());
+    assert_eq!(app.tab, Tab::Search);
+}
+
+#[tokio::test]
+async fn a_new_search_clears_the_way_back() {
+    let (mut app, _plex) = on_browser().await;
+    app.handle_msg(key('m'));
+    app.handle_msg(found_albums("al1"));
+    app.search.last_query = "tides".into();
+    app.handle_msg(Msg::SearchResults {
+        query: "tides".into(),
+        hits: vec![album_hit("al5", "Low Tides")],
+    });
+    app.handle_msg(key_code(KeyCode::Esc));
+    assert_eq!(app.tab, Tab::Search);
+    assert_eq!(app.search.hits.len(), 1);
+}
+
+#[tokio::test]
+async fn leaving_the_tab_clears_the_way_back() {
+    let (mut app, _plex) = on_browser().await;
+    app.handle_msg(key('m'));
+    app.handle_msg(found_albums("al1"));
+    app.handle_msg(key_code(KeyCode::BackTab));
+    assert_eq!(app.tab, Tab::Playlists);
+    app.handle_msg(key_code(KeyCode::Tab));
+    app.handle_msg(key_code(KeyCode::Esc));
+    assert_eq!(app.tab, Tab::Search, "Esc has no tab to return to");
+}
+
+/// Going on from Help to another tab forgets it too.
+#[tokio::test]
+async fn leaving_through_help_clears_the_way_back() {
+    let (mut app, _plex) = on_browser().await;
+    app.handle_msg(key('m'));
+    app.handle_msg(found_albums("al1"));
+    app.handle_msg(key_code(KeyCode::Tab));
+    app.handle_msg(key_code(KeyCode::Tab));
+    assert_eq!(app.tab, Tab::Queue);
+    for _ in 0..3 {
+        app.handle_msg(key_code(KeyCode::Tab));
+    }
+    assert_eq!(app.tab, Tab::Search);
+    app.handle_msg(key_code(KeyCode::Esc));
+    assert_eq!(app.tab, Tab::Search, "Esc has no tab to return to");
+}
+
+#[tokio::test]
+async fn help_keeps_the_way_back() {
+    let (mut app, _plex) = on_browser().await;
+    app.handle_msg(key('m'));
+    app.handle_msg(found_albums("al1"));
+    app.handle_msg(key_code(KeyCode::Tab));
+    assert_eq!(app.tab, Tab::Help);
+    app.handle_msg(key_code(KeyCode::Esc));
+    assert_eq!(app.tab, Tab::Search);
+    app.handle_msg(key_code(KeyCode::Esc));
+    assert_eq!(app.tab, Tab::Browser);
+}
+
+/// A long walk drops its middle steps and keeps the way back to the first tab.
+#[tokio::test]
+async fn the_way_back_keeps_its_first_tab() {
+    let (mut app, _plex) = on_browser().await;
+    app.handle_msg(key('m'));
+    app.handle_msg(found_albums("al1"));
+    for i in 0..30 {
+        app.search.detail_request = Some(format!("al{i}"));
+        app.handle_msg(album_loaded(&format!("al{i}")));
+    }
+    for _ in 0..25 {
+        if app.tab == Tab::Search {
+            app.handle_msg(key_code(KeyCode::Esc));
+        }
+    }
+    assert_eq!(app.tab, Tab::Browser);
+}

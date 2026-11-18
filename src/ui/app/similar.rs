@@ -163,6 +163,7 @@ impl App {
         };
         match outcome {
             SimilarOutcome::Tracks(rows) => {
+                self.push_back_for_detail(req.origin);
                 let (tracks, matches): (Vec<_>, Vec<_>) = rows.into_iter().unzip();
                 let mut state = TableState::default();
                 if !tracks.is_empty() {
@@ -180,6 +181,7 @@ impl App {
             }
             SimilarOutcome::Hits(rows) => {
                 let (hits, matches): (Vec<_>, Vec<_>) = rows.into_iter().unzip();
+                self.push_back_for_results(req.origin);
                 self.search.state.select((!hits.is_empty()).then_some(0));
                 self.search.hits = hits;
                 self.search.similar = Some(SimilarHits { label, kind: req.kind, matches });

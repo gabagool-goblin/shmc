@@ -268,6 +268,12 @@ impl App {
         if self.tab == Tab::Search && t != Tab::Search {
             self.search.focused = false;
         }
+        // Leaving Search drops the way back, except for a visit to Help.
+        if (self.tab == Tab::Search && !matches!(t, Tab::Search | Tab::Help))
+            || (self.tab == Tab::Help && t != Tab::Search)
+        {
+            self.search.back.clear();
+        }
         if t == Tab::Help && self.tab != Tab::Help {
             self.help_prev = self.tab;
         }
@@ -512,11 +518,7 @@ impl App {
                     self.goto_tab(Tab::Queue);
                 }
             },
-            Tab::Search => {
-                self.set_search_detail(None);
-                self.search.detail_request = None;
-                self.search.similar_request = None;
-            }
+            Tab::Search => self.search_back(),
             Tab::Help => {
                 let t = self.help_prev;
                 self.goto_tab(t);

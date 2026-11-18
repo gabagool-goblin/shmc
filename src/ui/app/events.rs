@@ -85,6 +85,7 @@ impl App {
                 if query == self.search.last_query {
                     self.search.hits = hits;
                     self.search.similar = None;
+                    self.search.back.clear();
                     self.search.state.select(if self.search.hits.is_empty() {
                         None
                     } else {
@@ -99,6 +100,7 @@ impl App {
             Msg::SearchAlbumLoaded { key, label, tracks } => {
                 if self.search.detail_request.as_deref() == Some(key.as_str()) {
                     self.search.detail_request = None;
+                    self.push_back_for_detail(Tab::Search);
                     let mut state = TableState::default();
                     if !tracks.is_empty() {
                         state.select(Some(0));
