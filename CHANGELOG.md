@@ -8,6 +8,7 @@ All notable changes to shmc are documented here. The format follows
 
 ### Added
 
+- `s` starts track or artist radio from Plex (needs Plex Pass and `plex.allow_writes`).
 - `m` lists tracks, albums or artists that sound like the selected one, from Plex's sonic analysis (needs Plex Pass).
 - `Esc` in the Search tab goes back a step at a time, ending at the tab where `m` was pressed.
 - `v` selects a range in the Search tab's album view and similar list.

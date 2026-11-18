@@ -22,6 +22,9 @@ pub struct MediaContainer {
     /// Comma-separated, on the server root `/` only.
     #[serde(rename = "@ownerFeatures", default)]
     pub owner_features: Option<String>,
+    /// On a play queue's reply.
+    #[serde(rename = "@playQueueID", default)]
+    pub play_queue_id: Option<String>,
     #[serde(rename = "Directory", default)]
     pub directories: Vec<WireDirectory>,
     #[serde(rename = "Track", default)]
@@ -58,6 +61,23 @@ pub struct WireDirectory {
     /// On `/nearest` rows: how far the row is from the seed.
     #[serde(rename = "@distance", default, deserialize_with = "lenient")]
     pub distance: Option<f64>,
+    /// An artist's radio stations, with `includeStations=1`.
+    #[serde(rename = "Stations", default)]
+    pub stations: Option<WireStations>,
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct WireStations {
+    #[serde(rename = "Playlist", default)]
+    pub stations: Vec<WireStation>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct WireStation {
+    #[serde(rename = "@key")]
+    pub key: String,
+    #[serde(rename = "@title", default)]
+    pub title: Option<String>,
 }
 
 impl WireDirectory {
@@ -127,6 +147,9 @@ pub struct WireTrack {
     /// Playlist entries only; unlike `ratingKey` it is unique per entry.
     #[serde(rename = "@playlistItemID", default)]
     pub playlist_item_id: Option<String>,
+    /// Play queue entries only.
+    #[serde(rename = "@playQueueItemID", default)]
+    pub play_queue_item_id: Option<String>,
     /// A float such as "6.0"; absent when unrated.
     #[serde(rename = "@userRating", default, deserialize_with = "lenient")]
     pub user_rating: Option<f64>,

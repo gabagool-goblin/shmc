@@ -58,7 +58,7 @@ These are the defaults shown by `shmc config --list`. Only include settings you 
 server = "http://192.168.1.100:32400"
 token = "your-plex-token"
 music_section = ""            # Library ID; empty uses the first music library
-allow_writes = false          # Let shmc change the server, such as ratings
+allow_writes = false          # Let shmc change the server: ratings and radio
 report_playback = false       # Send plays to Plex: play counts, last played
 
 [mpv]
@@ -202,7 +202,7 @@ cava -p ~/.cache/shmc/cava/config
 | Cache (album art, mpv socket) | `~/Library/Caches/shmc/` | `~/.cache/shmc/` |
 | Logs (`shmc.log`, `mpv.log`) | `~/Library/Logs/shmc/` | `~/.local/state/shmc/` |
 
-With `report_playback` on, `client-id` beside the config file identifies shmc to Plex. Audio is never written to disk. Album art is cached up to `album_art.cache_mb`, with least recently used covers removed first.
+With `report_playback` or `allow_writes` on, `client-id` beside the config file identifies shmc to Plex. Audio is never written to disk. Album art is cached up to `album_art.cache_mb`, with least recently used covers removed first.
 
 `shmc.log` rotates at 2 MB. `mpv.log` is replaced on each start. The Plex token is stripped from both logs before they're written and when displayed by `shmc log`.
 

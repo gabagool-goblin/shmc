@@ -1,6 +1,7 @@
 pub mod client;
 pub mod client_id;
 pub mod models;
+pub mod radio;
 pub mod report;
 pub mod sonic;
 

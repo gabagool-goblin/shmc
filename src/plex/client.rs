@@ -122,7 +122,7 @@ fn may_follow(previous: &Url, next: &Url) -> bool {
 
 /// Names where a stopped redirect pointed. Origin only: a proxy can echo the
 /// query string, token included, in `Location`.
-fn redirect_error(resp: &reqwest::Response) -> Option<String> {
+pub(super) fn redirect_error(resp: &reqwest::Response) -> Option<String> {
     if !resp.status().is_redirection() {
         return None;
     }
@@ -151,13 +151,17 @@ fn redirect_policy() -> reqwest::redirect::Policy {
 }
 
 /// Ceiling for an XML response; a 2,500-track page is ~4 MB.
-const MAX_XML_BYTES: u64 = 32 * 1024 * 1024;
+pub(super) const MAX_XML_BYTES: u64 = 32 * 1024 * 1024;
 
 /// Ceiling for an image download; a cover is a few hundred kilobytes.
 const MAX_IMAGE_BYTES: u64 = 32 * 1024 * 1024;
 
 /// The response body, or an error once it is known to exceed `max_bytes`.
-async fn read_capped(mut resp: reqwest::Response, max_bytes: u64, url: &str) -> Result<Vec<u8>> {
+pub(super) async fn read_capped(
+    mut resp: reqwest::Response,
+    max_bytes: u64,
+    url: &str,
+) -> Result<Vec<u8>> {
     let too_big = || {
         anyhow::anyhow!(
             "response from {} is larger than {} MiB; refusing it",
@@ -232,7 +236,7 @@ impl PlexClient {
 
     /// A URL on this server. Server paths are untrusted: absolute ones, and ones
     /// like `@evil.example/x` that turn the base into userinfo, are refused.
-    fn url_for(&self, path: &str) -> Result<Url> {
+    pub(super) fn url_for(&self, path: &str) -> Result<Url> {
         let base = Url::parse(&self.base).context("parsing server URL")?;
         // A "://" in the query is not an origin change.
         let path_only = path.split('?').next().unwrap_or(path);
@@ -257,7 +261,12 @@ impl PlexClient {
             .with_context(|| format!("parsing XML from {url}"))
     }
 
-    fn request(&self, method: reqwest::Method, url: &str, accept: &str) -> reqwest::RequestBuilder {
+    pub(super) fn request(
+        &self,
+        method: reqwest::Method,
+        url: &str,
+        accept: &str,
+    ) -> reqwest::RequestBuilder {
         self.http
             .request(method, url)
             .header("X-Plex-Token", &self.token)
@@ -681,7 +690,7 @@ impl PlexClient {
     }
 
     /// Unlike `identity`, a missing id is an error.
-    async fn machine_id(&self) -> Result<String> {
+    pub(crate) async fn machine_id(&self) -> Result<String> {
         self.identity_raw()
             .await?
             .machine
@@ -788,6 +797,39 @@ pub(crate) mod testing {
             }
         });
         (base, log)
+    }
+
+    pub(crate) type Seen = std::sync::Arc<std::sync::Mutex<Vec<String>>>;
+
+    /// `serve`, also keeping each whole request (headers included).
+    pub(crate) async fn serve_full(
+        reply: impl Fn(&str) -> (u16, String) + Send + 'static,
+    ) -> (String, Seen, Seen) {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let base = format!("http://{}", listener.local_addr().unwrap());
+        let seen: Seen = Seen::default();
+        let log = seen.clone();
+        let full: Seen = Seen::default();
+        let full_log = full.clone();
+        tokio::spawn(async move {
+            loop {
+                let (mut sock, _) = listener.accept().await.unwrap();
+                let mut buf = vec![0u8; 16384];
+                let n = sock.read(&mut buf).await.unwrap_or(0);
+                let req = String::from_utf8_lossy(&buf[..n]).to_string();
+                let line = req.lines().next().unwrap_or("").to_string();
+                log.lock().unwrap().push(line.clone());
+                full_log.lock().unwrap().push(req);
+                let (status, body) = reply(&line);
+                let resp = format!(
+                    "HTTP/1.1 {status} X\r\nContent-Type: application/xml\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                    body.len()
+                );
+                let _ = sock.write_all(resp.as_bytes()).await;
+            }
+        });
+        (base, seen, full)
     }
 }
 
@@ -1053,46 +1095,14 @@ mod url_for_tests {
 
 #[cfg(test)]
 mod save_tests {
+    use super::testing::{serve_full, Seen};
     use super::*;
-    use std::sync::{Arc, Mutex};
-
-    type Seen = Arc<Mutex<Vec<String>>>;
+    use std::sync::Mutex;
 
     /// A fake PMS answering `reply(request_line)` with a status and body.
     async fn serve(reply: impl Fn(&str) -> (u16, String) + Send + 'static) -> (String, Seen) {
         let (base, seen, _) = serve_full(reply).await;
         (base, seen)
-    }
-
-    /// `serve`, also keeping each whole request (headers included).
-    async fn serve_full(
-        reply: impl Fn(&str) -> (u16, String) + Send + 'static,
-    ) -> (String, Seen, Seen) {
-        use tokio::io::{AsyncReadExt, AsyncWriteExt};
-        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let base = format!("http://{}", listener.local_addr().unwrap());
-        let seen: Seen = Arc::default();
-        let log = seen.clone();
-        let full: Seen = Arc::default();
-        let full_log = full.clone();
-        tokio::spawn(async move {
-            loop {
-                let (mut sock, _) = listener.accept().await.unwrap();
-                let mut buf = vec![0u8; 16384];
-                let n = sock.read(&mut buf).await.unwrap_or(0);
-                let req = String::from_utf8_lossy(&buf[..n]).to_string();
-                let line = req.lines().next().unwrap_or("").to_string();
-                log.lock().unwrap().push(line.clone());
-                full_log.lock().unwrap().push(req);
-                let (status, body) = reply(&line);
-                let resp = format!(
-                    "HTTP/1.1 {status} X\r\nContent-Type: application/xml\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
-                    body.len()
-                );
-                let _ = sock.write_all(resp.as_bytes()).await;
-            }
-        });
-        (base, seen, full)
     }
 
     fn param(line: &str, name: &str) -> Option<String> {

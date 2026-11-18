@@ -138,8 +138,7 @@ impl App {
             self.transient("m works on a track, album or artist".into());
             return;
         };
-        // One request at a time may open the Search tab's list.
-        self.search.detail_request = None;
+        self.clear_list_requests();
         self.search.similar_request =
             Some(SimilarRequest { key: seed.key.clone(), kind: seed.kind, origin: self.tab });
         let _ = self.plex.tx.send(PlexCmd::LoadSimilar {
@@ -149,6 +148,13 @@ impl App {
             label: seed.label,
         });
         self.transient(format!("finding similar {}…", seed.kind.plural()));
+    }
+
+    /// One request at a time may open the Search tab's list.
+    pub(super) fn clear_list_requests(&mut self) {
+        self.search.detail_request = None;
+        self.search.similar_request = None;
+        self.search.radio_request = None;
     }
 
     /// Replaces or closes the Search tab's detail list, ending any selection in it.
