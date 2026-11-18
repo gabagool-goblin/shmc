@@ -24,6 +24,7 @@ mod rating;
 mod report;
 mod similar;
 mod theme;
+mod visual;
 
 fn track(i: usize) -> Track {
     Track {
@@ -269,6 +270,17 @@ fn tracks_reply(seq: u64, range: std::ops::Range<usize>, action: QueueAction) ->
             action,
         },
     )
+}
+
+fn end_file_eof() -> Msg {
+    Msg::Mpv(MpvEvent::EndFile { reason: "eof".into() })
+}
+
+/// Applies `needle` as the queue filter, matching on the title.
+fn filter_queue(app: &mut App, needle: &str) {
+    let titles: Vec<String> = app.queue.iter().map(|t| t.title.clone()).collect();
+    app.queue_filter.text = needle.into();
+    app.queue_filter.apply(titles.len(), |i| titles[i].contains(needle));
 }
 
 fn queue_keys(app: &App) -> Vec<String> {
