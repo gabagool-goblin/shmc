@@ -45,8 +45,8 @@ impl App {
     }
 
     pub(super) fn rate_playing(&mut self) {
-        if !self.set_ratings {
-            self.transient("ratings are read-only: turn on plex.set_ratings".into());
+        if !self.allow_writes {
+            self.transient("ratings are read-only: turn on plex.allow_writes".into());
             return;
         }
         if self.rating_style == RatingStyle::Off {

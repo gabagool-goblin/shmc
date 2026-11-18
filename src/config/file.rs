@@ -17,6 +17,18 @@ fn flatten_values(table: &toml::Table, prefix: &str, out: &mut BTreeMap<String, 
     }
 }
 
+/// Keys shmc no longer reads, each with what replaced it.
+const RETIRED_KEYS: &[(&str, &str)] = &[("plex.set_ratings", "plex.allow_writes")];
+
+/// The retired keys `text` still sets, with their replacements. Unknown keys are
+/// ignored on load, so only `shmc config --check` can point these out.
+pub fn retired_keys(text: &str) -> Vec<(&'static str, &'static str)> {
+    let Ok(table) = text.parse::<toml::Table>() else { return Vec::new() };
+    let mut flat = BTreeMap::new();
+    flatten_values(&table, "", &mut flat);
+    RETIRED_KEYS.iter().copied().filter(|(old, _)| flat.contains_key(*old)).collect()
+}
+
 /// An integer and a float are equal when numerically so (`volume = 50` in a
 /// file against `50.0` in the struct).
 fn same_value(a: &toml::Value, b: &toml::Value) -> bool {
