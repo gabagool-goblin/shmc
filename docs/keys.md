@@ -32,6 +32,8 @@ The header shows the playing track's rating: five stars, one star or none, set b
 
 `m` on a track, album or artist lists the ones that sound like it, from Plex's sonic analysis, which needs Plex Pass. The list opens in the Search tab, closest first, with a Match column, and the usual keys work on it. Similar albums include the artist's own. `Esc` goes back a step at a time, ending at the tab where `m` was pressed.
 
+`s` on a track or artist starts its Plex radio, which needs Plex Pass and `plex.allow_writes`. The tracks open in the Search tab like similar tracks, and `s` again starts a fresh station.
+
 On macOS, the media keys and the Control Center buttons work like shmc's own keys: play/pause like `Space`, next and previous like `>` and `<`, fast-forward and rewind seek 5 seconds, and stop like `:stop`. To leave the media keys alone, add `--input-media-keys=no` to `mpv.extra_args`.
 
 ## Lists

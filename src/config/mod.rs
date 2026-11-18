@@ -37,7 +37,7 @@ pub struct PlexConfig {
     pub token: String,
     /// Which Plex music library section to use. Empty = auto (first artist section)
     pub music_section: String,
-    /// Let shmc change things on the server, such as a track's rating with `r`.
+    /// Let shmc change things on the server: ratings with `r` and radio with `s`.
     pub allow_writes: bool,
     /// Send plays to Plex for play counts, last played and Now Playing.
     pub report_playback: bool,

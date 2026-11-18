@@ -20,6 +20,7 @@ mod keys;
 mod layout;
 mod queue;
 mod queue_requests;
+mod radio;
 mod rating;
 mod report;
 mod similar;

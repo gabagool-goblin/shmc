@@ -1,3 +1,4 @@
+use super::radio::{self, RadioEnv, RadioSeed};
 use super::similar::{SimilarKind, SimilarOutcome};
 use crate::plex::sonic::Features;
 use crate::plex::PlexClient;
@@ -68,6 +69,13 @@ pub enum PlexCmd {
         exclude: Option<String>,
         label: String,
     },
+    /// Replies once with `Msg::RadioLoaded`, never `Msg::Error`.
+    StartRadio {
+        key: String,
+        seed: RadioSeed,
+        /// Shown when Plex names no station.
+        label: String,
+    },
     LoadThumb {
         path: String,
     },
@@ -90,15 +98,18 @@ pub fn spawn_plex_worker(
     tx: UnboundedSender<Msg>,
     art_cache_mb: u64,
     art_max_size_px: [u32; 2],
+    client_id: Option<String>,
 ) -> UnboundedSender<PlexCmd> {
     let (ctx, mut crx) = tokio::sync::mpsc::unbounded_channel::<PlexCmd>();
     let features: Arc<Mutex<Option<Features>>> = Arc::default();
+    let radio_env = RadioEnv::new(client_id);
     tokio::spawn(async move {
         while let Some(cmd) = crx.recv().await {
             let client = client.clone();
             let tx = tx.clone();
             let section = section.clone();
             let features = features.clone();
+            let radio_env = radio_env.clone();
             tokio::spawn(async move {
                 match cmd {
                     PlexCmd::LoadArtists => match client.artists(&section).await {
@@ -262,6 +273,9 @@ pub fn spawn_plex_worker(
                         let outcome = find_similar(&client, &features, &key, kind, exclude).await;
                         let _ = tx.send(Msg::SimilarLoaded { key, label, outcome });
                     }
+                    PlexCmd::StartRadio { key, seed, label } => {
+                        radio::run(&client, &features, &radio_env, &tx, key, seed, label).await;
+                    }
                     PlexCmd::LoadThumb { path } => {
                         match load_thumb(&client, &path, art_cache_mb, art_max_size_px).await {
                             Ok((img, file)) => {
@@ -298,6 +312,28 @@ pub fn spawn_plex_worker(
     ctx
 }
 
+/// The server's features, read once per session. `None` when the read failed:
+/// unknown, not "no Plex Pass", so the feature's own request decides.
+pub(super) async fn cached_features(
+    client: &PlexClient,
+    features: &Mutex<Option<Features>>,
+) -> Option<Features> {
+    let known = *features.lock().unwrap_or_else(|e| e.into_inner());
+    if known.is_some() {
+        return known;
+    }
+    match client.features().await {
+        Ok(f) => {
+            *features.lock().unwrap_or_else(|e| e.into_inner()) = Some(f);
+            Some(f)
+        }
+        Err(e) => {
+            tracing::warn!("server features: {e:#}");
+            None
+        }
+    }
+}
+
 async fn find_similar(
     client: &PlexClient,
     features: &Mutex<Option<Features>>,
@@ -305,21 +341,7 @@ async fn find_similar(
     kind: SimilarKind,
     exclude: Option<String>,
 ) -> SimilarOutcome {
-    let known = *features.lock().unwrap_or_else(|e| e.into_inner());
-    let known = match known {
-        Some(f) => Some(f),
-        None => match client.features().await {
-            Ok(f) => {
-                *features.lock().unwrap_or_else(|e| e.into_inner()) = Some(f);
-                Some(f)
-            }
-            // A failed feature read is unknown, not "no Plex Pass": /nearest decides.
-            Err(e) => {
-                tracing::warn!("server features: {e:#}");
-                None
-            }
-        },
-    };
+    let known = cached_features(client, features).await;
     if known.is_some_and(|f| !f.sonic_analysis) {
         return SimilarOutcome::NoSonic;
     }

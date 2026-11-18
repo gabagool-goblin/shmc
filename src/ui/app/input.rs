@@ -300,8 +300,7 @@ impl App {
                     }
                     self.search.last_query = q.clone();
                     self.set_search_detail(None);
-                    self.search.detail_request = None;
-                    self.search.similar_request = None;
+                    self.clear_list_requests();
                     let _ = self.plex.tx.send(PlexCmd::Search(q));
                     self.transient("searching…".into());
                 }
@@ -756,6 +755,7 @@ impl App {
             Act::SleepTimer => self.cycle_sleep_timer(),
             Act::Rate => self.rate_playing(),
             Act::Similar => self.find_similar(),
+            Act::Radio => self.start_radio(),
         }
     }
 }

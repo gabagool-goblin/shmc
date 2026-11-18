@@ -92,8 +92,7 @@ impl App {
                         Some(0)
                     });
                     self.set_search_detail(None);
-                    self.search.detail_request = None;
-                    self.search.similar_request = None;
+                    self.clear_list_requests();
                     self.transient(format!("{} results for {:?}", self.search.hits.len(), query));
                 }
             }
@@ -116,6 +115,7 @@ impl App {
                 }
             }
             Msg::SimilarLoaded { key, label, outcome } => self.similar_loaded(key, label, outcome),
+            Msg::RadioLoaded { key, label, outcome } => self.radio_loaded(key, label, outcome),
             Msg::PlaylistsLoaded(list) => {
                 self.playlists.playlists = list;
                 self.playlists.preview_cache.clear();

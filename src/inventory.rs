@@ -130,7 +130,7 @@ pub const ALL: &[Setting] = &[
     Setting {
         key: "plex.allow_writes",
         label: "Allow changes",
-        help: "Let shmc change things on the server, such as ratings.",
+        help: "Let shmc change things on the server: ratings and radio.",
         kind: Kind::Bool,
         group: "Plex",
         applies: None,

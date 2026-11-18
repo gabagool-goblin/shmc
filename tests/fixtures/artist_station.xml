@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MediaContainer size="1" allowSync="1" identifier="com.plexapp.plugins.library" mediaTagPrefix="/system/bundle/media/flags/">
+<Directory ratingKey="31007" key="/library/metadata/31007/children" guid="plex://artist/5d07000000000000" type="artist" title="Mira Vale" summary="">
+<Image alt="Mira Vale" type="coverPoster" url="/library/metadata/31007/thumb/1700000000"/>
+<Genre tag="Folk"/>
+<Similar id="9001" filter="artist.id=9001" tag="Violet Ferry"/>
+<Location path="/music/Mira Vale"/>
+<Stations size="1">
+<Playlist guid="com.plexapp.plugins.library://station/artist/31007" key="/library/metadata/31007/station/0b5f3c1e-5a9e-4c52-9d0e-1b9a52c4a7f3?type=10" radio="1" title="Mira Vale Radio" type="playlist" playlistType="audio" smart="1" summary="" leafCount="0"/>
+</Stations>
+</Directory>
+</MediaContainer>

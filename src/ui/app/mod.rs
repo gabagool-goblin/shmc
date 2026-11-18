@@ -22,6 +22,7 @@ mod input;
 mod nav;
 mod plex_worker;
 mod queue;
+mod radio;
 mod rating;
 mod report;
 mod search_back;
@@ -30,6 +31,7 @@ mod similar;
 
 pub use plex_worker::{spawn_plex_worker, PlexCmd, PlexHandle};
 use queue::PosGuard;
+pub use radio::{RadioEnv, RadioOutcome, RadioRequest, RadioSeed};
 pub use search_back::{SavedResults, SearchBack};
 pub use similar::{SimilarHits, SimilarKind, SimilarOutcome, SimilarRequest};
 
@@ -153,6 +155,11 @@ pub enum Msg {
         key: String,
         label: String,
         outcome: SimilarOutcome,
+    },
+    RadioLoaded {
+        key: String,
+        label: String,
+        outcome: RadioOutcome,
     },
     PlaylistsLoaded(Vec<crate::plex::Playlist>),
     PlaylistSaved(crate::plex::SaveOutcome),
@@ -316,6 +323,7 @@ pub struct SearchState {
     /// The album being loaded for the drill-in.
     pub detail_request: Option<String>,
     pub similar_request: Option<SimilarRequest>,
+    pub radio_request: Option<RadioRequest>,
     /// Set while `hits` are a similar albums or artists list, not a search result.
     pub similar: Option<SimilarHits>,
     /// What Esc steps back through, oldest first.

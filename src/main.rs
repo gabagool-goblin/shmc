@@ -174,13 +174,17 @@ fn run() -> Result<()> {
     // spawned (`kill_on_drop`).
     lifecycle::begin_orderly();
     let mut client_id_failed = false;
-    let client_id = if cfg.plex.report_playback {
+    let client_id = if cfg.plex.report_playback || cfg.plex.allow_writes {
         let dir = config_path.parent().unwrap_or_else(|| std::path::Path::new("."));
         match plex::client_id::load_or_create(dir) {
             Ok(id) => Some(id),
             Err(e) => {
-                tracing::warn!("playback reports are off: cannot store the client id: {e}");
-                client_id_failed = true;
+                if cfg.plex.report_playback {
+                    tracing::warn!("playback reports are off: cannot store the client id: {e}");
+                    client_id_failed = true;
+                } else {
+                    tracing::warn!("radio is off: cannot store the client id: {e}");
+                }
                 None
             }
         }
@@ -501,7 +505,7 @@ async fn start(cfg: config::Config, client_id: Option<String>) -> Result<Started
         });
     }
 
-    let reporter = client_id.map(|id| {
+    let reporter = client_id.clone().filter(|_| cfg.plex.report_playback).map(|id| {
         let tx = msg_tx.clone();
         plex::report::Reporter::spawn(client.clone(), id, move |note| {
             let _ = tx.send(Msg::Error(note));
@@ -514,6 +518,7 @@ async fn start(cfg: config::Config, client_id: Option<String>) -> Result<Started
         msg_tx.clone(),
         cfg.album_art.cache_mb,
         cfg.album_art.max_size_px,
+        client_id,
     );
     let _ = plex_tx.send(ui::app::PlexCmd::LoadArtists);
     let _ = plex_tx.send(ui::app::PlexCmd::LoadPlaylists);

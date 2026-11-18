@@ -316,3 +316,34 @@ fn parse_root_fixture_reads_owner_features() {
     assert!(f.radio);
     assert!(!f.loudness);
 }
+
+#[test]
+fn parse_artist_station_fixture() {
+    let c: MediaContainer =
+        quick_xml::de::from_str(include_str!("fixtures/artist_station.xml")).unwrap();
+    let s = shmc::plex::radio::station_from(c).unwrap();
+    assert_eq!(s.title, "Mira Vale Radio");
+    assert_eq!(
+        s.key,
+        "/library/metadata/31007/station/0b5f3c1e-5a9e-4c52-9d0e-1b9a52c4a7f3?type=10"
+    );
+}
+
+#[test]
+fn parse_play_queue_fixture() {
+    let c: MediaContainer =
+        quick_xml::de::from_str(include_str!("fixtures/play_queue.xml")).unwrap();
+    let (id, rows) = shmc::plex::radio::play_queue_from(c);
+    assert_eq!(id.as_deref(), Some("123"));
+    let got: Vec<_> = rows.iter().map(|(t, i)| (t.title.as_str(), i.as_str())).collect();
+    assert_eq!(
+        got,
+        [
+            ("Song 1", "701"),
+            ("Song 2", "702"),
+            ("Song 3", "703"),
+            ("Song 4", "704"),
+            ("Song 5", "705")
+        ]
+    );
+}
