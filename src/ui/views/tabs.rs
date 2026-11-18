@@ -377,31 +377,22 @@ fn draw_search_results(f: &mut Frame, app: &mut App, inner: Rect) {
         placeholder(f, inner, &format!("press {key} to search"));
         return;
     }
-    let inner = match app.search.similar.as_ref() {
-        Some(s) => {
-            let parts = Layout::vertical([Constraint::Length(1), Constraint::Min(1)]).split(inner);
-            draw_list_label(f, parts[0], &s.label, &format!(" ({})", s.kind.count(total)));
-            parts[1]
-        }
-        None => inner,
-    };
+    if let Some(s) = app.search.similar.as_ref() {
+        let parts = Layout::vertical([Constraint::Length(1), Constraint::Min(1)]).split(inner);
+        draw_list_label(f, parts[0], &s.label, &format!(" ({})", s.kind.count(total)));
+        draw_similar_hits(f, app, parts[1]);
+        return;
+    }
     let tc = TrackCols::new(
         app.column_weights,
         [1, 0, 2],
         [Constraint::Percentage(24), Constraint::Percentage(36), Constraint::Min(12)],
     );
-    let show_match = inner.width >= MATCH_MIN_WIDTH && app.search.similar.is_some();
     let mut cols = tc.constraints();
-    if show_match {
-        cols.push(Constraint::Length(MATCH_COL_WIDTH));
-    }
     cols.push(Constraint::Length(len_col_width(
         app.search.hits.iter().filter_map(|h| h.duration_ms).max(),
     )));
     let mut headers = tc.headers(["Type / Artist", "Title", "Album"]);
-    if show_match {
-        headers.push(HeaderSpec::right("Match"));
-    }
     headers.push(HeaderSpec::right("Len"));
     let frame = table_frame(f, inner, total, &cols, Some(&headers), None);
     let cursor = app.search.state.selected();
@@ -452,17 +443,90 @@ fn draw_search_results(f: &mut Frame, app: &mut App, inner: Rect) {
             let album = theme::ellipsize(&clean(&hit.subtitle), frame.col_w[slot]);
             cells.push(Cell::from(Line::from(album)).style(base));
         }
-        if show_match {
-            let pct = app.search.similar.as_ref().and_then(|s| s.matches.get(i).copied().flatten());
-            let text = pct.map(|p| format!("{p}%")).unwrap_or_default();
-            cells.push(Cell::from(Line::from(text).right_aligned()).style(theme::dim()));
-        }
         let dur =
             hit.duration_ms.map(|ms| theme::format_time(ms as f64 / 1000.0)).unwrap_or_default();
         cells.push(Cell::from(Line::from(dur).right_aligned()).style(theme::dim()));
         rows.push(Row::new(cells));
     }
 
+    let col_w: Vec<Constraint> = frame.col_w.iter().map(|w| Constraint::Length(*w)).collect();
+    let mut state = TableState::default();
+    if let Some(c) = cursor {
+        state.select(Some(c.saturating_sub(offset).min(rows.len().saturating_sub(1))));
+    }
+    let table = Table::new(rows, col_w).column_spacing(1).row_highlight_style(theme::current());
+    f.render_stateful_widget(table, frame.rows, &mut state);
+    if let Some(bar) = frame.bar {
+        render_scrollbar(f, bar, total, offset, visible);
+    }
+}
+
+/// Every row of a similar albums or artists list is the same kind, so the list
+/// has columns of its own instead of the mixed results' ones.
+fn draw_similar_hits(f: &mut Frame, app: &mut App, area: Rect) {
+    let Some(s) = app.search.similar.as_ref() else { return };
+    let albums = s.kind == SimilarKind::Albums;
+    let wide = area.width >= MATCH_MIN_WIDTH;
+    let total = app.search.hits.len();
+    let mut cols = Vec::new();
+    let mut headers = Vec::new();
+    if albums {
+        cols.extend([Constraint::Percentage(40), Constraint::Min(12)]);
+        headers.extend([HeaderSpec::left("Artist"), HeaderSpec::left("Album")]);
+        if wide {
+            cols.push(Constraint::Length(YEAR_COL_WIDTH));
+            headers.push(HeaderSpec::left("Year"));
+        }
+    } else {
+        cols.push(Constraint::Min(12));
+        headers.push(HeaderSpec::left("Artist"));
+    }
+    if wide {
+        cols.push(Constraint::Length(MATCH_COL_WIDTH));
+        headers.push(HeaderSpec::right("Match"));
+        if albums {
+            let longest = app.search.hits.iter().filter_map(|h| h.duration_ms).max();
+            cols.push(Constraint::Length(len_col_width(longest)));
+            headers.push(HeaderSpec::right("Len"));
+        }
+    }
+    let frame = table_frame(f, area, total, &cols, Some(&headers), None);
+    let cursor = app.search.state.selected();
+    let visible = frame.rows.height as usize;
+    let offset = app.scroll.update(
+        ScrollId::SearchResults,
+        cursor.unwrap_or(0),
+        visible,
+        total,
+        app.scrolloff,
+    );
+    let Some(s) = app.search.similar.as_ref() else { return };
+    let end = (offset + visible).min(total);
+    let mut rows: Vec<Row> = Vec::with_capacity(end.saturating_sub(offset));
+    for i in offset..end {
+        let Some(hit) = app.search.hits.get(i) else { continue };
+        let w = |slot: usize| frame.col_w.get(slot).copied().unwrap_or(0);
+        let mut cells = vec![Cell::from(theme::ellipsize(&clean(&hit.artist), w(0)))];
+        if albums {
+            cells.push(Cell::from(theme::ellipsize(&clean(&hit.title), w(1))));
+            if wide {
+                cells.push(Cell::from(hit.subtitle.clone()).style(theme::dim()));
+            }
+        }
+        if wide {
+            let pct = s.matches.get(i).copied().flatten();
+            let text = pct.map(|p| format!("{p}%")).unwrap_or_default();
+            cells.push(Cell::from(Line::from(text).right_aligned()).style(theme::dim()));
+            if albums {
+                let dur = hit
+                    .duration_ms
+                    .map(|ms| theme::format_time(ms as f64 / 1000.0))
+                    .unwrap_or_default();
+                cells.push(Cell::from(Line::from(dur).right_aligned()).style(theme::dim()));
+            }
+        }
+        rows.push(Row::new(cells).style(theme::text()));
+    }
     let col_w: Vec<Constraint> = frame.col_w.iter().map(|w| Constraint::Length(*w)).collect();
     let mut state = TableState::default();
     if let Some(c) = cursor {
@@ -586,6 +650,9 @@ fn draw_list_label(f: &mut Frame, area: Rect, label: &str, count: &str) {
     ]);
     f.render_widget(Paragraph::new(line), area);
 }
+
+/// A four-digit year, which also fits the "Year" header.
+const YEAR_COL_WIDTH: u16 = 4;
 
 /// Room for the "Match" header, which also fits "100%".
 const MATCH_COL_WIDTH: u16 = 5;

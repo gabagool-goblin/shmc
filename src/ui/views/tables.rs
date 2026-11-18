@@ -317,7 +317,7 @@ pub(super) struct HeaderSpec {
 }
 
 impl HeaderSpec {
-    fn left(label: &'static str) -> Self {
+    pub(super) fn left(label: &'static str) -> Self {
         Self { label, right: false }
     }
     pub(super) fn right(label: &'static str) -> Self {
