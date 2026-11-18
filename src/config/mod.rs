@@ -4,6 +4,7 @@ mod file;
 mod paths;
 mod settings;
 
+pub use file::retired_keys;
 pub(crate) use file::scrub_value;
 pub use paths::{cache_dir, config_path, log_dir, themes_dir_for, usable_log_dir, NO_HOME};
 pub use settings::{SettingChange, SettingRow, NO_DEFAULT};
@@ -36,8 +37,8 @@ pub struct PlexConfig {
     pub token: String,
     /// Which Plex music library section to use. Empty = auto (first artist section)
     pub music_section: String,
-    /// Let `r` change a track's rating on the server.
-    pub set_ratings: bool,
+    /// Let shmc change things on the server, such as a track's rating with `r`.
+    pub allow_writes: bool,
     /// Send plays to Plex for play counts, last played and Now Playing.
     pub report_playback: bool,
 }
@@ -49,7 +50,7 @@ impl std::fmt::Debug for PlexConfig {
             .field("server", &crate::redact::redact_url(&self.server))
             .field("token", &token_label(&self.token))
             .field("music_section", &self.music_section)
-            .field("set_ratings", &self.set_ratings)
+            .field("allow_writes", &self.allow_writes)
             .field("report_playback", &self.report_playback)
             .finish()
     }

@@ -58,7 +58,7 @@ These are the defaults shown by `shmc config --list`. Only include settings you 
 server = "http://192.168.1.100:32400"
 token = "your-plex-token"
 music_section = ""            # Library ID; empty uses the first music library
-set_ratings = false           # Let r rate tracks on the server
+allow_writes = false          # Let shmc change the server, such as ratings
 report_playback = false       # Send plays to Plex: play counts, last played
 
 [mpv]

@@ -11,7 +11,7 @@ async fn playing(style: RatingStyle) -> (TestApp, tokio::sync::mpsc::UnboundedRe
     app.queue = (0..3).map(track).collect();
     app.current = Some(1);
     app.stopped = false;
-    app.set_ratings = true;
+    app.allow_writes = true;
     app.rating_style = style;
     (app, plex)
 }
@@ -77,12 +77,12 @@ async fn one_style_toggles_without_asking() {
 #[tokio::test]
 async fn refused_rating_sends_nothing() {
     let (mut app, mut plex) = playing(RatingStyle::Five).await;
-    app.set_ratings = false;
+    app.allow_writes = false;
     app.handle_msg(key('r'));
-    assert!(app.status.contains("plex.set_ratings"), "{}", app.status);
+    assert!(app.status.contains("plex.allow_writes"), "{}", app.status);
     app.handle_msg(key('4'));
 
-    app.set_ratings = true;
+    app.allow_writes = true;
     app.rating_style = RatingStyle::Off;
     app.handle_msg(key('r'));
     assert!(app.status.contains("ui.rating_style"), "{}", app.status);

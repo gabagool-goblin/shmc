@@ -707,7 +707,7 @@ fn ui_loop(terminal: &mut ui::term::Term, started: &mut Started) -> Result<UiEnd
         ui_settings(cfg),
         &cfg.keys,
     );
-    app.set_ratings = cfg.plex.set_ratings;
+    app.allow_writes = cfg.plex.allow_writes;
     app.reporter = started.reporter.as_ref().map(|r| r.sender());
 
     let cava = started.cava.clone();

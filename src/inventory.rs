@@ -128,9 +128,9 @@ pub const ALL: &[Setting] = &[
         applies: None,
     },
     Setting {
-        key: "plex.set_ratings",
-        label: "Set ratings",
-        help: "Let r rate tracks on the server.",
+        key: "plex.allow_writes",
+        label: "Allow changes",
+        help: "Let shmc change things on the server, such as ratings.",
         kind: Kind::Bool,
         group: "Plex",
         applies: None,

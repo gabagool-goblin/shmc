@@ -149,6 +149,10 @@ pub async fn collect(cfg: &Config, config_path: &Path, with_terminal: bool) -> R
     for problem in cfg.ui.enum_problems() {
         b.setting_warn(problem);
     }
+    let text = std::fs::read_to_string(config_path).unwrap_or_default();
+    for (old, new) in crate::config::retired_keys(&text) {
+        b.setting_warn(format!("{old} is no longer read; use {new}"));
+    }
     let (keymap, key_problems) = crate::ui::keymap::Keymap::from_table(&cfg.keys);
     for problem in key_problems {
         b.setting_warn(format!("{problem}; using the default keys"));
@@ -471,6 +475,25 @@ mod tests {
         let text = bad.render("shmc checks");
         assert!(text.contains("bad: secondary") && !text.contains("nope"), "{text}");
         assert!(text.contains("bad: styles.current") && !text.contains("SECRET"), "{text}");
+    }
+
+    /// A key shmc no longer reads is a warning naming its replacement.
+    #[test]
+    fn retired_key_warns_naming_its_replacement() {
+        let tmp = tempfile::tempdir().unwrap();
+        let path = tmp.path().join("config.toml");
+        let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
+        let warnings = |text: &str| {
+            std::fs::write(&path, text).unwrap();
+            let report = rt.block_on(collect(&Config::default(), &path, false));
+            let warns = report.settings.into_iter().filter(|e| e.severity == Severity::Warn);
+            warns.map(|e| e.text).filter(|t| t.contains("no longer read")).collect::<Vec<_>>()
+        };
+        assert_eq!(
+            warnings("[plex]\nset_ratings = true\n"),
+            ["plex.set_ratings is no longer read; use plex.allow_writes"]
+        );
+        assert!(warnings("[plex]\nallow_writes = true\n").is_empty());
     }
 
     /// A bad value is a warning naming the key; shmc starts with the default.

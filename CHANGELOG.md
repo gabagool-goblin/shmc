@@ -13,6 +13,10 @@ All notable changes to shmc are documented here. The format follows
 - `v` selects a range in the Search tab's album view and similar list.
 - Track lists show a rated track's rating after its title.
 
+### Changed
+
+- `plex.allow_writes` replaces `plex.set_ratings`; `shmc config --check` names the old key.
+
 ## 0.2.1 — 2026-11-16
 
 ### Fixed

@@ -468,8 +468,8 @@ pub struct App {
     /// Ratings known per rating key, from a track's metadata or a confirmed write.
     pub ratings: HashMap<String, Option<u8>>,
     pub rating_style: RatingStyle,
-    /// Writing ratings is allowed (`plex.set_ratings`).
-    pub set_ratings: bool,
+    /// Changing the server is allowed (`plex.allow_writes`).
+    pub allow_writes: bool,
     /// Where playback reports go; None when `plex.report_playback` is off.
     pub reporter: Option<UnboundedSender<crate::plex::report::Report>>,
     report: Option<report::TrackReport>,
@@ -615,7 +615,7 @@ impl App {
             pending_rating: None,
             ratings: HashMap::new(),
             rating_style: ui.rating_mode(),
-            set_ratings: false,
+            allow_writes: false,
             reporter: None,
             report: None,
             playlist_load: None,
