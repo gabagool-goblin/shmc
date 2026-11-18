@@ -2,20 +2,76 @@
 
 use super::*;
 use ratatui::widgets::TableState;
-use shmc::plex::models::{Album, HitKind, SearchHit};
-use shmc::ui::app::{BrowserCol, SimilarOutcome};
+use shmc::plex::models::{Album, Artist, HitKind, SearchHit};
+use shmc::ui::app::{BrowserCol, SimilarKind, SimilarOutcome};
 
 type Plex = tokio::sync::mpsc::UnboundedReceiver<PlexCmd>;
 
-/// `(key, exclude, label)` of every similar request sent.
-fn requests(plex: &mut Plex) -> Vec<(String, Option<String>, String)> {
+/// `(key, kind, exclude, label)` of every similar request sent.
+fn requests_of_kind(plex: &mut Plex) -> Vec<(String, SimilarKind, Option<String>, String)> {
     sent(plex)
         .into_iter()
         .filter_map(|c| match c {
-            PlexCmd::LoadSimilar { key, exclude, label } => Some((key, exclude, label)),
+            PlexCmd::LoadSimilar { key, kind, exclude, label } => Some((key, kind, exclude, label)),
             _ => None,
         })
         .collect()
+}
+
+/// `(key, exclude, label)` of every similar request sent.
+fn requests(plex: &mut Plex) -> Vec<(String, Option<String>, String)> {
+    requests_of_kind(plex).into_iter().map(|(k, _, e, l)| (k, e, l)).collect()
+}
+
+fn album(key: &str, title: &str) -> Album {
+    Album {
+        rating_key: key.into(),
+        title: title.into(),
+        artist: "Northwind Sounds".into(),
+        year: None,
+        thumb: None,
+    }
+}
+
+fn album_hit(key: &str, title: &str) -> SearchHit {
+    SearchHit {
+        kind: HitKind::Album,
+        rating_key: key.into(),
+        title: title.into(),
+        artist: "Violet Ferry".into(),
+        subtitle: "2016".into(),
+        duration_ms: None,
+        album_key: None,
+        artist_key: Some("ar7".into()),
+        user_rating: None,
+    }
+}
+
+/// Three albums at 96, 95 and 90 percent.
+fn found_albums(key: &str) -> Msg {
+    let rows = vec![
+        (album_hit("al21", "Salt Flats"), Some(96)),
+        (album_hit("al22", "Night Ledger"), Some(95)),
+        (album_hit("al23", "Low Signal"), Some(90)),
+    ];
+    Msg::SimilarLoaded {
+        key: key.into(),
+        label: "Sonically similar to Evening Satellite — Northwind Sounds".into(),
+        outcome: SimilarOutcome::Hits(rows),
+    }
+}
+
+/// The Browser with one artist and one album, the album column in focus.
+async fn on_browser() -> (TestApp, Plex) {
+    let (mut app, plex) = new_app_with_plex().await;
+    app.browser.artists =
+        vec![Artist { rating_key: "ar1".into(), title: "Northwind Sounds".into(), thumb: None }];
+    app.browser.artists_state.select(Some(0));
+    app.browser.albums = vec![album("al1", "Evening Satellite")];
+    app.browser.albums_state.select(Some(0));
+    app.browser.focus = BrowserCol::Albums;
+    app.tab = Tab::Browser;
+    (app, plex)
 }
 
 /// Rows `10..13` with matches 96, 95 and 90.
@@ -144,23 +200,59 @@ async fn m_on_a_search_track_hit_asks_for_it() {
     );
 }
 
-/// An album or artist row is not a track.
+/// An album or artist in the Browser is asked about with its own key and no exclusion.
 #[tokio::test]
-async fn m_on_an_album_row_sends_nothing() {
-    let (mut app, mut plex) = new_app_with_plex().await;
-    app.browser.albums = vec![Album {
-        rating_key: "al1".into(),
-        title: "Evening Satellite".into(),
-        artist: "Northwind Sounds".into(),
-        year: None,
-        thumb: None,
-    }];
-    app.browser.albums_state.select(Some(0));
-    app.browser.focus = BrowserCol::Albums;
-    app.tab = Tab::Browser;
+async fn m_on_a_browser_album_or_artist_asks_for_it() {
+    let (mut app, mut plex) = on_browser().await;
     app.handle_msg(key('m'));
-    assert!(sent(&mut plex).is_empty());
-    assert!(app.search.similar_request.is_none());
+    app.browser.focus = BrowserCol::Artists;
+    app.handle_msg(key('m'));
+    assert_eq!(
+        requests_of_kind(&mut plex),
+        [
+            (
+                "al1".to_string(),
+                SimilarKind::Albums,
+                None,
+                "Sonically similar to Evening Satellite — Northwind Sounds".to_string()
+            ),
+            (
+                "ar1".to_string(),
+                SimilarKind::Artists,
+                None,
+                "Sonically similar to Northwind Sounds".to_string()
+            ),
+        ]
+    );
+}
+
+/// Found albums take the place of the search results and open like any album hit.
+#[tokio::test]
+async fn found_albums_replace_the_search_results() {
+    let (mut app, mut plex) = on_browser().await;
+    let mut state = TableState::default();
+    state.select(Some(0));
+    app.search.detail = Some(shmc::ui::app::SearchDetail {
+        key: "al1".into(),
+        label: "Old".into(),
+        tracks: vec![track(0)],
+        state,
+        matches: None,
+    });
+    app.handle_msg(key('m'));
+    app.handle_msg(found_albums("al1"));
+    assert_eq!(app.tab, Tab::Search);
+    assert!(app.search.detail.is_none());
+    let keys: Vec<_> = app.search.hits.iter().map(|h| h.rating_key.as_str()).collect();
+    assert_eq!(keys, ["al21", "al22", "al23"]);
+    let similar = app.search.similar.as_ref().expect("the list is labelled");
+    assert_eq!(similar.matches, [Some(96), Some(95), Some(90)]);
+    assert_eq!(app.search.state.selected(), Some(0));
+
+    let _ = sent(&mut plex);
+    app.handle_msg(key('j'));
+    app.handle_msg(enter());
+    assert_eq!(app.search.detail_request.as_deref(), Some("al22"));
 }
 
 /// Without Plex Pass, an unanalysed track or no result the list stays where it was.
@@ -254,4 +346,31 @@ async fn album_view_has_no_match_column() {
     app.tab = Tab::Search;
     let frame = render(&mut app, 80, 24);
     assert!(frame.contains("Len") && !frame.contains("Match"), "{frame}");
+}
+
+/// A similar albums list shows its label and Match, and drops Match on a narrow pane.
+#[tokio::test]
+async fn similar_albums_show_label_and_match() {
+    let (mut app, _plex) = on_browser().await;
+    app.handle_msg(key('m'));
+    app.handle_msg(found_albums("al1"));
+    for (w, h) in [(80, 24), (100, 60)] {
+        let g = grid(&mut app, w, h);
+        let (header_end, _) = end_of(&g, "Match").expect("Match header");
+        let (value_end, _) = end_of(&g, "96%").expect("96%");
+        assert_eq!(header_end, value_end, "values align under the header at {w}x{h}");
+        let frame = render(&mut app, w, h);
+        assert!(
+            frame
+                .contains("▸ Sonically similar to Evening Satellite — Northwind Sounds (3 albums)"),
+            "{frame}"
+        );
+    }
+    let narrow = render(&mut app, 50, 24);
+    assert!(!narrow.contains("Match") && !narrow.contains("96%"), "{narrow}");
+    assert!(narrow.contains("(3 albums)"), "{narrow}");
+    assert!(narrow.contains("Len"), "{narrow}");
+    for name in ["Salt Flats", "Night Ledger", "Low Signal"] {
+        assert!(narrow.contains(name), "{name} is clipped at 50 columns:\n{narrow}");
+    }
 }

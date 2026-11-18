@@ -1,8 +1,8 @@
-//! Plex Pass sonic analysis: the nearest tracks to a seed, and which Plex Pass
-//! features the server has.
+//! Plex Pass sonic analysis: the nearest tracks, albums or artists to a seed,
+//! and which Plex Pass features the server has.
 
 use super::client::PlexClient;
-use super::models::{MediaContainer, Track};
+use super::models::{MediaContainer, SearchHit, Track};
 use anyhow::{Context, Result};
 
 /// Plex Pass features shmc uses, from the server root's `ownerFeatures`.
@@ -42,6 +42,22 @@ pub fn similar_from(c: MediaContainer) -> Vec<(Track, Option<u8>)> {
         .collect()
 }
 
+/// Albums and artists in Plex's order, each with its match when it has a distance.
+pub fn similar_hits_from(c: MediaContainer) -> Vec<(SearchHit, Option<u8>)> {
+    c.directories
+        .into_iter()
+        .filter_map(|d| {
+            let percent = d.distance.filter(|x| x.is_finite()).map(match_percent);
+            let hit = match d.type_.as_deref() {
+                Some("album") => d.into_album_hit(),
+                Some("artist") => d.into_artist_hit(),
+                _ => return None,
+            };
+            Some((hit, percent))
+        })
+        .collect()
+}
+
 impl PlexClient {
     /// Plex leaves the seed out of its own list. `exclude` is an artist key
     /// whose tracks are left out too.
@@ -55,6 +71,12 @@ impl PlexClient {
             path.push_str(&format!("?excludeGrandparentID={artist}"));
         }
         Ok(similar_from(self.get_xml(&path).await?))
+    }
+
+    /// The albums or artists nearest to an album or artist, seed left out.
+    pub async fn similar_hits(&self, key: &str) -> Result<Vec<(SearchHit, Option<u8>)>> {
+        let c = self.get_xml(&format!("/library/metadata/{key}/nearest")).await?;
+        Ok(similar_hits_from(c))
     }
 
     pub async fn features(&self) -> Result<Features> {

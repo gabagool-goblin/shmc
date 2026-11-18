@@ -250,6 +250,55 @@ fn parse_nearest_fixture_keeps_order_and_rounds_matches_up() {
     assert_eq!(rows[0].0.grandparent_rating_key.as_deref(), Some("5001"));
 }
 
+/// Similar albums keep Plex's order and carry their artist's key and a rounded-up match.
+#[test]
+fn parse_nearest_albums_fixture() {
+    use shmc::plex::HitKind;
+    let c: MediaContainer =
+        quick_xml::de::from_str(include_str!("fixtures/nearest_albums.xml")).unwrap();
+    let rows = shmc::plex::sonic::similar_hits_from(c);
+    let got: Vec<_> = rows
+        .iter()
+        .map(|(h, p)| {
+            (
+                h.kind,
+                h.rating_key.as_str(),
+                h.title.as_str(),
+                h.artist.as_str(),
+                h.artist_key.as_deref(),
+                *p,
+            )
+        })
+        .collect();
+    assert_eq!(
+        got,
+        [
+            (HitKind::Album, "6101", "Salt Flats", "Violet Ferry", Some("5101"), Some(96)),
+            (HitKind::Album, "6102", "Night Ledger", "Paper Harbour", Some("5102"), Some(95)),
+            (HitKind::Album, "6103", "Low Signal", "Violet Ferry", Some("5101"), Some(90)),
+        ]
+    );
+}
+
+/// Similar artists keep Plex's order; the name is the hit's `artist`.
+#[test]
+fn parse_nearest_artists_fixture() {
+    use shmc::plex::HitKind;
+    let c: MediaContainer =
+        quick_xml::de::from_str(include_str!("fixtures/nearest_artists.xml")).unwrap();
+    let rows = shmc::plex::sonic::similar_hits_from(c);
+    let got: Vec<_> =
+        rows.iter().map(|(h, p)| (h.kind, h.rating_key.as_str(), h.artist.as_str(), *p)).collect();
+    assert_eq!(
+        got,
+        [
+            (HitKind::Artist, "5201", "Violet Ferry", Some(96)),
+            (HitKind::Artist, "5202", "Paper Harbour", Some(95)),
+            (HitKind::Artist, "5203", "Mira Vale", Some(90)),
+        ]
+    );
+}
+
 /// A distance outside 0..=1 stays a percentage.
 #[test]
 fn match_percent_is_clamped() {

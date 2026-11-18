@@ -84,6 +84,7 @@ impl App {
             Msg::SearchResults { query, hits } => {
                 if query == self.search.last_query {
                     self.search.hits = hits;
+                    self.search.similar = None;
                     self.search.state.select(if self.search.hits.is_empty() {
                         None
                     } else {

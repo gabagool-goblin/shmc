@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<MediaContainer size="3" identifier="com.plexapp.plugins.library" librarySectionTitle="Music">
+<Directory ratingKey="6101" key="/library/metadata/6101/children" parentRatingKey="5101" type="album" title="Salt Flats" parentTitle="Violet Ferry" year="2016" distance="0.0412"/>
+<Directory ratingKey="6102" key="/library/metadata/6102/children" parentRatingKey="5102" type="album" title="Night Ledger" parentTitle="Paper Harbour" year="2019" distance="0.05"/>
+<Directory ratingKey="6103" key="/library/metadata/6103/children" parentRatingKey="5101" type="album" title="Low Signal" parentTitle="Violet Ferry" distance="0.1"/>
+</MediaContainer>

@@ -8,7 +8,7 @@ All notable changes to shmc are documented here. The format follows
 
 ### Added
 
-- `m` lists tracks that sound like the selected one, from Plex's sonic analysis (needs Plex Pass).
+- `m` lists tracks, albums or artists that sound like the selected one, from Plex's sonic analysis (needs Plex Pass).
 - `v` selects a range in the Search tab's album view and similar list.
 - Track lists show a rated track's rating after its title.
 
