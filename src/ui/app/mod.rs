@@ -29,7 +29,7 @@ mod similar;
 
 pub use plex_worker::{spawn_plex_worker, PlexCmd, PlexHandle};
 use queue::PosGuard;
-pub use similar::SimilarOutcome;
+pub use similar::{SimilarHits, SimilarKind, SimilarOutcome, SimilarRequest};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Tab {
@@ -291,7 +291,7 @@ impl Default for PlaylistsView {
     }
 }
 
-/// Enter on an album hit; never touches the queue.
+/// The Search tab's album view or similar tracks list; never touches the queue.
 pub struct SearchDetail {
     pub key: String,
     pub label: String,
@@ -313,8 +313,9 @@ pub struct SearchState {
     history_pos: Option<usize>,
     /// The album being loaded for the drill-in.
     pub detail_request: Option<String>,
-    /// The track whose similar list is being loaded.
-    pub similar_request: Option<String>,
+    pub similar_request: Option<SimilarRequest>,
+    /// Set while `hits` are a similar albums or artists list, not a search result.
+    pub similar: Option<SimilarHits>,
     pub detail: Option<SearchDetail>,
 }
 

@@ -7,7 +7,7 @@ use super::widgets::{
     render_list, spans_clean, title_spans, window,
 };
 use super::{draw_block, draw_vdivider};
-use crate::ui::app::{App, BrowserCol, PlaylistsCol};
+use crate::ui::app::{App, BrowserCol, PlaylistsCol, SimilarKind};
 use crate::ui::keymap::{Act, HelpLine, KeyCtx};
 use crate::ui::scroll::ScrollId;
 use crate::ui::scrollbar::{list_split, render_scrollbar};
@@ -377,16 +377,31 @@ fn draw_search_results(f: &mut Frame, app: &mut App, inner: Rect) {
         placeholder(f, inner, &format!("press {key} to search"));
         return;
     }
+    let inner = match app.search.similar.as_ref() {
+        Some(s) => {
+            let parts = Layout::vertical([Constraint::Length(1), Constraint::Min(1)]).split(inner);
+            draw_list_label(f, parts[0], &s.label, &format!(" ({})", s.kind.count(total)));
+            parts[1]
+        }
+        None => inner,
+    };
     let tc = TrackCols::new(
         app.column_weights,
         [1, 0, 2],
         [Constraint::Percentage(24), Constraint::Percentage(36), Constraint::Min(12)],
     );
+    let show_match = inner.width >= MATCH_MIN_WIDTH && app.search.similar.is_some();
     let mut cols = tc.constraints();
+    if show_match {
+        cols.push(Constraint::Length(MATCH_COL_WIDTH));
+    }
     cols.push(Constraint::Length(len_col_width(
         app.search.hits.iter().filter_map(|h| h.duration_ms).max(),
     )));
     let mut headers = tc.headers(["Type / Artist", "Title", "Album"]);
+    if show_match {
+        headers.push(HeaderSpec::right("Match"));
+    }
     headers.push(HeaderSpec::right("Len"));
     let frame = table_frame(f, inner, total, &cols, Some(&headers), None);
     let cursor = app.search.state.selected();
@@ -437,6 +452,11 @@ fn draw_search_results(f: &mut Frame, app: &mut App, inner: Rect) {
             let album = theme::ellipsize(&clean(&hit.subtitle), frame.col_w[slot]);
             cells.push(Cell::from(Line::from(album)).style(base));
         }
+        if show_match {
+            let pct = app.search.similar.as_ref().and_then(|s| s.matches.get(i).copied().flatten());
+            let text = pct.map(|p| format!("{p}%")).unwrap_or_default();
+            cells.push(Cell::from(Line::from(text).right_aligned()).style(theme::dim()));
+        }
         let dur =
             hit.duration_ms.map(|ms| theme::format_time(ms as f64 / 1000.0)).unwrap_or_default();
         cells.push(Cell::from(Line::from(dur).right_aligned()).style(theme::dim()));
@@ -466,15 +486,7 @@ fn draw_search_detail(f: &mut Frame, app: &mut App, inner: Rect) {
         let d = app.search.detail.as_ref().expect("checked by caller");
         (d.label.clone(), d.tracks.len(), d.state.selected())
     };
-    let label_line = Line::from(vec![
-        Span::styled("▸ ", theme::accent()),
-        Span::styled(
-            theme::ellipsize(&clean(&label), inner.width.saturating_sub(14)),
-            theme::secondary(),
-        ),
-        Span::styled(format!(" ({total} tracks)"), theme::dim()),
-    ]);
-    f.render_widget(Paragraph::new(label_line), parts[0]);
+    draw_list_label(f, parts[0], &label, &format!(" ({})", SimilarKind::Tracks.count(total)));
 
     let tc = TrackCols::plain(
         app.column_weights,
@@ -562,10 +574,23 @@ fn draw_search_detail(f: &mut Frame, app: &mut App, inner: Rect) {
     }
 }
 
+/// The line above a Search list: what it is, then how many rows.
+fn draw_list_label(f: &mut Frame, area: Rect, label: &str, count: &str) {
+    let line = Line::from(vec![
+        Span::styled("▸ ", theme::accent()),
+        Span::styled(
+            theme::ellipsize(&clean(label), area.width.saturating_sub(14)),
+            theme::secondary(),
+        ),
+        Span::styled(count.to_string(), theme::dim()),
+    ]);
+    f.render_widget(Paragraph::new(line), area);
+}
+
 /// Room for the "Match" header, which also fits "100%".
 const MATCH_COL_WIDTH: u16 = 5;
 
-/// The similar list drops its Match column below this pane width.
+/// A similar list drops its Match column below this pane width.
 const MATCH_MIN_WIDTH: u16 = 60;
 
 /// The widest the Help tab's key column grows, and the gap after it.

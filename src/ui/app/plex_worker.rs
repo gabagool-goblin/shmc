@@ -1,4 +1,4 @@
-use super::similar::SimilarOutcome;
+use super::similar::{SimilarKind, SimilarOutcome};
 use crate::plex::sonic::Features;
 use crate::plex::PlexClient;
 use crate::ui::playlist_load::PlaylistRequest;
@@ -63,7 +63,8 @@ pub enum PlexCmd {
     /// Replies once with `Msg::SimilarLoaded`, never `Msg::Error`.
     LoadSimilar {
         key: String,
-        /// The album artist whose own tracks are left out.
+        kind: SimilarKind,
+        /// Tracks only: the album artist whose own tracks are left out.
         exclude: Option<String>,
         label: String,
     },
@@ -257,8 +258,8 @@ pub fn spawn_plex_worker(
                             }
                         }
                     }
-                    PlexCmd::LoadSimilar { key, exclude, label } => {
-                        let outcome = find_similar(&client, &features, &key, exclude).await;
+                    PlexCmd::LoadSimilar { key, kind, exclude, label } => {
+                        let outcome = find_similar(&client, &features, &key, kind, exclude).await;
                         let _ = tx.send(Msg::SimilarLoaded { key, label, outcome });
                     }
                     PlexCmd::LoadThumb { path } => {
@@ -301,6 +302,7 @@ async fn find_similar(
     client: &PlexClient,
     features: &Mutex<Option<Features>>,
     key: &str,
+    kind: SimilarKind,
     exclude: Option<String>,
 ) -> SimilarOutcome {
     let known = *features.lock().unwrap_or_else(|e| e.into_inner());
@@ -320,6 +322,16 @@ async fn find_similar(
     };
     if known.is_some_and(|f| !f.sonic_analysis) {
         return SimilarOutcome::NoSonic;
+    }
+    if kind != SimilarKind::Tracks {
+        return match client.similar_hits(key).await {
+            Ok(rows) if !rows.is_empty() => SimilarOutcome::Hits(rows),
+            Ok(_) => SimilarOutcome::NoneFound,
+            Err(e) => {
+                tracing::warn!("similar {kind:?}: {e:#}");
+                SimilarOutcome::NoneFound
+            }
+        };
     }
     match client.similar(key, exclude.as_deref()).await {
         Ok(rows) if !rows.is_empty() => SimilarOutcome::Tracks(rows),

@@ -55,6 +55,39 @@ pub struct WireDirectory {
     pub year: Option<u32>,
     #[serde(rename = "@duration", default, deserialize_with = "lenient")]
     pub duration: Option<u64>,
+    /// On `/nearest` rows: how far the row is from the seed.
+    #[serde(rename = "@distance", default, deserialize_with = "lenient")]
+    pub distance: Option<f64>,
+}
+
+impl WireDirectory {
+    pub fn into_album_hit(self) -> SearchHit {
+        SearchHit {
+            kind: HitKind::Album,
+            rating_key: self.rating_key.unwrap_or(self.key),
+            title: self.title.unwrap_or_default(),
+            artist: self.grandparent_title.or(self.parent_title).unwrap_or_default(),
+            subtitle: self.year.map(|y| y.to_string()).unwrap_or_default(),
+            duration_ms: self.duration,
+            album_key: None,
+            artist_key: self.parent_rating_key,
+            user_rating: None,
+        }
+    }
+
+    pub fn into_artist_hit(self) -> SearchHit {
+        SearchHit {
+            kind: HitKind::Artist,
+            rating_key: self.rating_key.unwrap_or(self.key),
+            title: String::new(),
+            artist: self.title.unwrap_or_default(),
+            subtitle: String::new(),
+            duration_ms: None,
+            album_key: None,
+            artist_key: None,
+            user_rating: None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -435,32 +468,8 @@ impl MediaContainer {
                 user_rating: t.user_rating,
             });
         }
-        for d in albums {
-            hits.push(SearchHit {
-                kind: HitKind::Album,
-                rating_key: d.rating_key.unwrap_or(d.key),
-                title: d.title.unwrap_or_default(),
-                artist: d.grandparent_title.or(d.parent_title).unwrap_or_default(),
-                subtitle: d.year.map(|y| y.to_string()).unwrap_or_default(),
-                duration_ms: d.duration,
-                album_key: None,
-                artist_key: d.parent_rating_key,
-                user_rating: None,
-            });
-        }
-        for d in artists {
-            hits.push(SearchHit {
-                kind: HitKind::Artist,
-                rating_key: d.rating_key.unwrap_or(d.key),
-                title: String::new(),
-                artist: d.title.unwrap_or_default(),
-                subtitle: String::new(),
-                duration_ms: None,
-                album_key: None,
-                artist_key: None,
-                user_rating: None,
-            });
-        }
+        hits.extend(albums.into_iter().map(WireDirectory::into_album_hit));
+        hits.extend(artists.into_iter().map(WireDirectory::into_artist_hit));
         hits
     }
 }
