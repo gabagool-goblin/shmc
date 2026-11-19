@@ -289,8 +289,8 @@ fn queue_keys(app: &App) -> Vec<String> {
 }
 
 fn on_playlist(app: &mut App, i: usize) {
-    app.playlists.playlists = (0..3).map(playlist).collect();
-    app.playlists.state.select(Some(i));
+    app.playlists.list.items = (0..3).map(playlist).collect();
+    app.playlists.list.state.select(Some(i));
     app.playlists.focus = PlaylistsCol::List;
     app.tab = Tab::Playlists;
 }

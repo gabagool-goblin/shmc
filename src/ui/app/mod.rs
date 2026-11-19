@@ -1,7 +1,6 @@
 use crate::config::{KeyTable, RatingStyle, UiConfig, VolumeDisplay};
 use crate::playback::{MpvCmd, MpvEvent, MpvHandle};
 use crate::plex::{Album, Artist, AudioInfo, SearchHit, Track};
-use crate::ui::filter::ListFilter;
 use crate::ui::keymap::Keymap;
 use crate::ui::playlist_load::PlaylistLoad;
 use crate::ui::queue_seq::{QueueOutcome, QueueSeq};
@@ -265,14 +264,12 @@ impl Default for Browser {
 }
 
 pub struct PlaylistsView {
-    pub playlists: Vec<crate::plex::Playlist>,
-    pub state: ListState,
+    pub list: FilteredList<crate::plex::Playlist>,
     pub focus: PlaylistsCol,
-    pub items: Vec<Track>,
-    pub items_state: ListState,
+    pub tracks: FilteredList<Track>,
     /// The playlist whose items are (being) loaded.
-    pub items_for: Option<String>,
-    pub items_total: Option<usize>,
+    pub tracks_for: Option<String>,
+    pub tracks_total: Option<usize>,
     pub preview_cache: HashMap<String, Vec<Track>>,
 }
 
@@ -285,13 +282,11 @@ pub enum PlaylistsCol {
 impl Default for PlaylistsView {
     fn default() -> Self {
         Self {
-            playlists: Vec::new(),
-            state: ListState::default(),
+            list: FilteredList::default(),
             focus: PlaylistsCol::List,
-            items: Vec::new(),
-            items_state: ListState::default(),
-            items_for: None,
-            items_total: None,
+            tracks: FilteredList::default(),
+            tracks_for: None,
+            tracks_total: None,
             preview_cache: HashMap::new(),
         }
     }
@@ -547,8 +542,6 @@ pub struct App {
     /// Title, Artist, Album; 0 hides one.
     pub column_weights: [u32; 3],
     pub queue_columns: Vec<crate::config::QueueColumn>,
-    pub pl_list_filter: ListFilter,
-    pub pl_items_filter: ListFilter,
 
     pub status: String,
     pub status_error: bool,
@@ -670,8 +663,6 @@ impl App {
             numbers_playlists: ui.numbers_playlists(),
             column_weights: ui.effective_column_weights(),
             queue_columns: ui.resolved_queue_columns(),
-            pl_list_filter: ListFilter::default(),
-            pl_items_filter: ListFilter::default(),
             status: String::new(),
             status_error: false,
             status_epoch: 0,

@@ -118,8 +118,8 @@ async fn goto_artist_clears_the_artists_filter() {
 #[tokio::test]
 async fn highlighting_a_playlist_previews_its_tracks() {
     let (mut app, mut plex) = new_app_with_plex().await;
-    app.playlists.playlists = (0..3).map(playlist).collect();
-    app.playlists.state.select(Some(0));
+    app.playlists.list.items = (0..3).map(playlist).collect();
+    app.playlists.list.state.select(Some(0));
     app.playlists.focus = PlaylistsCol::List;
     app.tab = Tab::Playlists;
     app.preview_debounce_ms = 0;
@@ -140,16 +140,16 @@ async fn highlighting_a_playlist_previews_its_tracks() {
 #[tokio::test]
 async fn cached_playlist_preview_skips_the_request() {
     let (mut app, mut plex) = new_app_with_plex().await;
-    app.playlists.playlists = (0..3).map(playlist).collect();
+    app.playlists.list.items = (0..3).map(playlist).collect();
     app.playlists.preview_cache.insert("p1".into(), vec![track(0)]);
-    app.playlists.state.select(Some(0));
+    app.playlists.list.state.select(Some(0));
     app.playlists.focus = PlaylistsCol::List;
     app.tab = Tab::Playlists;
     app.preview_debounce_ms = 0;
 
     app.handle_msg(key('j'));
 
-    assert_eq!(app.playlists.items.len(), 1);
+    assert_eq!(app.playlists.tracks.items.len(), 1);
     let requested =
         sent(&mut plex).into_iter().any(|cmd| matches!(cmd, PlexCmd::LoadPlaylistPreview { .. }));
     assert!(!requested, "a cache hit must not fetch again");
@@ -159,8 +159,8 @@ async fn cached_playlist_preview_skips_the_request() {
 #[tokio::test]
 async fn failed_playlist_preview_retried_on_highlight() {
     let (mut app, mut plex) = new_app_with_plex().await;
-    app.playlists.playlists = (0..3).map(playlist).collect();
-    app.playlists.state.select(Some(0));
+    app.playlists.list.items = (0..3).map(playlist).collect();
+    app.playlists.list.state.select(Some(0));
     app.playlists.focus = PlaylistsCol::List;
     app.tab = Tab::Playlists;
     app.preview_debounce_ms = 0;
@@ -406,8 +406,8 @@ async fn large_playlist_add_asks_for_confirmation() {
     let (mut app, mut plex) = new_app_with_plex().await;
     let mut large = playlist(0);
     large.item_count = Some(5000);
-    app.playlists.playlists = vec![large];
-    app.playlists.state.select(Some(0));
+    app.playlists.list.items = vec![large];
+    app.playlists.list.state.select(Some(0));
     app.playlists.focus = PlaylistsCol::List;
     app.tab = Tab::Playlists;
     app.confirm_playlist_over = 1000;
@@ -430,8 +430,8 @@ async fn large_playlist_add_asks_for_confirmation() {
 #[tokio::test]
 async fn enter_on_a_playlist_replaces_the_queue() {
     let (mut app, mut plex) = new_app_with_plex().await;
-    app.playlists.playlists = (0..3).map(playlist).collect();
-    app.playlists.state.select(Some(1));
+    app.playlists.list.items = (0..3).map(playlist).collect();
+    app.playlists.list.state.select(Some(1));
     app.playlists.focus = PlaylistsCol::List;
     app.tab = Tab::Playlists;
 
@@ -474,9 +474,9 @@ async fn add_on_artist_queues_its_tracks() {
 async fn capped_preview_is_announced() {
     let mut app = new_app().await;
     app.tab = Tab::Playlists;
-    app.playlists.playlists = vec![listed_playlist("p0", "Big Mix", 20_000)];
-    app.playlists.items_for = Some("p0".into());
-    app.playlists.items_total = Some(20_000);
+    app.playlists.list.items = vec![listed_playlist("p0", "Big Mix", 20_000)];
+    app.playlists.tracks_for = Some("p0".into());
+    app.playlists.tracks_total = Some(20_000);
     app.handle_msg(Msg::PlaylistItemsLoaded {
         rating_key: "p0".into(),
         tracks: (0..100).map(track).collect(),
@@ -488,9 +488,9 @@ async fn capped_preview_is_announced() {
     // from the cache
     let mut app = new_app().await;
     app.tab = Tab::Playlists;
-    app.playlists.playlists = vec![listed_playlist("p0", "Big Mix", 20_000)];
+    app.playlists.list.items = vec![listed_playlist("p0", "Big Mix", 20_000)];
     app.playlists.focus = PlaylistsCol::List;
-    app.playlists.state.select(Some(0));
+    app.playlists.list.state.select(Some(0));
     app.playlists.preview_cache.insert("p0".into(), (0..100).map(track).collect());
     app.handle_msg(key('j'));
     assert!(app.status.contains("20000"), "{}", app.status);
@@ -499,9 +499,9 @@ async fn capped_preview_is_announced() {
 
     let mut app = new_app().await;
     app.tab = Tab::Playlists;
-    app.playlists.playlists = vec![playlist(0)];
-    app.playlists.items_for = Some("p0".into());
-    app.playlists.items_total = Some(12);
+    app.playlists.list.items = vec![playlist(0)];
+    app.playlists.tracks_for = Some("p0".into());
+    app.playlists.tracks_total = Some(12);
     app.handle_msg(Msg::PlaylistItemsLoaded {
         rating_key: "p0".into(),
         tracks: (0..12).map(track).collect(),
@@ -557,10 +557,10 @@ async fn browser_album_enter_replaces_queue_with_album() {
 #[tokio::test]
 async fn playlist_track_enter_replaces_from_that_track() {
     let (mut app, mut plex) = new_app_with_plex().await;
-    app.playlists.playlists = vec![playlist(0)];
-    app.playlists.items_for = Some("p0".into());
-    app.playlists.items = (0..4).map(track).collect();
-    app.playlists.items_state.select(Some(1));
+    app.playlists.list.items = vec![playlist(0)];
+    app.playlists.tracks_for = Some("p0".into());
+    app.playlists.tracks.items = (0..4).map(track).collect();
+    app.playlists.tracks.state.select(Some(1));
     app.playlists.focus = PlaylistsCol::Items;
     app.tab = Tab::Playlists;
 
@@ -583,10 +583,10 @@ async fn large_playlist_track_asks_remainder_or_start() {
         let (mut app, mut plex) = new_app_with_plex().await;
         let mut large = playlist(0);
         large.item_count = Some(5000);
-        app.playlists.playlists = vec![large];
-        app.playlists.items_for = Some("p0".into());
-        app.playlists.items = (0..4).map(track).collect();
-        app.playlists.items_state.select(Some(1));
+        app.playlists.list.items = vec![large];
+        app.playlists.tracks_for = Some("p0".into());
+        app.playlists.tracks.items = (0..4).map(track).collect();
+        app.playlists.tracks.state.select(Some(1));
         app.playlists.focus = PlaylistsCol::Items;
         app.tab = Tab::Playlists;
         app.confirm_playlist_over = 1000;
@@ -619,10 +619,10 @@ async fn play_next_large_playlist_inserts_one_track() {
     let (mut app, mut plex) = new_app_with_plex().await;
     let mut large = playlist(0);
     large.item_count = Some(5000);
-    app.playlists.playlists = vec![large];
-    app.playlists.items_for = Some("p0".into());
-    app.playlists.items = (0..4).map(track).collect();
-    app.playlists.items_state.select(Some(1));
+    app.playlists.list.items = vec![large];
+    app.playlists.tracks_for = Some("p0".into());
+    app.playlists.tracks.items = (0..4).map(track).collect();
+    app.playlists.tracks.state.select(Some(1));
     app.playlists.focus = PlaylistsCol::Items;
     app.tab = Tab::Playlists;
     app.confirm_playlist_over = 1000;
@@ -640,8 +640,8 @@ async fn play_next_large_playlist_inserts_one_track() {
 #[tokio::test]
 async fn vanished_playlist_start_reported() {
     let (mut app, mut plex) = new_app_with_plex().await;
-    app.playlists.playlists = vec![playlist(0)];
-    app.playlists.state.select(Some(0));
+    app.playlists.list.items = vec![playlist(0)];
+    app.playlists.list.state.select(Some(0));
     app.playlists.focus = PlaylistsCol::List;
     app.tab = Tab::Playlists;
     app.handle_msg(enter());

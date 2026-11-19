@@ -61,7 +61,7 @@ async fn all_tabs_render_at_several_sizes() {
     app.browser.albums_for = Some("al2".into());
     app.browser.tracks_for = Some("al2".into());
 
-    app.playlists.playlists = (0..25)
+    app.playlists.list.items = (0..25)
         .map(|i| Playlist {
             rating_key: format!("p{i}"),
             title: format!("Night Mix {i:02}"),
@@ -72,11 +72,11 @@ async fn all_tabs_render_at_several_sizes() {
             summary: None,
         })
         .collect();
-    app.playlists.state.select(Some(3));
-    app.playlists.items = (0..12).map(track).collect();
-    app.playlists.items_state.select(Some(5));
+    app.playlists.list.state.select(Some(3));
+    app.playlists.tracks.items = (0..12).map(track).collect();
+    app.playlists.tracks.state.select(Some(5));
     app.playlists.focus = PlaylistsCol::List;
-    app.playlists.items_for = Some("p3".into());
+    app.playlists.tracks_for = Some("p3".into());
 
     let c: shmc::plex::models::MediaContainer =
         quick_xml::de::from_str(include_str!("../fixtures/hubs_search_starfall.xml")).unwrap();
@@ -558,19 +558,19 @@ async fn header_shows_file_audio_details() {
 async fn playlist_item_columns_stable_across_playlists() {
     let mut app = new_app().await;
     app.tab = Tab::Playlists;
-    app.playlists.playlists =
+    app.playlists.list.items =
         vec![listed_playlist("p0", "Small Mix", 9), listed_playlist("p1", "Big Mix", 20_000)];
     app.playlists.focus = PlaylistsCol::Items;
 
-    app.playlists.items = (0..9).map(track).collect();
-    app.playlists.items_for = Some("p0".into());
-    app.playlists.items_total = Some(9);
+    app.playlists.tracks.items = (0..9).map(track).collect();
+    app.playlists.tracks_for = Some("p0".into());
+    app.playlists.tracks_total = Some(9);
     let small = render(&mut app, 120, 40);
     let small_x = column_of(&small, "Starfall! 0");
 
-    app.playlists.items = (0..100).map(track).collect();
-    app.playlists.items_for = Some("p1".into());
-    app.playlists.items_total = Some(20_000);
+    app.playlists.tracks.items = (0..100).map(track).collect();
+    app.playlists.tracks_for = Some("p1".into());
+    app.playlists.tracks_total = Some(20_000);
     let big = render(&mut app, 120, 40);
     let big_x = column_of(&big, "Starfall! 0");
 
@@ -892,11 +892,11 @@ async fn app_with_every_table() -> TestApp {
     let mut app = new_app().await;
     app.queue.items = (0..50).map(track).collect();
     app.queue.state.select(Some(7));
-    app.playlists.playlists = (0..3).map(playlist).collect();
-    app.playlists.items = (0..12).map(track).collect();
-    app.playlists.items_state.select(Some(5));
+    app.playlists.list.items = (0..3).map(playlist).collect();
+    app.playlists.tracks.items = (0..12).map(track).collect();
+    app.playlists.tracks.state.select(Some(5));
     app.playlists.focus = PlaylistsCol::Items;
-    app.playlists.items_for = Some("p0".into());
+    app.playlists.tracks_for = Some("p0".into());
     let c: shmc::plex::models::MediaContainer =
         quick_xml::de::from_str(include_str!("../fixtures/hubs_search_starfall.xml")).unwrap();
     app.search.hits = c.into_search_hits();

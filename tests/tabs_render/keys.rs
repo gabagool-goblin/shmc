@@ -182,10 +182,10 @@ async fn key_after_expired_prompt_not_swallowed() {
     let (mut app, mut plex) = new_app_with_plex().await;
     let mut large = playlist(0);
     large.item_count = Some(5000);
-    app.playlists.playlists = vec![large];
-    app.playlists.items_for = Some("p0".into());
-    app.playlists.items = (0..4).map(track).collect();
-    app.playlists.items_state.select(Some(0));
+    app.playlists.list.items = vec![large];
+    app.playlists.tracks_for = Some("p0".into());
+    app.playlists.tracks.items = (0..4).map(track).collect();
+    app.playlists.tracks.state.select(Some(0));
     app.playlists.focus = PlaylistsCol::Items;
     app.tab = Tab::Playlists;
     app.confirm_playlist_over = 1000;
@@ -198,7 +198,7 @@ async fn key_after_expired_prompt_not_swallowed() {
     app.handle_msg(key('j'));
 
     assert_eq!(
-        app.playlists.items_state.selected(),
+        app.playlists.tracks.state.selected(),
         Some(1),
         "the key press must move the cursor, not cancel the question"
     );
@@ -250,9 +250,9 @@ async fn hints_name_rebound_keys() {
     app.visual = None;
     app.tab = Tab::Playlists;
     app.playlists.focus = PlaylistsCol::List;
-    app.playlists.playlists =
+    app.playlists.list.items =
         vec![listed_playlist("p0", "A", 5000), listed_playlist("p1", "B", 5000)];
-    app.playlists.state.select(Some(0));
+    app.playlists.list.state.select(Some(0));
     let frame = render(&mut app, 120, 30);
     assert!(frame.contains("Z adds it"), "{frame}");
     app.playlists.preview_cache.insert("p1".into(), (0..3).map(track).collect());
@@ -494,16 +494,16 @@ async fn sleep_timer_cycles_and_pauses_at_deadline() {
 async fn g_keeps_non_letter_bindings() {
     let mut app = new_app().await;
     app.tab = Tab::Playlists;
-    app.playlists.playlists = ["Bravo", "Charlie", "Delta"]
+    app.playlists.list.items = ["Bravo", "Charlie", "Delta"]
         .iter()
         .enumerate()
         .map(|(i, title)| Playlist { title: (*title).into(), ..playlist(i) })
         .collect();
-    app.playlists.state.select(Some(2));
+    app.playlists.list.state.select(Some(2));
 
     app.handle_msg(key('g'));
     app.handle_msg(key('b'));
-    assert_eq!(app.playlists.state.selected(), Some(0), "'g b' jumps");
+    assert_eq!(app.playlists.list.state.selected(), Some(0), "'g b' jumps");
     assert_eq!(app.tab, Tab::Playlists);
 
     app.handle_msg(key('g'));
@@ -511,10 +511,10 @@ async fn g_keeps_non_letter_bindings() {
     assert_eq!(app.tab, Tab::Browser, "'g 2' must still switch tabs");
 
     app.tab = Tab::Playlists;
-    app.playlists.state.select(Some(2));
+    app.playlists.list.state.select(Some(2));
     app.handle_msg(key('g'));
     app.handle_msg(key('g'));
-    assert_eq!(app.playlists.state.selected(), Some(0), "'gg' goes to the top");
+    assert_eq!(app.playlists.list.state.selected(), Some(0), "'gg' goes to the top");
 }
 
 /// A timer that fires while paused leaves the track paused.

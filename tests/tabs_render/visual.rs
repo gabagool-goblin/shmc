@@ -209,9 +209,9 @@ async fn visual_anchor_dropped_on_new_browser_tracks() {
 async fn visual_range_adds_playlist_tracks() {
     let mut app = new_app().await;
     on_playlist(&mut app, 0);
-    app.playlists.items_for = Some("pl0".into());
-    app.playlists.items = (0..6).map(track).collect();
-    app.playlists.items_state.select(Some(1));
+    app.playlists.tracks_for = Some("pl0".into());
+    app.playlists.tracks.items = (0..6).map(track).collect();
+    app.playlists.tracks.state.select(Some(1));
     app.playlists.focus = PlaylistsCol::Items;
 
     keys(&mut app, "vj");

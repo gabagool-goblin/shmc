@@ -117,14 +117,14 @@ impl App {
             Msg::SimilarLoaded { key, label, outcome } => self.similar_loaded(key, label, outcome),
             Msg::RadioLoaded { key, label, outcome } => self.radio_loaded(key, label, outcome),
             Msg::PlaylistsLoaded(list) => {
-                self.playlists.playlists = list;
+                self.playlists.list.items = list;
                 self.playlists.preview_cache.clear();
-                self.playlists.items_for = None;
-                self.playlists.items_total = None;
-                self.playlists.items.clear();
+                self.playlists.tracks_for = None;
+                self.playlists.tracks_total = None;
+                self.playlists.tracks.items.clear();
                 self.drop_visual(ListRef::PlItems);
                 self.refilter(ListRef::PlList);
-                self.playlists.state.select(if self.playlists.playlists.is_empty() {
+                self.playlists.list.state.select(if self.playlists.list.items.is_empty() {
                     None
                 } else {
                     Some(0)
@@ -172,12 +172,12 @@ impl App {
                 }
             }
             Msg::PlaylistItemsLoaded { rating_key, tracks } => {
-                if self.playlists.items_for.as_deref() == Some(rating_key.as_str()) {
+                if self.playlists.tracks_for.as_deref() == Some(rating_key.as_str()) {
                     self.playlists.preview_cache.insert(rating_key, tracks.clone());
-                    self.playlists.items = tracks;
+                    self.playlists.tracks.items = tracks;
                     self.drop_visual(ListRef::PlItems);
                     self.refilter(ListRef::PlItems);
-                    self.playlists.items_state.select(if self.playlists.items.is_empty() {
+                    self.playlists.tracks.state.select(if self.playlists.tracks.items.is_empty() {
                         None
                     } else {
                         Some(0)
@@ -191,7 +191,7 @@ impl App {
                     && still_selected
                     && self.tab == Tab::Playlists
                     && self.playlists.focus == PlaylistsCol::List
-                    && self.playlists.items_for.as_deref() == Some(key.as_str())
+                    && self.playlists.tracks_for.as_deref() == Some(key.as_str())
                 {
                     self.load_playlist_preview(key);
                 }
@@ -338,8 +338,8 @@ impl App {
             Msg::PreviewFailed { key } => {
                 // Retry on the next highlight, not on every message: a dead
                 // server would be asked nonstop.
-                if self.playlists.items_for.as_deref() == Some(key.as_str()) {
-                    self.playlists.items_for = None;
+                if self.playlists.tracks_for.as_deref() == Some(key.as_str()) {
+                    self.playlists.tracks_for = None;
                     self.preview_blocked = Some(key);
                 }
             }

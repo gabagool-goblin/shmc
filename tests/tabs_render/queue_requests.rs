@@ -11,9 +11,9 @@ async fn enter_on_repeated_song_names_entry() {
     first.playlist_item_id = Some("101".into());
     let mut second = track(7); // the same song again, a different entry
     second.playlist_item_id = Some("202".into());
-    app.playlists.items = vec![first, second];
-    app.playlists.items_for = Some("p0".into());
-    app.playlists.items_state.select(Some(1));
+    app.playlists.tracks.items = vec![first, second];
+    app.playlists.tracks_for = Some("p0".into());
+    app.playlists.tracks.state.select(Some(1));
     app.playlists.focus = PlaylistsCol::Items;
     app.handle_msg(enter());
 

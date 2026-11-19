@@ -222,18 +222,18 @@ pub(super) fn draw_playlists_tab(f: &mut Frame, app: &mut App, area: Rect) {
 
     {
         let pane = list_pane;
-        let raw = app.playlists.playlists.len();
-        let total = app.pl_list_filter.len(raw);
-        let (content, bar) = begin_list(f, pane, total, &app.pl_list_filter, raw);
-        let cursor = app.playlists.state.selected();
+        let raw = app.playlists.list.items.len();
+        let total = app.playlists.list.filter.len(raw);
+        let (content, bar) = begin_list(f, pane, total, &app.playlists.list.filter, raw);
+        let cursor = app.playlists.list.state.selected();
         let (offset, visible) = window(app, ScrollId::PlaylistList, cursor, total, content);
-        if total == 0 && app.pl_list_filter.is_active() {
+        if total == 0 && app.playlists.list.filter.is_active() {
             no_matches(f, content);
         } else {
-            let text = app.pl_list_filter.text.as_str();
+            let text = app.playlists.list.filter.text.as_str();
             let items = build_range(offset, visible, total, |fi, items: &mut Vec<ListItem>| {
-                let real = app.pl_list_filter.real(fi, raw);
-                let p = &app.playlists.playlists[real];
+                let real = app.playlists.list.filter.real(fi, raw);
+                let p = &app.playlists.list.items[real];
                 // room for the "✦ " marker and the " (count)" suffix
                 let mut used = 0u16;
                 if p.smart {
@@ -266,12 +266,12 @@ pub(super) fn draw_playlists_tab(f: &mut Frame, app: &mut App, area: Rect) {
         render_bar(f, bar, total, offset, visible);
     }
 
-    if app.playlists.items.is_empty() {
+    if app.playlists.tracks.items.is_empty() {
         let key = app
             .keymap
             .first_key(KeyCtx::Playlists, &Act::Activate)
             .unwrap_or_else(|| "Enter".into());
-        let msg = if app.playlists.playlists.is_empty() {
+        let msg = if app.playlists.list.items.is_empty() {
             "no playlists found".to_string()
         } else if app.preview_tracks == 0 {
             format!("preview off; {key} adds this playlist")
@@ -282,9 +282,9 @@ pub(super) fn draw_playlists_tab(f: &mut Frame, app: &mut App, area: Rect) {
         return;
     }
     let pane = items_pane;
-    let raw = app.playlists.items.len();
-    let total = app.pl_items_filter.len(raw);
-    let ind = indicator_text(&app.pl_items_filter, raw);
+    let raw = app.playlists.tracks.items.len();
+    let total = app.playlists.tracks.filter.len(raw);
+    let ind = indicator_text(&app.playlists.tracks.filter, raw);
     // Sized from the preview cap, not the previewed length, so the columns do
     // not move when the selection changes.
     let num_w = if app.numbers_playlists {
@@ -295,12 +295,12 @@ pub(super) fn draw_playlists_tab(f: &mut Frame, app: &mut App, area: Rect) {
     let tc = TrackCols::plain(app.column_weights, TRACK_LEGACY);
     let cols_c = track_cols(
         num_w,
-        len_col_width(app.playlists.items.iter().filter_map(|t| t.duration_ms).max()),
+        len_col_width(app.playlists.tracks.items.iter().filter_map(|t| t.duration_ms).max()),
         &tc,
     );
     let headers = track_headers(num_w, &tc);
     let frame = table_frame(f, pane, total, &cols_c, Some(&headers), ind);
-    let cursor = app.playlists.items_state.selected();
+    let cursor = app.playlists.tracks.state.selected();
     let visible = frame.rows.height as usize;
     let offset = app.scroll.update(
         ScrollId::PlaylistItems,
@@ -310,7 +310,7 @@ pub(super) fn draw_playlists_tab(f: &mut Frame, app: &mut App, area: Rect) {
         app.scrolloff,
     );
     if total == 0 {
-        if app.pl_items_filter.is_active() {
+        if app.playlists.tracks.filter.is_active() {
             no_matches(f, frame.rows);
         }
         if let Some(bar) = frame.bar {
@@ -318,11 +318,11 @@ pub(super) fn draw_playlists_tab(f: &mut Frame, app: &mut App, area: Rect) {
         }
         return;
     }
-    let needle = app.pl_items_filter.text.as_str();
+    let needle = app.playlists.tracks.filter.text.as_str();
     let cur_key = app.current_track().map(|t| t.rating_key.clone());
     let rows = build_track_rows(
-        &app.playlists.items,
-        &app.pl_items_filter,
+        &app.playlists.tracks.items,
+        &app.playlists.tracks.filter,
         offset,
         visible,
         total,
