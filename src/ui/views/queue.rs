@@ -367,20 +367,21 @@ fn draw_queue_table(f: &mut Frame, app: &mut App, area: Rect) {
     if area.width < 10 || area.height < 3 {
         return;
     }
-    let raw = app.queue.len();
-    let total = app.queue_filter.len(raw);
-    let ind = indicator_text(&app.queue_filter, raw);
+    let raw = app.queue.items.len();
+    let total = app.queue.filter.len(raw);
+    let ind = indicator_text(&app.queue.filter, raw);
     let visible_rows = area.height.saturating_sub(u16::from(ind.is_some()) + 2) as usize;
     let (content, _) = list_split(area, total, visible_rows);
-    let qc = QueueCols::new(&app.queue_columns, app.column_weights, &app.queue, content.width);
+    let qc =
+        QueueCols::new(&app.queue_columns, app.column_weights, &app.queue.items, content.width);
     let frame = table_frame(f, area, total, &qc.constraints(), Some(&qc.headers()), ind);
 
-    let cursor = app.queue_state.selected();
+    let cursor = app.queue.state.selected();
     let visible = frame.rows.height as usize;
     let offset =
         app.scroll.update(ScrollId::Queue, cursor.unwrap_or(0), visible, total, app.scrolloff);
     if total == 0 {
-        if app.queue_filter.is_active() {
+        if app.queue.filter.is_active() {
             no_matches(f, frame.rows);
         }
         if let Some(bar) = frame.bar {
@@ -389,11 +390,11 @@ fn draw_queue_table(f: &mut Frame, app: &mut App, area: Rect) {
         return;
     }
 
-    let needle = app.queue_filter.text.as_str();
+    let needle = app.queue.filter.text.as_str();
     let current_key = app.current_track().map(|t| t.rating_key.clone());
     let rows = build_track_rows(
-        &app.queue,
-        &app.queue_filter,
+        &app.queue.items,
+        &app.queue.filter,
         offset,
         visible,
         total,

@@ -19,6 +19,7 @@ use tokio::sync::mpsc::UnboundedSender;
 mod activate;
 mod events;
 mod input;
+mod list;
 mod nav;
 mod plex_worker;
 mod queue;
@@ -29,6 +30,7 @@ mod search_back;
 mod shuffle;
 mod similar;
 
+pub use list::FilteredList;
 pub use plex_worker::{spawn_plex_worker, PlexCmd, PlexHandle};
 use queue::PosGuard;
 pub use radio::{RadioEnv, RadioOutcome, RadioRequest, RadioSeed};
@@ -439,7 +441,7 @@ pub struct App {
     pub mpv: MpvHandle,
 
     // playback mirror: the queue is mpv's playlist
-    pub queue: Vec<Track>,
+    pub queue: FilteredList<Track, TableState>,
     pub current: Option<usize>,
     pub position: f64,
     pub duration: f64,
@@ -504,7 +506,6 @@ pub struct App {
     err_streak: u32,
 
     pub browser: Browser,
-    pub queue_state: TableState,
     pub playlists: PlaylistsView,
     pub search: SearchState,
     pub command: CommandMode,
@@ -552,7 +553,6 @@ pub struct App {
     /// Title, Artist, Album; 0 hides one.
     pub column_weights: [u32; 3],
     pub queue_columns: Vec<crate::config::QueueColumn>,
-    pub queue_filter: ListFilter,
     pub browser_filters: [ListFilter; 3], // artists, albums, tracks
     pub pl_list_filter: ListFilter,
     pub pl_items_filter: ListFilter,
@@ -597,7 +597,7 @@ impl App {
             token,
             plex,
             mpv,
-            queue: Vec::new(),
+            queue: FilteredList::default(),
             current: None,
             position: 0.0,
             duration: 0.0,
@@ -639,7 +639,6 @@ impl App {
             failed_at: None,
             err_streak: 0,
             browser: Browser::default(),
-            queue_state: TableState::default(),
             playlists: PlaylistsView::default(),
             search: SearchState::default(),
             command: CommandMode::default(),
@@ -678,7 +677,6 @@ impl App {
             numbers_playlists: ui.numbers_playlists(),
             column_weights: ui.effective_column_weights(),
             queue_columns: ui.resolved_queue_columns(),
-            queue_filter: ListFilter::default(),
             browser_filters: Default::default(),
             pl_list_filter: ListFilter::default(),
             pl_items_filter: ListFilter::default(),
@@ -696,7 +694,7 @@ impl App {
     }
 
     pub fn current_track(&self) -> Option<&Track> {
-        self.current.and_then(|i| self.queue.get(i))
+        self.current.and_then(|i| self.queue.items.get(i))
     }
 
     /// Centered in the progress row for ~2s.

@@ -24,8 +24,8 @@ async fn all_tabs_render_at_several_sizes() {
     let mut app = new_app().await;
     app.art_enabled = true;
 
-    app.queue = (0..50).map(track).collect();
-    app.queue_state.select(Some(7));
+    app.queue.items = (0..50).map(track).collect();
+    app.queue.state.select(Some(7));
     app.current = Some(7);
     app.stopped = false; // App::new starts stopped; simulate an active player
     app.duration = 257.0;
@@ -214,8 +214,8 @@ async fn all_tabs_render_at_several_sizes() {
 #[tokio::test]
 async fn bottom_row_prefers_command_then_filter_then_status() {
     let mut app = new_app().await;
-    app.queue = (0..50).map(track).collect();
-    app.queue_state.select(Some(7));
+    app.queue.items = (0..50).map(track).collect();
+    app.queue.state.select(Some(7));
     app.current = Some(7);
     app.stopped = false;
     app.tab = Tab::Queue;
@@ -230,18 +230,18 @@ async fn bottom_row_prefers_command_then_filter_then_status() {
     app.command.text.clear();
     app.status.clear();
 
-    app.queue_filter.typing = true;
-    app.queue_filter.text = "sky".into();
-    let titles: Vec<String> = app.queue.iter().map(|t| t.title.clone()).collect();
-    app.queue_filter.apply(titles.len(), |i| titles[i].contains("Starfall! 1"));
+    app.queue.filter.typing = true;
+    app.queue.filter.text = "sky".into();
+    let titles: Vec<String> = app.queue.items.iter().map(|t| t.title.clone()).collect();
+    app.queue.filter.apply(titles.len(), |i| titles[i].contains("Starfall! 1"));
     let c2 = render(&mut app, 120, 40);
     assert!(c2.contains("/ sky█"), "filter input must render\nframe:\n{c2}");
     assert!(c2.contains("Queue 11/50"), "filter counter must render\nframe:\n{c2}");
 
-    app.queue_filter.typing = false;
+    app.queue.filter.typing = false;
     let c3 = render(&mut app, 120, 40);
     assert!(c3.contains("filter: sky (11/50)"), "filter indicator must show counts\nframe:\n{c3}");
-    app.queue_filter.clear();
+    app.queue.filter.clear();
 
     app.status = "Added album: Evening Satellite (12 tracks)".into();
     let c4 = render(&mut app, 120, 40);
@@ -251,8 +251,8 @@ async fn bottom_row_prefers_command_then_filter_then_status() {
 #[tokio::test]
 async fn transport_state_shows_badge_and_glyph() {
     let mut app = new_app().await;
-    app.queue = (0..5).map(track).collect();
-    app.queue_state.select(Some(1));
+    app.queue.items = (0..5).map(track).collect();
+    app.queue.state.select(Some(1));
     app.current = Some(1);
     app.stopped = false;
     app.duration = 257.0;
@@ -279,12 +279,12 @@ async fn transport_state_shows_badge_and_glyph() {
 #[tokio::test]
 async fn header_renders_a_cjk_title() {
     let mut app = new_app().await;
-    app.queue = (0..30).map(track).collect();
-    app.queue_state.select(Some(3));
+    app.queue.items = (0..30).map(track).collect();
+    app.queue.state.select(Some(3));
     app.current = Some(3);
     app.stopped = false;
     app.tab = Tab::Queue;
-    app.queue[3].title = "日本語の曲".into();
+    app.queue.items[3].title = "日本語の曲".into();
     let cjk = render(&mut app, 120, 40);
     let header_nospace: String = cjk.lines().take(4).collect::<String>().replace(' ', "");
     assert!(
@@ -367,8 +367,8 @@ async fn browser_track_filter_shows_counts_and_no_matches() {
 async fn cover_placeholder_stays_put_across_songs() {
     let mut app = new_app().await;
     app.art_enabled = true;
-    app.queue = (0..30).map(track).collect();
-    app.queue_state.select(Some(1));
+    app.queue.items = (0..30).map(track).collect();
+    app.queue.state.select(Some(1));
     app.stopped = false;
     app.tab = Tab::Queue;
     let row_of = |frame: &str| frame.lines().position(|l| l.contains("No cover"));
@@ -389,8 +389,8 @@ async fn cover_placeholder_stays_put_across_songs() {
 async fn visualizer_keeps_drawing_while_paused() {
     let mut app = new_app().await;
     app.art_enabled = true;
-    app.queue = (0..30).map(track).collect();
-    app.queue_state.select(Some(3));
+    app.queue.items = (0..30).map(track).collect();
+    app.queue.state.select(Some(3));
     app.current = Some(3);
     app.stopped = false;
     app.duration = 3725.0;
@@ -438,8 +438,8 @@ fn char_x(line: &str, needle: &str) -> Option<usize> {
 #[tokio::test]
 async fn queue_drops_row_numbers_for_art() {
     let mut app = new_app().await;
-    app.queue = (0..50).map(track).collect();
-    app.queue_state.select(Some(0));
+    app.queue.items = (0..50).map(track).collect();
+    app.queue.state.select(Some(0));
     app.current = Some(0);
     app.stopped = false;
     app.art_enabled = true;
@@ -488,8 +488,8 @@ async fn queue_drops_row_numbers_for_art() {
 #[tokio::test]
 async fn queue_headers_share_the_tab_bar_colour() {
     let mut app = new_app().await;
-    app.queue = (0..20).map(track).collect();
-    app.queue_state.select(Some(0));
+    app.queue.items = (0..20).map(track).collect();
+    app.queue.state.select(Some(0));
     app.tab = Tab::Queue;
 
     let mut terminal = Terminal::new(TestBackend::new(120, 40)).unwrap();
@@ -526,7 +526,7 @@ async fn volume_digits_do_not_shift_the_meter() {
 #[tokio::test]
 async fn header_shows_file_audio_details() {
     let mut app = new_app().await;
-    app.queue = vec![track(0)];
+    app.queue.items = vec![track(0)];
     app.current = Some(0);
     app.stopped = false;
     app.duration = 257.0;
@@ -780,7 +780,7 @@ async fn durations_over_an_hour_are_not_clipped() {
     let long = |i: usize, secs: u64| Track { duration_ms: Some(secs * 1000), ..track(i) };
     let tracks = vec![long(0, 3725), long(1, 36_000), long(2, 599)];
     queue_app_with_art(&mut app, false);
-    app.queue = tracks.clone();
+    app.queue.items = tracks.clone();
     app.browser.tracks = tracks;
     app.browser.tracks_for = Some("al1".into());
     for tab in [Tab::Queue, Tab::Browser] {
@@ -807,7 +807,7 @@ async fn durations_over_an_hour_are_not_clipped() {
 async fn header_title_is_centred_on_the_frame() {
     let mut app = new_app().await;
     queue_app_with_art(&mut app, false);
-    app.queue = vec![track(0)];
+    app.queue.items = vec![track(0)];
     app.current = Some(0);
     for w in 60u16..=250 {
         let frame = render(&mut app, w, 30);
@@ -887,8 +887,8 @@ impl Table {
 
 async fn app_with_every_table() -> TestApp {
     let mut app = new_app().await;
-    app.queue = (0..50).map(track).collect();
-    app.queue_state.select(Some(7));
+    app.queue.items = (0..50).map(track).collect();
+    app.queue.state.select(Some(7));
     app.playlists.playlists = (0..3).map(playlist).collect();
     app.playlists.items = (0..12).map(track).collect();
     app.playlists.items_state.select(Some(5));
@@ -1159,14 +1159,14 @@ fn queue_with_columns(cols: &[&str]) -> UiConfig {
 }
 
 fn tagged_queue(app: &mut App) {
-    app.queue = (0..50)
+    app.queue.items = (0..50)
         .map(|i| Track {
             year: Some(2008),
             audio: AudioInfo { codec: Some("flac".into()), ..AudioInfo::default() },
             ..track(i)
         })
         .collect();
-    app.queue_state.select(Some(7));
+    app.queue.state.select(Some(7));
     app.tab = Tab::Queue;
 }
 

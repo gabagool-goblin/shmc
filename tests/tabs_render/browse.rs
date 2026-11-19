@@ -98,8 +98,8 @@ async fn goto_artist_clears_the_artists_filter() {
     let titles: Vec<String> = app.browser.artists.iter().map(|a| a.title.clone()).collect();
     app.browser_filters[0].text = "Artist 1".into();
     app.browser_filters[0].apply(titles.len(), |i| titles[i].contains("Artist 1"));
-    app.queue = vec![Track { grandparent_rating_key: Some("a5".into()), ..track(0) }];
-    app.queue_state.select(Some(0));
+    app.queue.items = vec![Track { grandparent_rating_key: Some("a5".into()), ..track(0) }];
+    app.queue.state.select(Some(0));
     app.tab = Tab::Queue;
     app.handle_msg(key('b'));
 
@@ -187,8 +187,8 @@ async fn failed_playlist_preview_retried_on_highlight() {
 #[tokio::test]
 async fn unrelated_error_keeps_goto_jump() {
     let mut app = new_app().await;
-    app.queue = vec![track(0)];
-    app.queue_state.select(Some(0));
+    app.queue.items = vec![track(0)];
+    app.queue.state.select(Some(0));
     app.tab = Tab::Queue;
 
     app.handle_msg(key('b')); // the track is on album al1 of artist ar1
@@ -213,8 +213,8 @@ fn artist_ar1() -> Artist {
 #[tokio::test]
 async fn late_reply_ignored_after_cancelled_jump() {
     let (mut app, mut plex) = new_app_with_plex().await;
-    app.queue = vec![track(0)];
-    app.queue_state.select(Some(0));
+    app.queue.items = vec![track(0)];
+    app.queue.state.select(Some(0));
     app.tab = Tab::Queue;
     app.handle_msg(key('b'));
     app.handle_msg(key('3'));
@@ -232,8 +232,8 @@ async fn late_reply_ignored_after_cancelled_jump() {
 async fn browser_move_drops_pending_jump() {
     for keys in ["j", "gg", "ga"] {
         let (mut app, mut plex) = new_app_with_plex().await;
-        app.queue = vec![track(0)];
-        app.queue_state.select(Some(0));
+        app.queue.items = vec![track(0)];
+        app.queue.state.select(Some(0));
         app.tab = Tab::Queue;
         app.handle_msg(key('g'));
         app.handle_msg(Msg::GotoArtist(artist_ar1()));
@@ -512,7 +512,7 @@ async fn capped_preview_is_announced() {
 #[tokio::test]
 async fn browser_track_enter_replaces_with_album_remainder() {
     let mut app = new_app().await;
-    app.queue = vec![track(9)];
+    app.queue.items = vec![track(9)];
     app.current = Some(0);
     app.stopped = false;
     app.browser.tracks = (0..5).map(track).collect();
@@ -524,7 +524,7 @@ async fn browser_track_enter_replaces_with_album_remainder() {
     app.handle_msg(enter());
 
     assert_eq!(
-        app.queue.iter().map(|t| t.rating_key.as_str()).collect::<Vec<_>>(),
+        app.queue.items.iter().map(|t| t.rating_key.as_str()).collect::<Vec<_>>(),
         vec!["t2", "t3", "t4"]
     );
     assert_eq!(app.current, Some(0));
@@ -626,14 +626,14 @@ async fn play_next_large_playlist_inserts_one_track() {
     app.playlists.focus = PlaylistsCol::Items;
     app.tab = Tab::Playlists;
     app.confirm_playlist_over = 1000;
-    app.queue = vec![track(0)];
+    app.queue.items = vec![track(0)];
     app.current = Some(0);
 
     app.handle_msg(key('i'));
 
     assert!(resolve_seqs(&mut plex).is_empty(), "play-next never queues a whole playlist");
-    assert_eq!(app.queue.len(), 2);
-    assert_eq!(app.queue[1].rating_key, "t1");
+    assert_eq!(app.queue.items.len(), 2);
+    assert_eq!(app.queue.items[1].rating_key, "t1");
 }
 
 /// A playlist start that has left the playlist is reported as an error that says so.

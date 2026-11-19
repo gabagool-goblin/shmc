@@ -63,7 +63,7 @@ async fn each_queue_visit_gets_a_fresh_dwell() {
 #[tokio::test]
 async fn new_cover_is_immediate_and_resize_holds() {
     let (mut app, mut terminal) = app_with_cover().await;
-    app.queue = (0..3).map(track).collect();
+    app.queue.items = (0..3).map(track).collect();
     app.current = Some(0);
     app.handle_msg(Msg::Resize);
     assert!(app.art.hold_until.is_some(), "a resize did not start a dwell");
@@ -89,9 +89,9 @@ async fn app_showing_album_cover(
     app.tab = Tab::Queue;
     app.art_enabled = true;
     app.picker = Some(ratatui_image::picker::Picker::from_fontsize((10, 20)));
-    app.queue = (0..4).map(track).collect();
-    app.queue[2].parent_rating_key = Some("al2".into());
-    app.queue[3].parent_rating_key = None;
+    app.queue.items = (0..4).map(track).collect();
+    app.queue.items[2].parent_rating_key = Some("al2".into());
+    app.queue.items[3].parent_rating_key = None;
     app.handle_msg(playlist_pos(0));
     assert_eq!(thumb_requests(&mut plex), [AL1_THUMB]);
     let img = Arc::new(DynamicImage::ImageRgba8(RgbaImage::new(8, 8)));
@@ -170,8 +170,8 @@ async fn square_art_pane_respects_the_percentage_cap() {
     let track0 = track(0);
     let artist = track0.artist.clone();
     let album = track0.album.clone();
-    app.queue = vec![track0];
-    app.queue_state.select(Some(0));
+    app.queue.items = vec![track0];
+    app.queue.state.select(Some(0));
     app.current = Some(0);
     app.tab = Tab::Queue;
 
@@ -217,9 +217,9 @@ async fn square_art_pane_respects_the_percentage_cap() {
 async fn disabling_art_gives_the_queue_full_width() {
     let mut app = new_app().await;
     app.tab = Tab::Queue;
-    app.queue = (0..10).map(track).collect();
+    app.queue.items = (0..10).map(track).collect();
     app.current = Some(0);
-    app.queue_state.select(Some(0));
+    app.queue.state.select(Some(0));
     app.stopped = false;
 
     let mut terminal = Terminal::new(TestBackend::new(100, 30)).unwrap();
@@ -267,8 +267,8 @@ async fn app_awaiting_cover() -> (TestApp, tokio::sync::mpsc::UnboundedReceiver<
     app.tab = Tab::Queue;
     app.art_enabled = true;
     app.now_playing_cover = true;
-    app.queue = (0..4).map(track).collect();
-    app.queue[2].parent_rating_key = Some("al2".into());
+    app.queue.items = (0..4).map(track).collect();
+    app.queue.items[2].parent_rating_key = Some("al2".into());
     app.handle_msg(playlist_pos(0));
     let (tx, rx) = unbounded_channel();
     app.mpv.tx = tx;

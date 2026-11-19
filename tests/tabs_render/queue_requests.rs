@@ -52,7 +52,7 @@ async fn appends_apply_in_request_order() {
     assert_eq!(seqs.len(), 2);
 
     app.handle_msg(tracks_reply(seqs[1], 10..12, QueueAction::Append));
-    assert!(app.queue.is_empty(), "the second append waits for the first");
+    assert!(app.queue.items.is_empty(), "the second append waits for the first");
     app.handle_msg(tracks_reply(seqs[0], 20..22, QueueAction::Append));
 
     assert_eq!(queue_keys(&app), ["t20", "t21", "t10", "t11"]);
@@ -72,7 +72,7 @@ async fn failed_request_does_not_block_next_append() {
 
     app.handle_msg(tracks_reply(seqs[2], 30..31, QueueAction::Append));
     app.handle_msg(reply(seqs[1], QueueOutcome::Failed("resolving playlist: boom".into())));
-    assert!(app.queue.is_empty());
+    assert!(app.queue.items.is_empty());
     app.handle_msg(tracks_reply(seqs[0], 10..11, QueueAction::Append));
 
     assert_eq!(queue_keys(&app), ["t10", "t30"]);
@@ -95,7 +95,7 @@ async fn clear_drops_replace_still_loading() {
         app.handle_msg(tracks_reply(seq, 10..15, QueueAction::Replace));
 
         let how = if by_key { "D" } else { ":clear" };
-        assert!(app.queue.is_empty(), "{how}: the late reply refilled the cleared queue");
+        assert!(app.queue.items.is_empty(), "{how}: the late reply refilled the cleared queue");
         assert_eq!(app.current, None, "{how}");
         assert!(app.stopped, "{how}: nothing may start playing");
     }
@@ -131,7 +131,7 @@ async fn local_append_lands_after_slower_remote_append() {
     app.browser.tracks_state.select(Some(2));
     app.browser.focus = BrowserCol::Tracks;
     app.handle_msg(key('a'));
-    assert!(app.queue.is_empty(), "the local append waits for the playlist asked first");
+    assert!(app.queue.items.is_empty(), "the local append waits for the playlist asked first");
     assert!(app.status.contains("queued after"), "{:?}", app.status);
 
     app.handle_msg(tracks_reply(seq, 20..22, QueueAction::Append));
@@ -196,8 +196,12 @@ async fn mpv_matches_queue(app: &App) -> bool {
         .iter()
         .map(|e| e["filename"].as_str().unwrap_or_default().to_string())
         .collect();
-    let queued: Vec<String> =
-        app.queue.iter().map(|t| t.stream_url("http://127.0.0.1:1", "TOK").unwrap()).collect();
+    let queued: Vec<String> = app
+        .queue
+        .items
+        .iter()
+        .map(|t| t.stream_url("http://127.0.0.1:1", "TOK").unwrap())
+        .collect();
     in_mpv == queued
 }
 
@@ -216,7 +220,7 @@ async fn streamed_playlist_plays_at_once_and_grows() {
     let (mut app, mut plex) = new_app_with_plex().await;
     let (seq, _) = start_load(&mut app, &mut plex);
     land_head(&mut app, seq);
-    assert_eq!(app.queue.len(), 200);
+    assert_eq!(app.queue.items.len(), 200);
     assert_eq!(app.current, Some(0));
     assert!(!app.stopped, "playback starts with the first page");
 
@@ -311,7 +315,7 @@ async fn small_playlist_leaves_nothing_loading() {
             action: QueueAction::Replace,
         },
     ));
-    assert_eq!(app.queue.len(), 60);
+    assert_eq!(app.queue.items.len(), 60);
 
     app.tab = Tab::Queue;
     app.handle_msg(key('z'));
@@ -331,10 +335,10 @@ async fn remove_and_play_while_loading_keep_queue() {
     app.handle_msg(page(seq, 200..250, false));
     app.handle_msg(page(seq, 250..260, true));
 
-    assert_eq!(app.queue.len(), 259);
-    assert_eq!(app.queue.last().unwrap().rating_key, "t259");
+    assert_eq!(app.queue.items.len(), 259);
+    assert_eq!(app.queue.items.last().unwrap().rating_key, "t259");
     assert!(mpv_matches_queue(&app).await);
-    assert!(app.current.is_some_and(|c| c < app.queue.len()));
+    assert!(app.current.is_some_and(|c| c < app.queue.items.len()));
 }
 
 #[tokio::test]
@@ -345,7 +349,7 @@ async fn page_failure_keeps_loaded_tracks() {
     app.handle_msg(page(seq, 200..230, false));
     app.handle_msg(Msg::PlaylistLoadStopped { load_id: seq, error: "boom".into() });
 
-    assert_eq!(app.queue.len(), 230);
+    assert_eq!(app.queue.items.len(), 230);
     assert!(app.status.contains("stopped at 230 / 5 000: boom"), "{}", app.status);
     assert!(app.status_error);
     app.tab = Tab::Playlists;
@@ -359,7 +363,7 @@ async fn failed_first_page_does_not_lock_queue() {
     let (seq, _) = start_load(&mut app, &mut plex);
     app.handle_msg(Msg::PlaylistLoadStopped { load_id: seq, error: "stopped early".into() });
     app.handle_msg(reply(seq, QueueOutcome::Failed("resolving playlist: boom".into())));
-    assert!(app.queue.is_empty());
+    assert!(app.queue.items.is_empty());
 
     app.handle_msg(key('a'));
     assert!(resolve_streams(&mut plex).is_some(), "{}", app.status);

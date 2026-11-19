@@ -387,7 +387,7 @@ async fn volume_meter_keeps_eight_cells() {
 async fn visualizer_draws_ramp_over_eighths() {
     let mut app = new_app().await;
     queue_app_with_art(&mut app, false);
-    app.queue.truncate(3); // no scrollbar thumb to confuse the comparison
+    app.queue.items.truncate(3); // no scrollbar thumb to confuse the comparison
     app.cava_alive = true;
     app.cava_frame = (0..96).map(|i| (i * 7 % 256) as u8).collect();
     let (w, h) = (80u16, 30u16);
@@ -445,7 +445,7 @@ async fn scrollbar_draws_own_glyphs() {
 async fn cut_text_ends_with_ellipsis() {
     let mut app = new_app().await;
     queue_app_with_art(&mut app, false);
-    app.queue[2].title = "A very long title that cannot possibly fit in the cell".into();
+    app.queue.items[2].title = "A very long title that cannot possibly fit in the cell".into();
     let cut = |app: &mut App| {
         grid(app, 50, 24).iter().map(|r| r.concat()).find(|r| r.contains("A very long")).unwrap()
     };
@@ -570,7 +570,7 @@ fn chrome_rows(compact: bool, style: theme::BorderStyle, h: u16) -> (u16, u16, u
 async fn every_header_border_combo_fits() {
     let mut app = new_app().await;
     queue_app_with_art(&mut app, true);
-    app.queue[2].title = "Unique Song".into();
+    app.queue.items[2].title = "Unique Song".into();
     app.position = 42.0;
     app.duration = 257.0;
     for compact in [false, true] {
@@ -669,7 +669,7 @@ async fn compact_without_borders_keeps_now_playing_row() {
     let mut app = new_app().await;
     queue_app_with_art(&mut app, true);
     app.art_metadata = true;
-    app.queue[2].title = "Unique Song".into();
+    app.queue.items[2].title = "Unique Song".into();
     app.header_compact = true;
     let _look = LookGuard::set(with_borders(theme::BorderStyle::None));
     let h = 30;

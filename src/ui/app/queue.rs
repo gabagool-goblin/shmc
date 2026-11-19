@@ -138,12 +138,12 @@ impl App {
             return 0;
         }
         self.extend_shuffle_snapshot(&playable);
-        self.queue.extend(playable);
+        self.queue.items.extend(playable);
         self.removed.clear();
         let _ = self.mpv.tx.send(MpvCmd::Append(items));
         self.refilter(ListRef::Queue);
-        if self.queue_state.selected().is_none() {
-            self.queue_state.select(Some(0));
+        if self.queue.state.selected().is_none() {
+            self.queue.state.select(Some(0));
         }
         n
     }
@@ -208,7 +208,7 @@ impl App {
         }
         self.shuffle_new_queue(&mut playable);
         let (playable, items) = self.playable(playable);
-        self.queue = playable;
+        self.queue.items = playable;
         self.removed.clear();
         self.drop_visual(ListRef::Queue);
         let _ = self.mpv.tx.send(MpvCmd::Play(items));
@@ -218,9 +218,9 @@ impl App {
         self.position = 0.0;
         self.failed_at = None;
         self.err_streak = 0;
-        self.queue_filter.clear();
+        self.queue.filter.clear();
         self.refilter(ListRef::Queue);
-        self.queue_state.select(Some(0));
+        self.queue.state.select(Some(0));
         self.fetch_art_for_current();
         self.fetch_audio_for_current();
         self.transient(confirm.playing(n));
@@ -236,17 +236,17 @@ impl App {
             self.transient_err("no playable media for selection".into());
             return;
         }
-        if self.queue.is_empty() && self.current.is_none() {
+        if self.queue.items.is_empty() && self.current.is_none() {
             self.replace_queue_and_play(playable, confirm);
             return;
         }
         // `current` can be one past the end after a consume, before mpv corrects it
-        let index = self.current.map_or(0, |c| (c + 1).min(self.queue.len()));
-        let append_at = self.queue.len();
+        let index = self.current.map_or(0, |c| (c + 1).min(self.queue.items.len()));
+        let append_at = self.queue.items.len();
         self.expect_pos = None;
         self.extend_shuffle_snapshot(&playable);
         let _ = self.mpv.tx.send(MpvCmd::Insert { index, append_at, items });
-        self.queue.splice(index..index, playable);
+        self.queue.items.splice(index..index, playable);
         self.removed.clear();
         self.drop_visual(ListRef::Queue);
         // inserting shifts later indices (see `failed_at`)
@@ -261,18 +261,19 @@ impl App {
     fn select_queue_row(&mut self, real: usize) {
         let vis = self.vis_len(ListRef::Queue);
         if vis == 0 {
-            self.queue_state.select(None);
+            self.queue.state.select(None);
             return;
         }
         let sel = self
-            .queue_filter
+            .queue
+            .filter
             .cursor_of(real)
-            .unwrap_or_else(|| self.queue_state.selected().unwrap_or(0));
-        self.queue_state.select(Some(sel.min(vis - 1)));
+            .unwrap_or_else(|| self.queue.state.selected().unwrap_or(0));
+        self.queue.state.select(Some(sel.min(vis - 1)));
     }
 
     pub fn play_queue_index(&mut self, idx: usize) {
-        if idx >= self.queue.len() {
+        if idx >= self.queue.items.len() {
             return;
         }
         let _ = self.mpv.tx.send(MpvCmd::PlayIndex(idx));
@@ -307,7 +308,7 @@ impl App {
             self.transient("turn shuffle off to reorder".into());
             return;
         }
-        if self.queue_filter.is_active() {
+        if self.queue.filter.is_active() {
             self.transient("clear the queue filter to reorder".into());
             return;
         }
@@ -315,13 +316,13 @@ impl App {
         let to = if dir < 0 {
             let Some(t) = from.checked_sub(1) else { return };
             t
-        } else if from + 1 < self.queue.len() {
+        } else if from + 1 < self.queue.items.len() {
             from + 1
         } else {
             return;
         };
-        let item = self.queue.remove(from);
-        self.queue.insert(to, item);
+        let item = self.queue.items.remove(from);
+        self.queue.items.insert(to, item);
         self.removed.clear();
         self.drop_visual(ListRef::Queue);
         self.expect_pos = None;
@@ -333,7 +334,7 @@ impl App {
             self.failed_at = Some(Self::shifted(f, from, to));
         }
         self.refilter(ListRef::Queue);
-        self.queue_state.select(Some(to.min(self.vis_len(ListRef::Queue).saturating_sub(1))));
+        self.queue.state.select(Some(to.min(self.vis_len(ListRef::Queue).saturating_sub(1))));
     }
 
     pub(super) fn start_visual(&mut self) {
@@ -392,8 +393,8 @@ impl App {
             self.visual = None;
             return;
         };
-        let len = self.queue.len();
-        let indices: Vec<usize> = (lo..=hi).map(|fi| self.queue_filter.real(fi, len)).collect();
+        let len = self.queue.items.len();
+        let indices: Vec<usize> = (lo..=hi).map(|fi| self.queue.filter.real(fi, len)).collect();
         self.remove_indices(&indices);
     }
 
@@ -431,25 +432,25 @@ impl App {
 
     /// `indices`: ascending, unique, real queue indices.
     fn remove_indices(&mut self, indices: &[usize]) {
-        if indices.is_empty() || indices.last().is_some_and(|&i| i >= self.queue.len()) {
+        if indices.is_empty() || indices.last().is_some_and(|&i| i >= self.queue.items.len()) {
             return;
         }
         self.drop_visual(ListRef::Queue);
         if self.removed.len() == MAX_UNDO {
             self.removed.remove(0);
         }
-        self.removed.push(indices.iter().map(|&i| (i, self.queue[i].clone())).collect());
+        self.removed.push(indices.iter().map(|&i| (i, self.queue.items[i].clone())).collect());
         // descending: each index is still valid when mpv gets to it
         for &i in indices.iter().rev() {
-            self.queue.remove(i);
+            self.queue.items.remove(i);
             let _ = self.mpv.tx.send(MpvCmd::Remove(i));
         }
         self.failed_at = None;
         self.expect_pos = None;
         let first_row = indices
             .first()
-            .and_then(|&i| self.queue_filter.cursor_of(i))
-            .or(self.queue_state.selected())
+            .and_then(|&i| self.queue.filter.cursor_of(i))
+            .or(self.queue.state.selected())
             .unwrap_or(0);
         // the playing track was pulled out and nothing has replaced it yet
         let mut resume = None;
@@ -470,12 +471,12 @@ impl App {
         self.refilter(ListRef::Queue);
         let vis = self.vis_len(ListRef::Queue);
         if vis == 0 {
-            self.queue_state.select(None);
+            self.queue.state.select(None);
         } else {
-            self.queue_state.select(Some(first_row.min(vis - 1)));
+            self.queue.state.select(Some(first_row.min(vis - 1)));
         }
         if let Some(idx) = resume {
-            if idx < self.queue.len() {
+            if idx < self.queue.items.len() {
                 // the cursor stays put; `o` jumps to the playing track
                 let _ = self.mpv.tx.send(MpvCmd::PlayIndex(idx));
                 self.current = Some(idx);
@@ -509,21 +510,21 @@ impl App {
         self.expect_pos = None;
         self.failed_at = None;
         let old_current = self.current;
-        let first_index = batch[0].0.min(self.queue.len());
+        let first_index = batch[0].0.min(self.queue.items.len());
         let mut start = 0;
         while start < batch.len() {
             let mut end = start + 1;
             while end < batch.len() && batch[end].0 == batch[end - 1].0 + 1 {
                 end += 1;
             }
-            let len = self.queue.len();
+            let len = self.queue.items.len();
             let index = batch[start].0.min(len);
             let _ = self.mpv.tx.send(MpvCmd::Insert {
                 index,
                 append_at: len,
                 items: items[start..end].to_vec(),
             });
-            self.queue.splice(index..index, batch[start..end].iter().map(|(_, t)| t.clone()));
+            self.queue.items.splice(index..index, batch[start..end].iter().map(|(_, t)| t.clone()));
             if let Some(c) = self.current {
                 if index <= c {
                     self.current = Some(c + (end - start));
@@ -549,7 +550,7 @@ impl App {
     /// The track at `idx` finished and mpv has already advanced. Never send
     /// `playlist-play-index` here: it would restart the next track at 0:00.
     pub(super) fn consume_finished(&mut self, idx: usize) {
-        if idx >= self.queue.len() {
+        if idx >= self.queue.items.len() {
             return;
         }
         self.removed.clear();
@@ -559,25 +560,26 @@ impl App {
                 return Some(v);
             }
             let a = if idx < v.anchor { v.anchor - 1 } else { v.anchor };
-            (self.queue.len() > 1).then(|| Visual { anchor: a.min(self.queue.len() - 2), ..v })
+            (self.queue.items.len() > 1)
+                .then(|| Visual { anchor: a.min(self.queue.items.len() - 2), ..v })
         });
         // The cursor counts filtered rows: remember which item it is on.
         let sel_real = self.real_at(ListRef::Queue);
-        self.queue.remove(idx);
+        self.queue.items.remove(idx);
         self.failed_at = None;
         let _ = self.mpv.tx.send(MpvCmd::Remove(idx));
 
         self.refilter(ListRef::Queue);
         if let Some(r) = sel_real.filter(|&r| r != idx) {
             let moved = if r > idx { r - 1 } else { r };
-            if let Some(c) = self.queue_filter.cursor_of(moved) {
-                self.queue_state.select(Some(c));
+            if let Some(c) = self.queue.filter.cursor_of(moved) {
+                self.queue.state.select(Some(c));
             }
         }
 
-        let next = if idx < self.queue.len() {
+        let next = if idx < self.queue.items.len() {
             Some(idx)
-        } else if self.loop_playlist && !self.queue.is_empty() {
+        } else if self.loop_playlist && !self.queue.items.is_empty() {
             // repeat: mpv wraps to the first remaining entry
             Some(0)
         } else {
@@ -606,15 +608,15 @@ impl App {
 
         let vis = self.vis_len(ListRef::Queue);
         if vis == 0 {
-            self.queue_state.select(None);
+            self.queue.state.select(None);
         } else {
-            let sel = self.queue_state.selected().unwrap_or(0).min(vis - 1);
-            self.queue_state.select(Some(sel));
+            let sel = self.queue.state.selected().unwrap_or(0).min(vis - 1);
+            self.queue.state.select(Some(sel));
         }
     }
 
     pub(super) fn ask_clear_queue(&mut self) {
-        if self.queue.is_empty() {
+        if self.queue.items.is_empty() {
             // nothing to lose, but a replace still loading must go
             self.supersede_queue();
             self.clear_queue();
@@ -629,7 +631,7 @@ impl App {
         self.transient_secs(
             format!(
                 "clear the queue ({} tracks)? press {key} again or y to confirm · any other key cancels",
-                self.queue.len()
+                self.queue.items.len()
             ),
             self.confirm_timeout_secs,
             false,
@@ -637,7 +639,7 @@ impl App {
     }
 
     pub fn clear_queue(&mut self) {
-        self.queue.clear();
+        self.queue.items.clear();
         self.shuffle_snapshot = None;
         self.removed.clear();
         self.drop_visual(ListRef::Queue);
@@ -647,7 +649,7 @@ impl App {
         self.stopped = true;
         self.position = 0.0;
         self.duration = 0.0;
-        self.queue_state.select(None);
+        self.queue.state.select(None);
         self.refilter(ListRef::Queue);
         // a bare `playlist-clear` leaves mpv playing the loaded entry
         let _ = self.mpv.tx.send(MpvCmd::Stop);

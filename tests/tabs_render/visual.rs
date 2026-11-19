@@ -5,9 +5,9 @@ use shmc::ui::app::BrowserCol;
 async fn visual_range_above_playing_removes_and_undoes() {
     let mut app = new_app().await;
     app.tab = Tab::Queue;
-    app.queue = (0..7).map(track).collect();
+    app.queue.items = (0..7).map(track).collect();
     app.current = Some(5);
-    app.queue_state.select(Some(1));
+    app.queue.state.select(Some(1));
     app.stopped = false;
 
     keys(&mut app, "vjjd");
@@ -22,22 +22,22 @@ async fn visual_range_above_playing_removes_and_undoes() {
     app.handle_msg(key('u'));
     assert_eq!(queue_keys(&app), ["t0", "t1", "t2", "t3", "t4", "t5", "t6"]);
     assert_eq!(app.current, Some(5));
-    assert_eq!(app.queue_state.selected(), Some(1));
+    assert_eq!(app.queue.state.selected(), Some(1));
 }
 
 #[tokio::test]
 async fn visual_range_with_playing_hands_to_next() {
     let mut app = new_app().await;
     app.tab = Tab::Queue;
-    app.queue = (0..6).map(track).collect();
+    app.queue.items = (0..6).map(track).collect();
     app.current = Some(2);
-    app.queue_state.select(Some(1));
+    app.queue.state.select(Some(1));
     app.stopped = false;
 
     keys(&mut app, "vjjd");
     assert_eq!(queue_keys(&app), ["t0", "t4", "t5"]);
     assert_eq!(app.current, Some(1));
-    assert_eq!(app.queue[1].rating_key, "t4");
+    assert_eq!(app.queue.items[1].rating_key, "t4");
     assert!(!app.stopped);
 }
 
@@ -45,9 +45,9 @@ async fn visual_range_with_playing_hands_to_next() {
 async fn visual_range_under_filter_removes_visible_rows() {
     let mut app = new_app().await;
     app.tab = Tab::Queue;
-    app.queue = (0..30).map(track).collect();
+    app.queue.items = (0..30).map(track).collect();
     app.current = Some(0);
-    app.queue_state.select(Some(0));
+    app.queue.state.select(Some(0));
     app.stopped = false;
     // matches: t2, t20..=t29
     filter_queue(&mut app, "Starfall! 2");
@@ -68,9 +68,9 @@ async fn visual_range_under_filter_removes_visible_rows() {
 async fn visual_mode_lifetime() {
     let mut app = new_app().await;
     app.tab = Tab::Queue;
-    app.queue = (0..6).map(track).collect();
+    app.queue.items = (0..6).map(track).collect();
     app.current = Some(0);
-    app.queue_state.select(Some(3));
+    app.queue.state.select(Some(3));
     app.stopped = false;
 
     app.handle_msg(key('v'));
@@ -88,7 +88,7 @@ async fn visual_mode_lifetime() {
     app.current = Some(1);
     app.handle_msg(end_file_eof());
     assert_eq!(app.visual.map(|v| v.anchor), Some(2));
-    assert_eq!(app.queue[2].rating_key, "t3");
+    assert_eq!(app.queue.items[2].rating_key, "t3");
 
     app.handle_msg(key('2'));
     assert!(app.visual.is_none(), "leaving the tab ends it");
@@ -107,8 +107,8 @@ async fn visual_mode_lifetime() {
 async fn visual_mode_shows_label_and_count() {
     let mut app = new_app().await;
     app.tab = Tab::Queue;
-    app.queue = (0..8).map(track).collect();
-    app.queue_state.select(Some(1));
+    app.queue.items = (0..8).map(track).collect();
+    app.queue.state.select(Some(1));
     app.stopped = true;
     app.handle_msg(key('v'));
     keys(&mut app, "jj");
@@ -148,7 +148,7 @@ fn filter_browser_tracks(app: &mut App, needle: &str) {
 async fn browser_visual_range_adds_in_order() {
     let mut app = new_app().await;
     on_browser_tracks(&mut app, 30);
-    app.queue = vec![track(100)];
+    app.queue.items = vec![track(100)];
     // matches: t2, t20..=t29
     filter_browser_tracks(&mut app, "Starfall! 2");
 
@@ -163,7 +163,7 @@ async fn browser_visual_range_adds_in_order() {
 async fn visual_range_inserts_after_the_current_track() {
     let mut app = new_app().await;
     on_browser_tracks(&mut app, 6);
-    app.queue = (10..13).map(track).collect();
+    app.queue.items = (10..13).map(track).collect();
     app.current = Some(0);
     app.stopped = false;
     app.browser.tracks_state.select(Some(1));
@@ -177,7 +177,7 @@ async fn visual_range_inserts_after_the_current_track() {
 async fn visual_range_enter_replaces_queue_with_range() {
     let mut app = new_app().await;
     on_browser_tracks(&mut app, 8);
-    app.queue = (10..13).map(track).collect();
+    app.queue.items = (10..13).map(track).collect();
     app.browser.tracks_state.select(Some(5));
 
     keys(&mut app, "vk");
@@ -311,6 +311,6 @@ async fn g_letter_in_visual_jumps_not_adds() {
     let mut app = new_app().await;
     on_browser_tracks(&mut app, 8);
     keys(&mut app, "vjga");
-    assert!(app.queue.is_empty());
+    assert!(app.queue.items.is_empty());
     assert!(app.visual.is_some());
 }

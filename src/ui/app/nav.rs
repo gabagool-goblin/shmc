@@ -55,9 +55,9 @@ impl App {
     }
 
     pub(super) fn goto_album(&mut self) {
-        let t = self.queue_state.selected().and_then(|i| {
-            let real = self.queue_filter.real(i, self.queue.len());
-            self.queue.get(real).cloned()
+        let t = self.queue.state.selected().and_then(|i| {
+            let real = self.queue.filter.real(i, self.queue.items.len());
+            self.queue.items.get(real).cloned()
         });
         let Some(t) = t else { return };
         self.reveal(t.grandparent_rating_key, t.parent_rating_key, Some(t.rating_key));
@@ -167,7 +167,7 @@ impl App {
 
     pub(super) fn filter(&self, l: ListRef) -> Option<&ListFilter> {
         match l {
-            ListRef::Queue => Some(&self.queue_filter),
+            ListRef::Queue => Some(&self.queue.filter),
             ListRef::BArtists => Some(&self.browser_filters[0]),
             ListRef::BAlbums => Some(&self.browser_filters[1]),
             ListRef::BTracks => Some(&self.browser_filters[2]),
@@ -179,7 +179,7 @@ impl App {
 
     pub(super) fn filter_mut(&mut self, l: ListRef) -> Option<&mut ListFilter> {
         match l {
-            ListRef::Queue => Some(&mut self.queue_filter),
+            ListRef::Queue => Some(&mut self.queue.filter),
             ListRef::BArtists => Some(&mut self.browser_filters[0]),
             ListRef::BAlbums => Some(&mut self.browser_filters[1]),
             ListRef::BTracks => Some(&mut self.browser_filters[2]),
@@ -191,7 +191,7 @@ impl App {
 
     pub(super) fn total_len(&self, l: ListRef) -> usize {
         match l {
-            ListRef::Queue => self.queue.len(),
+            ListRef::Queue => self.queue.items.len(),
             ListRef::BArtists => self.browser.artists.len(),
             ListRef::BAlbums => self.browser.albums.len(),
             ListRef::BTracks => self.browser.tracks.len(),
@@ -215,7 +215,7 @@ impl App {
     /// An index into the filtered view.
     pub(super) fn cursor_of(&self, l: ListRef) -> Option<usize> {
         match l {
-            ListRef::Queue => self.queue_state.selected(),
+            ListRef::Queue => self.queue.state.selected(),
             ListRef::BArtists => self.browser.artists_state.selected(),
             ListRef::BAlbums => self.browser.albums_state.selected(),
             ListRef::BTracks => self.browser.tracks_state.selected(),
@@ -248,7 +248,7 @@ impl App {
         let l = self.active_list();
         let vis = self.vis_len(l);
         match l {
-            ListRef::Queue => f(&mut self.queue_state, vis),
+            ListRef::Queue => f(&mut self.queue.state, vis),
             ListRef::BArtists => f(&mut self.browser.artists_state, vis),
             ListRef::BAlbums => f(&mut self.browser.albums_state, vis),
             ListRef::BTracks => f(&mut self.browser.tracks_state, vis),
@@ -367,15 +367,15 @@ impl App {
         if !self.auto_follow
             || !self.queue_follow
             || self.tab != Tab::Queue
-            || self.queue_filter.is_active()
+            || self.queue.filter.is_active()
         {
             return;
         }
         let Some(cur) = self.current else { return };
-        if cur >= self.queue.len() {
+        if cur >= self.queue.items.len() {
             return;
         }
-        self.queue_state.select(Some(cur));
+        self.queue.state.select(Some(cur));
         self.scroll.pin_top(ScrollId::Queue);
     }
 
@@ -433,7 +433,7 @@ impl App {
 
     fn row_title(&self, l: ListRef, real: usize) -> Option<&str> {
         match l {
-            ListRef::Queue => self.queue.get(real).map(|t| t.title.as_str()),
+            ListRef::Queue => self.queue.items.get(real).map(|t| t.title.as_str()),
             ListRef::BArtists => self.browser.artists.get(real).map(|a| a.title.as_str()),
             ListRef::BAlbums => self.browser.albums.get(real).map(|a| a.title.as_str()),
             ListRef::BTracks => self.browser.tracks.get(real).map(|t| t.title.as_str()),
@@ -457,7 +457,7 @@ impl App {
             self.transient("nothing playing".into());
             return;
         };
-        let Some(key) = self.queue.get(cur).map(|t| t.rating_key.clone()) else { return };
+        let Some(key) = self.queue.items.get(cur).map(|t| t.rating_key.clone()) else { return };
         let center = self.center_cursor;
         let in_queue = self.active_list() == ListRef::Queue;
         if in_queue {
@@ -465,11 +465,11 @@ impl App {
         }
         match self.active_list() {
             ListRef::Queue => {
-                let Some(p) = self.queue_filter.cursor_of(cur) else {
+                let Some(p) = self.queue.filter.cursor_of(cur) else {
                     self.transient("playing track is filtered out".into());
                     return;
                 };
-                self.queue_state.select(Some(p));
+                self.queue.state.select(Some(p));
                 // with auto-follow off `o` still jumps, once
                 if self.auto_follow {
                     self.scroll.pin_top(ScrollId::Queue);
@@ -562,8 +562,8 @@ impl App {
         let needle = filter::Needle::new(&text);
         match l {
             ListRef::Queue => {
-                let items = &self.queue;
-                self.queue_filter.apply(items.len(), |i| {
+                let items = &self.queue.items;
+                self.queue.filter.apply(items.len(), |i| {
                     let t = &items[i];
                     needle.found_in(&t.title)
                         || needle.found_in(&t.artist)
