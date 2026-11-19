@@ -1,3 +1,4 @@
+use super::draw_list_label;
 use crate::ui::app::{App, SimilarKind};
 use crate::ui::keymap::{Act, KeyCtx};
 use crate::ui::scroll::ScrollId;
@@ -9,7 +10,7 @@ use crate::ui::views::widgets::{clean, placeholder, title_spans};
 use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::Modifier;
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Cell, Paragraph, Row, Table, TableState};
+use ratatui::widgets::{Cell, Row, Table, TableState};
 use ratatui::Frame;
 
 pub(in crate::ui::views) fn draw_search_tab(f: &mut Frame, app: &mut App, area: Rect) {
@@ -293,19 +294,6 @@ fn draw_search_detail(f: &mut Frame, app: &mut App, inner: Rect) {
     if let Some(bar) = frame.bar {
         render_scrollbar(f, bar, total, offset, visible);
     }
-}
-
-/// The line above a Search list: what it is, then how many rows.
-fn draw_list_label(f: &mut Frame, area: Rect, label: &str, count: &str) {
-    let line = Line::from(vec![
-        Span::styled("▸ ", theme::accent()),
-        Span::styled(
-            theme::ellipsize(&clean(label), area.width.saturating_sub(14)),
-            theme::secondary(),
-        ),
-        Span::styled(count.to_string(), theme::dim()),
-    ]);
-    f.render_widget(Paragraph::new(line), area);
 }
 
 /// A four-digit year, which also fits the "Year" header.
