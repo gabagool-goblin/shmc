@@ -1,8 +1,9 @@
-//! Star ratings: the playing track's rating for the header, and `r`.
+//! Star ratings: the playing track's rating for the header, `r` and `R`.
 
 use super::plex_worker::PlexCmd;
-use super::App;
+use super::{App, ListRef};
 use crate::config::RatingStyle;
+use crate::plex::models::HitKind;
 use crate::ui::views::{rating_glyphs, rating_short};
 use std::time::{Duration, Instant};
 
@@ -10,6 +11,7 @@ use std::time::{Duration, Instant};
 /// change while it waits cannot redirect the answer.
 pub(super) struct PendingRating {
     key: String,
+    title: String,
     armed_at: Instant,
 }
 
@@ -44,13 +46,38 @@ impl App {
         rating_glyphs(self.rating_style, self.playing_rating()?, self.icons_ascii)
     }
 
-    pub(super) fn rate_playing(&mut self) {
-        if !self.allow_writes {
-            self.transient("ratings are read-only: turn on plex.allow_writes".into());
+    /// Key, title and own rating of the highlighted track.
+    fn highlighted_track(&self) -> Option<(String, String, Option<u8>)> {
+        let list = self.active_list();
+        let real = self.real_at(list)?;
+        let track = match list {
+            ListRef::Queue => self.queue.get(real),
+            ListRef::BTracks => self.browser.tracks.get(real),
+            ListRef::PlItems => self.playlists.items.get(real),
+            ListRef::SearchDetail => self.search.detail.as_ref()?.tracks.get(real),
+            ListRef::Search => {
+                let hit = self.search.hits.get(real).filter(|h| h.kind == HitKind::Track)?;
+                return Some((hit.rating_key.clone(), hit.title.clone(), hit.user_rating));
+            }
+            _ => None,
+        }?;
+        Some((track.rating_key.clone(), track.title.clone(), track.user_rating))
+    }
+
+    pub(super) fn rate_highlighted(&mut self) {
+        if !self.can_rate() {
             return;
         }
-        if self.rating_style == RatingStyle::Off {
-            self.transient("ratings are hidden: set ui.rating_style".into());
+        let Some((key, title, own)) = self.highlighted_track() else {
+            self.transient("r rates tracks · R rates the playing track".into());
+            return;
+        };
+        let current = self.rating_for(&key, own);
+        self.ask_rating(key, title, current);
+    }
+
+    pub(super) fn rate_playing(&mut self) {
+        if !self.can_rate() {
             return;
         }
         let Some(track) = self.current_track().filter(|_| !self.stopped) else {
@@ -59,18 +86,33 @@ impl App {
         };
         let (key, title) = (track.rating_key.clone(), track.title.clone());
         let current = self.playing_rating();
+        self.ask_rating(key, title, current);
+    }
+
+    fn can_rate(&mut self) -> bool {
+        if !self.allow_writes {
+            self.transient("ratings are read-only: turn on plex.allow_writes".into());
+            return false;
+        }
+        if self.rating_style == RatingStyle::Off {
+            self.transient("ratings are hidden: set ui.rating_style".into());
+            return false;
+        }
+        true
+    }
+
+    fn ask_rating(&mut self, key: String, title: String, current: Option<u8>) {
         if self.rating_style == RatingStyle::One {
-            self.send_rating(key, if current.is_some() { None } else { Some(10) });
+            self.send_rating(key, title, if current.is_some() { None } else { Some(10) });
             return;
         }
-        let shown = self.rating_label().unwrap_or_else(|| "not rated".into());
+        let shown = current
+            .and_then(|r| rating_glyphs(self.rating_style, r, self.icons_ascii))
+            .unwrap_or_else(|| "not rated".into());
+        let question = format!("rate {title} ({shown}): 1 to 5 · 0 clears · any other key cancels");
         self.pending_playlist = None;
-        self.pending_rating = Some(PendingRating { key, armed_at: Instant::now() });
-        self.transient_secs(
-            format!("rate {title} ({shown}): 1 to 5 · 0 clears · any other key cancels"),
-            self.confirm_timeout_secs,
-            false,
-        );
+        self.pending_rating = Some(PendingRating { key, title, armed_at: Instant::now() });
+        self.transient_secs(question, self.confirm_timeout_secs, false);
     }
 
     /// Whether the question took the key: `0` to `5` answer it, anything else
@@ -85,7 +127,7 @@ impl App {
         match key {
             crossterm::event::KeyCode::Char(c @ '0'..='5') => {
                 let stars = c.to_digit(10).unwrap_or(0) as u8;
-                self.send_rating(pending.key, (stars > 0).then_some(stars * 2));
+                self.send_rating(pending.key, pending.title, (stars > 0).then_some(stars * 2));
             }
             _ => self.transient("cancelled".into()),
         }
@@ -96,31 +138,22 @@ impl App {
         self.pending_rating.is_some()
     }
 
-    fn send_rating(&mut self, key: String, rating: Option<u8>) {
-        let _ = self.plex.tx.send(PlexCmd::Rate { key, rating });
+    fn send_rating(&mut self, key: String, title: String, rating: Option<u8>) {
+        let _ = self.plex.tx.send(PlexCmd::Rate { key, rating, title });
     }
 
     /// The server confirmed a write.
-    pub(super) fn rating_saved(&mut self, rating_key: String, rating: Option<u8>) {
-        // The track may have left the queue before the reply.
-        let title = self.queue.iter().find(|t| t.rating_key == rating_key).map(|t| t.title.clone());
+    pub(super) fn rating_saved(&mut self, rating_key: String, rating: Option<u8>, title: String) {
         self.ratings.insert(rating_key, rating);
-        let what = match (self.rating_style, rating) {
-            (RatingStyle::One, Some(_)) => "starred",
-            (RatingStyle::One, None) => "unstarred",
-            (_, None) => "rating cleared",
+        let msg = match (self.rating_style, rating) {
+            (RatingStyle::One, Some(_)) => format!("starred: {title}"),
+            (RatingStyle::One, None) => format!("unstarred: {title}"),
+            (_, None) => format!("rating cleared: {title}"),
             (style, Some(r)) => {
                 let glyphs = rating_glyphs(style, r, self.icons_ascii).unwrap_or_default();
-                self.transient(match title {
-                    Some(t) => format!("rated {t}: {glyphs}"),
-                    None => format!("rated: {glyphs}"),
-                });
-                return;
+                format!("rated {title}: {glyphs}")
             }
         };
-        self.transient(match title {
-            Some(t) => format!("{what}: {t}"),
-            None => what.to_string(),
-        });
+        self.transient(msg);
     }
 }

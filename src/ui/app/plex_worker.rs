@@ -85,6 +85,7 @@ pub enum PlexCmd {
     Rate {
         key: String,
         rating: Option<u8>,
+        title: String,
     },
 }
 
@@ -297,9 +298,9 @@ pub fn spawn_plex_worker(
                         }
                         Err(e) => tracing::warn!("track info: {e:#}"),
                     },
-                    PlexCmd::Rate { key, rating } => match client.rate(&key, rating).await {
+                    PlexCmd::Rate { key, rating, title } => match client.rate(&key, rating).await {
                         Ok(()) => {
-                            let _ = tx.send(Msg::Rated { rating_key: key, rating });
+                            let _ = tx.send(Msg::Rated { rating_key: key, rating, title });
                         }
                         Err(e) => {
                             let _ = tx.send(Msg::Error(format!("rating failed: {e:#}")));

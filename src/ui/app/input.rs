@@ -753,7 +753,8 @@ impl App {
                 self.transient(format!("consume {}", if on { "on" } else { "off" }));
             }
             Act::SleepTimer => self.cycle_sleep_timer(),
-            Act::Rate => self.rate_playing(),
+            Act::Rate => self.rate_highlighted(),
+            Act::RatePlaying => self.rate_playing(),
             Act::Similar => self.find_similar(),
             Act::Radio => self.start_radio(),
         }

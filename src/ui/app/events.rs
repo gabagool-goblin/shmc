@@ -264,7 +264,9 @@ impl App {
                     self.art.requested = None;
                 }
             }
-            Msg::Rated { rating_key, rating } => self.rating_saved(rating_key, rating),
+            Msg::Rated { rating_key, rating, title } => {
+                self.rating_saved(rating_key, rating, title);
+            }
             Msg::TrackInfo { rating_key, audio, user_rating } => {
                 self.ratings.insert(rating_key.clone(), user_rating);
                 let wanted = self.current_track().map(|t| t.rating_key.as_str())
