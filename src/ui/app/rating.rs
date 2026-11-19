@@ -55,6 +55,7 @@ impl App {
             ListRef::BTracks => self.browser.tracks.items.get(real),
             ListRef::PlItems => self.playlists.tracks.items.get(real),
             ListRef::SearchDetail => self.search.detail.as_ref()?.tracks.get(real),
+            ListRef::DTracks => self.discover.tracks.get(real),
             ListRef::Search => {
                 let hit = self.search.hits.get(real).filter(|h| h.kind == HitKind::Track)?;
                 return Some((hit.rating_key.clone(), hit.title.clone(), hit.user_rating));

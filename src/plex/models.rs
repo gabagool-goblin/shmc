@@ -200,6 +200,9 @@ pub struct WireHub {
     pub directories: Vec<WireDirectory>,
     #[serde(rename = "Track", default)]
     pub tracks: Vec<WireTrack>,
+    /// The stations of a `station` hub.
+    #[serde(rename = "Playlist", default)]
+    pub stations: Vec<WireStation>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

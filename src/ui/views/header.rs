@@ -348,6 +348,7 @@ pub(crate) fn draw_header_block(
 pub(super) fn tab_name(t: Tab) -> &'static str {
     match t {
         Tab::Queue => "Queue",
+        Tab::Discover => "Discover",
         Tab::Browser => "Browser",
         Tab::Playlists => "Playlists",
         Tab::Search => "Search",
@@ -355,15 +356,25 @@ pub(super) fn tab_name(t: Tab) -> &'static str {
     }
 }
 
-fn tab_spans(names: &[&str], active: usize) -> Vec<Span<'static>> {
-    names
-        .iter()
-        .enumerate()
-        .map(|(i, name)| {
-            let style = if i == active { theme::tab_active() } else { theme::tab_inactive() };
-            Span::styled(format!(" {name} "), style)
-        })
-        .collect()
+/// Names padded by a space, or unpadded when that does not fit.
+fn tab_spans(names: &[&str], active: usize, width: u16) -> Vec<Span<'static>> {
+    let style = |i: usize| if i == active { theme::tab_active() } else { theme::tab_inactive() };
+    let padded: usize = names.iter().map(|n| theme::str_width(n) + 2).sum();
+    if padded <= width as usize {
+        return names
+            .iter()
+            .enumerate()
+            .map(|(i, name)| Span::styled(format!(" {name} "), style(i)))
+            .collect();
+    }
+    let mut spans = Vec::with_capacity(names.len() * 2);
+    for (i, name) in names.iter().enumerate() {
+        if i > 0 {
+            spans.push(Span::raw(" "));
+        }
+        spans.push(Span::styled((*name).to_string(), style(i)));
+    }
+    spans
 }
 
 /// The config screen's tab bar: always boxed, whatever `theme.borders` says.
@@ -383,7 +394,8 @@ pub(super) fn draw_tab_strip(
         return;
     }
     f.render_widget(
-        Paragraph::new(Line::from(tab_spans(names, active))).alignment(Alignment::Center),
+        Paragraph::new(Line::from(tab_spans(names, active, inner.width)))
+            .alignment(Alignment::Center),
         inner,
     );
 }
@@ -442,7 +454,7 @@ pub(crate) fn draw_tab_row(
     if inner.width == 0 || inner.height == 0 {
         return;
     }
-    let tabs = tab_spans(names, active);
+    let tabs = tab_spans(names, active, inner.width);
     let tabs_w = tabs.iter().map(|s| theme::str_width(&s.content)).sum::<usize>() as u16;
     let sleep_w = info.sleep.as_deref().map_or(0, |s| theme::str_width(s) as u16 + 1);
 

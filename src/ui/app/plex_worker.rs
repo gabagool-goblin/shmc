@@ -1,3 +1,4 @@
+use super::discover;
 use super::radio::{self, RadioEnv, RadioSeed};
 use super::similar::{SimilarKind, SimilarOutcome};
 use crate::plex::sonic::Features;
@@ -75,6 +76,13 @@ pub enum PlexCmd {
         seed: RadioSeed,
         /// Shown when Plex names no station.
         label: String,
+    },
+    /// Replies once with `Msg::StationsLoaded`, never `Msg::Error`.
+    LoadStations,
+    /// Replies once with `Msg::StationPreview`, never `Msg::Error`.
+    PreviewStation {
+        key: String,
+        title: String,
     },
     LoadThumb {
         path: String,
@@ -276,6 +284,13 @@ pub fn spawn_plex_worker(
                     }
                     PlexCmd::StartRadio { key, seed, label } => {
                         radio::run(&client, &features, &radio_env, &tx, key, seed, label).await;
+                    }
+                    PlexCmd::LoadStations => {
+                        discover::load_stations(&client, &section, &features, &tx).await;
+                    }
+                    PlexCmd::PreviewStation { key, title } => {
+                        discover::preview_station(&client, &features, &radio_env, &tx, key, title)
+                            .await;
                     }
                     PlexCmd::LoadThumb { path } => {
                         match load_thumb(&client, &path, art_cache_mb, art_max_size_px).await {

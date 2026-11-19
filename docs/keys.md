@@ -1,13 +1,13 @@
 # Keys and commands
 
-Press `?` or `5` to open Help. It lists all current key bindings, including changes from `[keys]`. This page covers the defaults.
+Press `?` or `6` to open Help. It lists all current key bindings, including changes from `[keys]`. This page covers the defaults.
 
 ## Everywhere
 
 | Key | Action |
 |---|---|
 | `q`, `Ctrl-C` | Quit (`q` in Help returns to the previous tab) |
-| `1`–`5`, `Tab`, `Shift-Tab` | Switch tabs: Queue, Browser, Playlists, Search, Help |
+| `1`–`6`, `Tab`, `Shift-Tab` | Switch tabs: Queue, Discover, Browser, Playlists, Search, Help |
 | `?` | Help |
 | `Space` | Pause / resume |
 | `>`, `<` | Next / previous track (`<` restarts after `ui.prev_restart_secs`) |
@@ -47,10 +47,10 @@ These keys work in all tab lists and Help, except where noted.
 | `PgDn`, `PgUp` | Page down / up |
 | `gg`, `G`, `Home`, `End` | Jump to top / bottom |
 | `g` + letter | Jump to the first row starting with that letter |
-| `h`, `l`, `Left`, `Right` | Switch columns (Browser, Playlists) |
-| `/` | Filter; starts a new search in Search. Not available in Help |
+| `h`, `l`, `Left`, `Right` | Switch columns (Discover, Browser, Playlists) |
+| `/` | Filter; starts a new search in Search. Not available in Discover or Help |
 | `o` | Jump to the playing track (Queue, Browser, Playlists) |
-| `v` | Select a range (Queue, Browser, Playlists and Search tracks) |
+| `v` | Select a range (Queue, Discover, Browser, Playlists and Search tracks) |
 
 After `g`, the next letter always triggers a jump, even if it's bound to another action. For example, `g a` jumps rather than adding. Other keys keep their normal bindings, so `g 2` still switches tabs.
 
@@ -74,6 +74,20 @@ Set `ui.auto_follow = false` to disable pinning. In that case, `o` jumps to the 
 `J` and `K` are disabled while shuffle is on or the queue is filtered.
 
 Tracks that fail to play are skipped. After three consecutive failures, playback stops and displays the failed track. Press `>` to continue.
+
+## Discover
+
+The Discover tab lists the library's radio stations, which need Plex Pass. The highlighted station's next 30 or so tracks show on the right, and `Enter` replaces the queue with them and turns shuffle off. Each look creates a play queue on the server, so it needs `plex.allow_writes`. A station is asked for once, and again only after it has played.
+
+| Key | Action |
+|---|---|
+| `Enter` | Play the station, or the track and the rest |
+| `h`, `l` | Focus the stations / the tracks |
+| `a` | Add the track to the queue |
+| `i` | Insert the track after the playing track |
+| `v` | Select a range of tracks |
+| `m`, `s` | Similar tracks, track radio |
+| `b` | Open the track in Browser |
 
 ## Browser, Playlists and Search
 
@@ -113,7 +127,7 @@ Press `:` to open the command line.
 | `:shuffle`, `:repeat`, `:single`, `:consume` | Toggle playback modes |
 | `:reshuffle` | Reshuffle queue |
 | `:sleep N`, `:sleep off` | Set sleep timer in minutes or cancel |
-| `:queue`, `:browser`, `:playlists`, `:search`, `:help` | Switch tabs |
+| `:queue`, `:discover`, `:browser`, `:playlists`, `:search`, `:help` | Switch tabs |
 | `:playing` | Jump to playing track |
 | `:clear` | Clear queue |
 | `:save NAME` | Save queue as a new Plex playlist |
@@ -136,7 +150,7 @@ remove = ["d", "Delete"]
 move_down = ["j", "Down", "C-n"]
 ```
 
-Available sections: `global`, `lists`, `queue`, `browser`, `playlists`, `search` and `help`.
+Available sections: `global`, `lists`, `queue`, `discover`, `browser`, `playlists`, `search` and `help`.
 
 `lists` accepts movement actions only:
 
@@ -162,8 +176,8 @@ If `[keys]` contains an invalid section, action, key name or duplicate binding w
 |---|---|---|
 | `quit` | `q`, `C-c` | global |
 | `next_tab`, `prev_tab` | `Tab`, `S-Tab` | global |
-| `tab_queue`, `tab_browser`, `tab_playlists`, `tab_search` | `1`, `2`, `3`, `4` | global |
-| `tab_help` | `5`, `?` | global |
+| `tab_queue`, `tab_discover`, `tab_browser`, `tab_playlists`, `tab_search` | `1`, `2`, `3`, `4`, `5` | global |
+| `tab_help` | `6`, `?` | global |
 | `command_line` | `:` | global |
 | `toggle_pause` | `Space` | global |
 | `next_track`, `prev_track` | `>`, `<` | global |
@@ -175,14 +189,14 @@ If `[keys]` contains an invalid section, action, key name or duplicate binding w
 | `toggle_single` | `c` | global |
 | `toggle_consume` | `C` | global |
 | `sleep_timer` | `S` | global |
-| `move_up`, `move_down` | `k`, `Up`; `j`, `Down` | queue, browser, playlists, search, help |
-| `page_up`, `page_down` | `PgUp`; `PgDn` | queue, browser, playlists, search, help |
-| `top`, `bottom` | `gg`, `Home`; `G`, `End` | queue, browser, playlists, search, help |
-| `column_left`, `column_right` | `h`, `Left`; `l`, `Right` | browser, playlists |
-| `activate` | `Enter` | browser, playlists, search |
-| `add` | `a` | browser, playlists, search |
-| `play_next` | `i` | browser, playlists, search |
-| `visual` | `v` | queue, browser, playlists, search |
+| `move_up`, `move_down` | `k`, `Up`; `j`, `Down` | queue, discover, browser, playlists, search, help |
+| `page_up`, `page_down` | `PgUp`; `PgDn` | queue, discover, browser, playlists, search, help |
+| `top`, `bottom` | `gg`, `Home`; `G`, `End` | queue, discover, browser, playlists, search, help |
+| `column_left`, `column_right` | `h`, `Left`; `l`, `Right` | discover, browser, playlists |
+| `activate` | `Enter` | discover, browser, playlists, search |
+| `add` | `a` | discover, browser, playlists, search |
+| `play_next` | `i` | discover, browser, playlists, search |
+| `visual` | `v` | queue, discover, browser, playlists, search |
 | `jump_to_playing` | `o` | queue, browser, playlists |
 | `filter` | `/` | queue, browser, playlists |
 | `play` | `Enter` | queue |
@@ -190,6 +204,6 @@ If `[keys]` contains an invalid section, action, key name or duplicate binding w
 | `undo` | `u` | queue |
 | `clear` | `D` | queue |
 | `move_track_down`, `move_track_up` | `J`, `K` | queue |
-| `show_in_browser` | `b` | queue, search |
+| `show_in_browser` | `b` | queue, discover, search |
 | `search` | `/` | search |
 | `back` | `Esc`, `BSpace` (browser); `Esc` (search); `Esc`, `q` (help) | browser, search, help |

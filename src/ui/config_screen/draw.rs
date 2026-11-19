@@ -692,7 +692,7 @@ fn draw_theme_preview(f: &mut Frame, area: Rect, ui: &crate::config::UiConfig) {
             f,
             header,
             style,
-            &["Queue", "Browser", "Playlists", "Search", "Help"],
+            &["Queue", "Discover", "Browser", "Playlists", "Search", "Help"],
             0,
             &info,
         );

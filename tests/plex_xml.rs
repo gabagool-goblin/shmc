@@ -347,3 +347,19 @@ fn parse_play_queue_fixture() {
         ]
     );
 }
+
+#[test]
+fn station_hub_lists_the_stations_in_order_and_skips_other_hubs() {
+    let c: MediaContainer =
+        quick_xml::de::from_str(include_str!("fixtures/hubs_stations.xml")).unwrap();
+    let stations: Vec<_> =
+        shmc::plex::radio::stations_from(c).into_iter().map(|s| (s.key, s.title)).collect();
+    let want = [
+        ("/library/sections/1/stations/1", "Library Radio"),
+        ("/library/sections/1/stations/8", "Deep Cuts Radio"),
+        ("/library/sections/1/stations/2", "Time Travel Radio"),
+        ("/library/sections/1/stations/3", "Random Album Radio"),
+    ];
+    let want: Vec<_> = want.iter().map(|(k, t)| (k.to_string(), t.to_string())).collect();
+    assert_eq!(stations, want);
+}

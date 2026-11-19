@@ -341,7 +341,11 @@ impl App {
         let l = self.active_list();
         if !matches!(
             l,
-            ListRef::Queue | ListRef::BTracks | ListRef::PlItems | ListRef::SearchDetail
+            ListRef::Queue
+                | ListRef::BTracks
+                | ListRef::PlItems
+                | ListRef::SearchDetail
+                | ListRef::DTracks
         ) {
             self.transient("visual mode works in track lists".into());
             return;
@@ -417,6 +421,7 @@ impl App {
                 (&self.playlists.tracks.items, Some(&self.playlists.tracks.filter))
             }
             (ListRef::SearchDetail, Some(d)) => (&d.tracks, None),
+            (ListRef::DTracks, _) => (&self.discover.tracks, None),
             _ => return,
         };
         let tracks: Vec<Track> = (lo..=hi)

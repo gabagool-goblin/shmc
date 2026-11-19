@@ -16,6 +16,7 @@ use std::time::{Duration, Instant};
 use tokio::sync::mpsc::UnboundedSender;
 
 mod activate;
+mod discover;
 mod events;
 mod input;
 mod list;
@@ -29,6 +30,7 @@ mod search_back;
 mod shuffle;
 mod similar;
 
+pub use discover::{DiscoverCol, DiscoverView, Preview, StationsLoad, StationsOutcome};
 pub use list::FilteredList;
 pub use plex_worker::{spawn_plex_worker, PlexCmd, PlexHandle};
 use queue::PosGuard;
@@ -39,6 +41,7 @@ pub use similar::{SimilarHits, SimilarKind, SimilarOutcome, SimilarRequest};
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Tab {
     Queue,
+    Discover,
     Browser,
     Playlists,
     Search,
@@ -48,7 +51,8 @@ pub enum Tab {
 impl Tab {
     pub fn next(self) -> Self {
         match self {
-            Tab::Queue => Tab::Browser,
+            Tab::Queue => Tab::Discover,
+            Tab::Discover => Tab::Browser,
             Tab::Browser => Tab::Playlists,
             Tab::Playlists => Tab::Search,
             Tab::Search => Tab::Help,
@@ -58,7 +62,8 @@ impl Tab {
     pub fn prev(self) -> Self {
         match self {
             Tab::Queue => Tab::Help,
-            Tab::Browser => Tab::Queue,
+            Tab::Discover => Tab::Queue,
+            Tab::Browser => Tab::Discover,
             Tab::Playlists => Tab::Browser,
             Tab::Search => Tab::Playlists,
             Tab::Help => Tab::Search,
@@ -67,13 +72,15 @@ impl Tab {
     pub fn index(self) -> usize {
         match self {
             Tab::Queue => 0,
-            Tab::Browser => 1,
-            Tab::Playlists => 2,
-            Tab::Search => 3,
-            Tab::Help => 4,
+            Tab::Discover => 1,
+            Tab::Browser => 2,
+            Tab::Playlists => 3,
+            Tab::Search => 4,
+            Tab::Help => 5,
         }
     }
-    pub const ALL: [Tab; 5] = [Tab::Queue, Tab::Browser, Tab::Playlists, Tab::Search, Tab::Help];
+    pub const ALL: [Tab; 6] =
+        [Tab::Queue, Tab::Discover, Tab::Browser, Tab::Playlists, Tab::Search, Tab::Help];
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -161,6 +168,11 @@ pub enum Msg {
         key: String,
         label: String,
         outcome: RadioOutcome,
+    },
+    StationsLoaded(StationsOutcome),
+    StationPreview {
+        key: String,
+        preview: Preview,
     },
     PlaylistsLoaded(Vec<crate::plex::Playlist>),
     PlaylistSaved(crate::plex::SaveOutcome),
@@ -412,6 +424,8 @@ pub enum ListRef {
     PlItems,
     Search,
     SearchDetail,
+    DStations,
+    DTracks,
     Help,
 }
 
@@ -494,6 +508,7 @@ pub struct App {
     /// server is broken, not one file.
     err_streak: u32,
 
+    pub discover: DiscoverView,
     pub browser: Browser,
     pub playlists: PlaylistsView,
     pub search: SearchState,
@@ -624,6 +639,7 @@ impl App {
             audio_cache: HashMap::new(),
             failed_at: None,
             err_streak: 0,
+            discover: DiscoverView::default(),
             browser: Browser::default(),
             playlists: PlaylistsView::default(),
             search: SearchState::default(),

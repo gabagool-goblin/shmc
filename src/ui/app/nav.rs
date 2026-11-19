@@ -13,6 +13,8 @@ fn scroll_id(l: ListRef) -> ScrollId {
         ListRef::PlItems => ScrollId::PlaylistItems,
         ListRef::Search => ScrollId::SearchResults,
         ListRef::SearchDetail => ScrollId::SearchDetail,
+        ListRef::DStations => ScrollId::DiscoverStations,
+        ListRef::DTracks => ScrollId::DiscoverTracks,
         ListRef::Help => ScrollId::Help,
     }
 }
@@ -28,6 +30,8 @@ fn scope_label(l: ListRef) -> &'static str {
         ListRef::PlItems => "Playlist tracks",
         ListRef::Search => "Search",
         ListRef::SearchDetail => "Album",
+        ListRef::DStations => "Stations",
+        ListRef::DTracks => "Station tracks",
         ListRef::Help => "Help",
     }
 }
@@ -148,6 +152,7 @@ impl App {
                 BrowserCol::Albums => ListRef::BAlbums,
                 BrowserCol::Tracks => ListRef::BTracks,
             },
+            Tab::Discover => self.discover_list(),
             Tab::Playlists => match self.playlists.focus {
                 PlaylistsCol::List => ListRef::PlList,
                 PlaylistsCol::Items => ListRef::PlItems,
@@ -171,7 +176,11 @@ impl App {
             ListRef::BTracks => Some(&self.browser.tracks.filter),
             ListRef::PlList => Some(&self.playlists.list.filter),
             ListRef::PlItems => Some(&self.playlists.tracks.filter),
-            ListRef::Search | ListRef::SearchDetail | ListRef::Help => None,
+            ListRef::Search
+            | ListRef::SearchDetail
+            | ListRef::DStations
+            | ListRef::DTracks
+            | ListRef::Help => None,
         }
     }
 
@@ -183,7 +192,11 @@ impl App {
             ListRef::BTracks => Some(&mut self.browser.tracks.filter),
             ListRef::PlList => Some(&mut self.playlists.list.filter),
             ListRef::PlItems => Some(&mut self.playlists.tracks.filter),
-            ListRef::Search | ListRef::SearchDetail | ListRef::Help => None,
+            ListRef::Search
+            | ListRef::SearchDetail
+            | ListRef::DStations
+            | ListRef::DTracks
+            | ListRef::Help => None,
         }
     }
 
@@ -199,6 +212,8 @@ impl App {
             ListRef::SearchDetail => {
                 self.search.detail.as_ref().map(|d| d.tracks.len()).unwrap_or(0)
             }
+            ListRef::DStations => self.discover.stations.len(),
+            ListRef::DTracks => self.discover.tracks.len(),
             ListRef::Help => self.keymap.help_lines().len(),
         }
     }
@@ -221,6 +236,8 @@ impl App {
             ListRef::PlItems => self.playlists.tracks.state.selected(),
             ListRef::Search => self.search.state.selected(),
             ListRef::SearchDetail => self.search.detail.as_ref().and_then(|d| d.state.selected()),
+            ListRef::DStations => self.discover.stations_state.selected(),
+            ListRef::DTracks => self.discover.tracks_state.selected(),
             ListRef::Help => self.help_state.selected(),
         }
     }
@@ -258,6 +275,8 @@ impl App {
                     f(&mut d.state, vis);
                 }
             }
+            ListRef::DStations => f(&mut self.discover.stations_state, vis),
+            ListRef::DTracks => f(&mut self.discover.tracks_state, vis),
             ListRef::Help => f(&mut self.help_state, vis),
         }
     }
@@ -279,6 +298,7 @@ impl App {
             !matches!(
                 (v.list, t),
                 (ListRef::Queue, Tab::Queue)
+                    | (ListRef::DTracks, Tab::Discover)
                     | (ListRef::BTracks, Tab::Browser)
                     | (ListRef::PlItems, Tab::Playlists)
                     | (ListRef::SearchDetail, Tab::Search)
@@ -288,6 +308,9 @@ impl App {
         }
         self.tab = t;
         self.pending_goto = None;
+        if t == Tab::Discover {
+            self.open_discover();
+        }
         if t == Tab::Queue {
             self.follow_queue();
         }
@@ -318,6 +341,7 @@ impl App {
                     BrowserCol::Artists => BrowserCol::Artists,
                 };
             }
+            Tab::Discover => self.discover_column_left(),
             Tab::Playlists if self.playlists.focus == PlaylistsCol::Items => {
                 // going back to the playlist list clears its track filter
                 self.playlists.tracks.filter.clear();
@@ -352,6 +376,7 @@ impl App {
                 }
                 _ => {}
             },
+            Tab::Discover => self.discover_column_right(),
             Tab::Playlists if !self.playlists.tracks.items.is_empty() => {
                 self.playlists.focus = PlaylistsCol::Items;
             }
@@ -444,6 +469,8 @@ impl App {
                 .as_ref()
                 .and_then(|d| d.tracks.get(real))
                 .map(|t| t.title.as_str()),
+            ListRef::DStations => self.discover.stations.get(real).map(|s| s.title.as_str()),
+            ListRef::DTracks => self.discover.tracks.get(real).map(|t| t.title.as_str()),
             ListRef::Help => None,
         }
     }
@@ -604,7 +631,11 @@ impl App {
                         || needle.found_in(&t.album)
                 });
             }
-            ListRef::Search | ListRef::SearchDetail | ListRef::Help => {}
+            ListRef::Search
+            | ListRef::SearchDetail
+            | ListRef::DStations
+            | ListRef::DTracks
+            | ListRef::Help => {}
         }
     }
 }

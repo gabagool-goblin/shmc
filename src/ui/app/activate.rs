@@ -263,6 +263,8 @@ impl App {
                 let confirm = Confirm::FromList { name: d.label.clone() };
                 self.queue_local(tracks, confirm, QueueAction::Replace);
             }
+            ListRef::DStations => self.start_station(),
+            ListRef::DTracks => self.play_discover_from(),
             ListRef::Help => {}
         }
     }
@@ -389,7 +391,8 @@ impl App {
                 let confirm = Confirm::Track { title: t.title.clone() };
                 self.queue_local(vec![t], confirm, action);
             }
-            ListRef::Queue | ListRef::Help => {}
+            ListRef::DTracks => self.add_discover_track(action),
+            ListRef::Queue | ListRef::DStations | ListRef::Help => {}
         }
     }
 }

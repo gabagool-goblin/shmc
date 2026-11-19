@@ -23,6 +23,15 @@ pub fn station_from(c: MediaContainer) -> Option<Station> {
     Some(Station { key: station.key, title: station.title.unwrap_or_default() })
 }
 
+/// The `station` hub's stations, in server order.
+pub fn stations_from(c: MediaContainer) -> Vec<Station> {
+    let hub = c.hubs.into_iter().find(|h| h.type_.as_deref() == Some("station"));
+    hub.into_iter()
+        .flat_map(|h| h.stations)
+        .map(|s| Station { key: s.key, title: s.title.unwrap_or_default() })
+        .collect()
+}
+
 /// The play queue's id and its tracks in order, each with its `playQueueItemID`.
 pub fn play_queue_from(c: MediaContainer) -> (Option<String>, Vec<(Track, String)>) {
     let tracks = c
@@ -57,6 +66,12 @@ impl PlexClient {
     pub async fn artist_station(&self, key: &str) -> Result<Option<Station>> {
         let c = self.get_xml(&format!("/library/metadata/{key}?includeStations=1")).await?;
         Ok(station_from(c))
+    }
+
+    /// The library's radio stations (Plex Pass).
+    pub async fn library_stations(&self, section: &str) -> Result<Vec<Station>> {
+        let c = self.get_xml(&format!("/hubs/sections/{section}?includeStations=1")).await?;
+        Ok(stations_from(c))
     }
 
     /// Creates a play queue from the station and reads it until it holds `want`

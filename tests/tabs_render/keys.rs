@@ -507,7 +507,7 @@ async fn g_keeps_non_letter_bindings() {
     assert_eq!(app.tab, Tab::Playlists);
 
     app.handle_msg(key('g'));
-    app.handle_msg(key('2'));
+    app.handle_msg(key('3'));
     assert_eq!(app.tab, Tab::Browser, "'g 2' must still switch tabs");
 
     app.tab = Tab::Playlists;
