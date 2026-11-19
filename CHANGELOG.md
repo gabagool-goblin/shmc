@@ -18,6 +18,10 @@ All notable changes to shmc are documented here. The format follows
 
 - `plex.allow_writes` replaces `plex.set_ratings`; `shmc config --check` names the old key.
 
+### Fixed
+
+- Log lines written at the same moment no longer run together in `shmc.log`.
+
 ## 0.2.1 — 2026-11-16
 
 ### Fixed

@@ -388,9 +388,9 @@ fn log_tail(path: &std::path::Path, lines: usize) -> std::io::Result<Vec<String>
 const MAX_LOG_BYTES: u64 = 2 * 1024 * 1024;
 
 /// Redacts every write: `shmc.log` is pasted into bug reports.
-struct RedactedLog(std::fs::File);
+struct RedactedLog<W>(W);
 
-impl std::io::Write for RedactedLog {
+impl<W: std::io::Write> std::io::Write for RedactedLog<W> {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         let text = String::from_utf8_lossy(buf);
         let text = redact::redact_secrets(&text);
@@ -399,9 +399,9 @@ impl std::io::Write for RedactedLog {
             Some(body) => (body, "\n"),
             None => (text.as_str(), ""),
         };
-        let escaped = redact::escape_field(body);
-        std::io::Write::write_all(&mut self.0, escaped.as_bytes())?;
-        std::io::Write::write_all(&mut self.0, tail.as_bytes())?;
+        // one write, so lines from other threads cannot land inside it
+        let line = redact::escape_field(body) + tail;
+        std::io::Write::write_all(&mut self.0, line.as_bytes())?;
         Ok(buf.len())
     }
 
@@ -841,6 +841,30 @@ mod tests {
         assert!(text.contains("X-Plex-Token=<redacted>"), "{text}");
         assert!(text.contains("plain line"), "{text}");
         assert_eq!(text.lines().count(), 2, "one event per line: {text}");
+    }
+
+    #[test]
+    fn log_event_is_one_write() {
+        use std::io::Write;
+
+        struct Writes(Vec<Vec<u8>>);
+        impl Write for Writes {
+            fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+                self.0.push(buf.to_vec());
+                Ok(buf.len())
+            }
+            fn flush(&mut self) -> std::io::Result<()> {
+                Ok(())
+            }
+        }
+
+        let mut log = RedactedLog(Writes(Vec::new()));
+        log.write_all(b"WARN transport error, retrying attempt=2\n").expect("write");
+        assert_eq!(
+            log.0 .0,
+            vec![b"WARN transport error, retrying attempt=2\n".to_vec()],
+            "line and newline must reach the file together"
+        );
     }
 
     #[test]
