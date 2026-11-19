@@ -9,7 +9,7 @@ async fn enter_on_filtered_artist_opens_it() {
     let (mut app, mut plex_rx) = new_app_with_plex().await;
     app.tab = Tab::Browser;
     app.browser.focus = BrowserCol::Artists;
-    app.browser.artists = (0..40)
+    app.browser.artists.items = (0..40)
         .map(|i| Artist {
             rating_key: format!("a{i}"),
             title: format!("Northwind Sounds {i:02}"),
@@ -23,9 +23,9 @@ async fn enter_on_filtered_artist_opens_it() {
         app.handle_msg(key(c));
     }
     app.handle_msg(enter());
-    assert_eq!(app.browser_filters[0].text, "sounds 07");
+    assert_eq!(app.browser.artists.filter.text, "sounds 07");
     assert_eq!(
-        app.browser.artists_state.selected(),
+        app.browser.artists.state.selected(),
         Some(0),
         "the cursor is on the filtered row 0"
     );
@@ -38,7 +38,7 @@ async fn enter_on_filtered_artist_opens_it() {
         Some("a7"),
         "the artist that matched is the one that opens"
     );
-    assert!(app.browser_filters[0].text.is_empty(), "navigating on clears the filter");
+    assert!(app.browser.artists.filter.text.is_empty(), "navigating on clears the filter");
     match plex_rx.try_recv() {
         Ok(PlexCmd::LoadAlbums(k)) => assert_eq!(k, "a7", "the worker is asked for a7's albums"),
         other => panic!("expected LoadAlbums(a7), got {other:?}"),
@@ -46,7 +46,7 @@ async fn enter_on_filtered_artist_opens_it() {
 
     // unfiltered Enter still works
     app.browser.focus = BrowserCol::Artists;
-    app.browser.artists_state.select(Some(3));
+    app.browser.artists.state.select(Some(3));
     app.handle_msg(enter());
     assert_eq!(app.browser.albums_for.as_deref(), Some("a3"));
 }
@@ -58,10 +58,10 @@ async fn right_on_an_artist_opens_its_albums() {
     let (mut app, mut plex_rx) = new_app_with_plex().await;
     app.tab = Tab::Browser;
     app.browser.focus = BrowserCol::Artists;
-    app.browser.artists = (0..3)
+    app.browser.artists.items = (0..3)
         .map(|i| Artist { rating_key: format!("a{i}"), title: format!("Artist {i}"), thumb: None })
         .collect();
-    app.browser.artists_state.select(Some(0));
+    app.browser.artists.state.select(Some(0));
 
     app.handle_msg(key_code(KeyCode::Right));
     assert_eq!(app.browser.focus, BrowserCol::Albums);
@@ -92,12 +92,12 @@ async fn right_on_an_artist_opens_its_albums() {
 #[tokio::test]
 async fn goto_artist_clears_the_artists_filter() {
     let mut app = new_app().await;
-    app.browser.artists = (0..10)
+    app.browser.artists.items = (0..10)
         .map(|i| Artist { rating_key: format!("a{i}"), title: format!("Artist {i}"), thumb: None })
         .collect();
-    let titles: Vec<String> = app.browser.artists.iter().map(|a| a.title.clone()).collect();
-    app.browser_filters[0].text = "Artist 1".into();
-    app.browser_filters[0].apply(titles.len(), |i| titles[i].contains("Artist 1"));
+    let titles: Vec<String> = app.browser.artists.items.iter().map(|a| a.title.clone()).collect();
+    app.browser.artists.filter.text = "Artist 1".into();
+    app.browser.artists.filter.apply(titles.len(), |i| titles[i].contains("Artist 1"));
     app.queue.items = vec![Track { grandparent_rating_key: Some("a5".into()), ..track(0) }];
     app.queue.state.select(Some(0));
     app.tab = Tab::Queue;
@@ -109,9 +109,9 @@ async fn goto_artist_clears_the_artists_filter() {
         thumb: None,
     }));
 
-    assert!(app.browser_filters[0].text.is_empty(), "the filter must not hide the target");
-    let sel = app.browser.artists_state.selected().expect("an artist is highlighted");
-    assert_eq!(app.browser.artists[sel].rating_key, "a5");
+    assert!(app.browser.artists.filter.text.is_empty(), "the filter must not hide the target");
+    let sel = app.browser.artists.state.selected().expect("an artist is highlighted");
+    assert_eq!(app.browser.artists.items[sel].rating_key, "a5");
 }
 
 /// Highlighting a playlist requests a bounded preview of its tracks.
@@ -223,7 +223,7 @@ async fn late_reply_ignored_after_cancelled_jump() {
     app.handle_msg(Msg::GotoArtist(artist_ar1()));
 
     assert_eq!(app.tab, Tab::Playlists);
-    assert!(app.browser.artists.is_empty());
+    assert!(app.browser.artists.items.is_empty());
     assert!(sent(&mut plex).is_empty(), "nothing is loaded for a dropped jump");
 }
 
@@ -280,11 +280,11 @@ fn reveal_hit(
 
 fn browser_target(app: &TestApp) -> (String, Option<String>, Option<String>) {
     let artist =
-        app.browser.artists[app.browser.artists_state.selected().unwrap()].rating_key.clone();
+        app.browser.artists.items[app.browser.artists.state.selected().unwrap()].rating_key.clone();
     let album =
-        app.browser.albums_state.selected().map(|i| app.browser.albums[i].rating_key.clone());
+        app.browser.albums.state.selected().map(|i| app.browser.albums.items[i].rating_key.clone());
     let track =
-        app.browser.tracks_state.selected().map(|i| app.browser.tracks[i].rating_key.clone());
+        app.browser.tracks.state.selected().map(|i| app.browser.tracks.items[i].rating_key.clone());
     (artist, album, track)
 }
 
@@ -353,7 +353,7 @@ async fn late_reply_ignored_after_cancelled_reveal() {
     app.handle_msg(Msg::GotoArtist(artist_ar1()));
 
     assert_eq!(app.tab, Tab::Queue);
-    assert!(app.browser.artists.is_empty());
+    assert!(app.browser.artists.items.is_empty());
     assert!(sent(&mut plex).is_empty());
 }
 
@@ -453,9 +453,9 @@ async fn enter_on_a_playlist_replaces_the_queue() {
 #[tokio::test]
 async fn add_on_artist_queues_its_tracks() {
     let (mut app, mut plex) = new_app_with_plex().await;
-    app.browser.artists =
+    app.browser.artists.items =
         vec![Artist { rating_key: "ar1".into(), title: "Artist".into(), thumb: None }];
-    app.browser.artists_state.select(Some(0));
+    app.browser.artists.state.select(Some(0));
     app.browser.focus = BrowserCol::Artists;
     app.tab = Tab::Browser;
 
@@ -515,9 +515,9 @@ async fn browser_track_enter_replaces_with_album_remainder() {
     app.queue.items = vec![track(9)];
     app.current = Some(0);
     app.stopped = false;
-    app.browser.tracks = (0..5).map(track).collect();
-    app.browser.artists_state.select(Some(0));
-    app.browser.tracks_state.select(Some(2));
+    app.browser.tracks.items = (0..5).map(track).collect();
+    app.browser.artists.state.select(Some(0));
+    app.browser.tracks.state.select(Some(2));
     app.browser.focus = BrowserCol::Tracks;
     app.tab = Tab::Browser;
 
@@ -534,14 +534,14 @@ async fn browser_track_enter_replaces_with_album_remainder() {
 #[tokio::test]
 async fn browser_album_enter_replaces_queue_with_album() {
     let (mut app, mut plex) = new_app_with_plex().await;
-    app.browser.albums = vec![Album {
+    app.browser.albums.items = vec![Album {
         rating_key: "al1".into(),
         title: "Album".into(),
         artist: "Artist".into(),
         year: Some(2024),
         thumb: None,
     }];
-    app.browser.albums_state.select(Some(0));
+    app.browser.albums.state.select(Some(0));
     app.browser.focus = BrowserCol::Albums;
     app.tab = Tab::Browser;
 
@@ -687,14 +687,14 @@ async fn search_track_enter_replaces_with_album_remainder() {
 #[tokio::test]
 async fn browser_album_right_drills_into_tracks() {
     let (mut app, mut plex) = new_app_with_plex().await;
-    app.browser.albums = vec![Album {
+    app.browser.albums.items = vec![Album {
         rating_key: "al1".into(),
         title: "Album".into(),
         artist: "Artist".into(),
         year: Some(2024),
         thumb: None,
     }];
-    app.browser.albums_state.select(Some(0));
+    app.browser.albums.state.select(Some(0));
     app.browser.focus = BrowserCol::Albums;
     app.tab = Tab::Browser;
 
@@ -748,19 +748,19 @@ async fn albums_loaded_applies_the_configured_order() {
             album_by("new", "New", "A", Some(2020)),
         ],
     });
-    let keys: Vec<&str> = app.browser.albums.iter().map(|a| a.rating_key.as_str()).collect();
+    let keys: Vec<&str> = app.browser.albums.items.iter().map(|a| a.rating_key.as_str()).collect();
     assert_eq!(keys, ["new", "old", "none"]);
 }
 
 async fn browser_with_albums(albums: Vec<Album>) -> TestApp {
     let mut app = new_app().await;
     app.tab = Tab::Browser;
-    app.browser.artists =
+    app.browser.artists.items =
         vec![Artist { rating_key: "a0".into(), title: "Browsed Artist".into(), thumb: None }];
-    app.browser.artists_state.select(Some(0));
+    app.browser.artists.state.select(Some(0));
     app.browser.albums_for = Some("a0".into());
-    app.browser.albums = albums;
-    app.browser.albums_state.select(Some(0));
+    app.browser.albums.items = albums;
+    app.browser.albums.state.select(Some(0));
     app.browser.focus = BrowserCol::Albums;
     app
 }

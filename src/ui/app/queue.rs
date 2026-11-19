@@ -410,7 +410,9 @@ impl App {
         };
         let Some(l) = self.visual.map(|v| v.list) else { return };
         let (items, filter) = match (l, self.search.detail.as_ref()) {
-            (ListRef::BTracks, _) => (&self.browser.tracks, Some(&self.browser_filters[2])),
+            (ListRef::BTracks, _) => {
+                (&self.browser.tracks.items, Some(&self.browser.tracks.filter))
+            }
             (ListRef::PlItems, _) => (&self.playlists.items, Some(&self.pl_items_filter)),
             (ListRef::SearchDetail, Some(d)) => (&d.tracks, None),
             _ => return,

@@ -329,8 +329,8 @@ async fn play_next_inserts_after_the_current_track() {
     let mut app = new_app().await;
     app.queue.items = vec![track(0), track(1)];
     app.current = Some(0);
-    app.browser.tracks = (0..3).map(|i| track(10 + i)).collect();
-    app.browser.tracks_state.select(Some(1));
+    app.browser.tracks.items = (0..3).map(|i| track(10 + i)).collect();
+    app.browser.tracks.state.select(Some(1));
     app.browser.focus = BrowserCol::Tracks;
     app.tab = Tab::Browser;
 
@@ -793,8 +793,8 @@ async fn play_next_after_consume_does_not_panic() {
 
     app.tab = Tab::Browser;
     app.browser.focus = BrowserCol::Tracks;
-    app.browser.tracks = (0..3).map(|i| track(10 + i)).collect();
-    app.browser.tracks_state.select(Some(0));
+    app.browser.tracks.items = (0..3).map(|i| track(10 + i)).collect();
+    app.browser.tracks.state.select(Some(0));
 
     app.handle_msg(key('i'));
     assert_eq!(app.queue.items.len(), 3, "the track was queued after the current one");
@@ -1110,8 +1110,8 @@ async fn play_next_highlights_inserted_track_under_filter() {
 
     filter_queue(&mut app, "x");
 
-    app.browser.tracks = vec![named(90, "Xylophone")];
-    app.browser.tracks_state.select(Some(0));
+    app.browser.tracks.items = vec![named(90, "Xylophone")];
+    app.browser.tracks.state.select(Some(0));
     app.browser.focus = BrowserCol::Tracks;
 
     app.handle_msg(key('i'));

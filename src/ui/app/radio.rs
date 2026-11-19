@@ -154,11 +154,11 @@ impl App {
         let real = self.real_at(list)?;
         match list {
             ListRef::Queue => self.queue.items.get(real).map(Seed::track),
-            ListRef::BTracks => self.browser.tracks.get(real).map(Seed::track),
+            ListRef::BTracks => self.browser.tracks.items.get(real).map(Seed::track),
             ListRef::PlItems => self.playlists.items.get(real).map(Seed::track),
             ListRef::SearchDetail => self.search.detail.as_ref()?.tracks.get(real).map(Seed::track),
             ListRef::BArtists => {
-                self.browser.artists.get(real).map(|a| Seed::artist(&a.rating_key, &a.title))
+                self.browser.artists.items.get(real).map(|a| Seed::artist(&a.rating_key, &a.title))
             }
             ListRef::Search => {
                 let hit = self.search.hits.get(real)?;

@@ -236,12 +236,9 @@ pub enum Msg {
 }
 
 pub struct Browser {
-    pub artists: Vec<Artist>,
-    pub artists_state: ListState,
-    pub albums: Vec<Album>,
-    pub albums_state: ListState,
-    pub tracks: Vec<Track>,
-    pub tracks_state: ListState,
+    pub artists: FilteredList<Artist>,
+    pub albums: FilteredList<Album>,
+    pub tracks: FilteredList<Track>,
     pub focus: BrowserCol,
     pub albums_for: Option<String>,
     pub tracks_for: Option<String>,
@@ -257,12 +254,9 @@ pub enum BrowserCol {
 impl Default for Browser {
     fn default() -> Self {
         Self {
-            artists: Vec::new(),
-            artists_state: ListState::default(),
-            albums: Vec::new(),
-            albums_state: ListState::default(),
-            tracks: Vec::new(),
-            tracks_state: ListState::default(),
+            artists: FilteredList::default(),
+            albums: FilteredList::default(),
+            tracks: FilteredList::default(),
             focus: BrowserCol::Artists,
             albums_for: None,
             tracks_for: None,
@@ -553,7 +547,6 @@ pub struct App {
     /// Title, Artist, Album; 0 hides one.
     pub column_weights: [u32; 3],
     pub queue_columns: Vec<crate::config::QueueColumn>,
-    pub browser_filters: [ListFilter; 3], // artists, albums, tracks
     pub pl_list_filter: ListFilter,
     pub pl_items_filter: ListFilter,
 
@@ -677,7 +670,6 @@ impl App {
             numbers_playlists: ui.numbers_playlists(),
             column_weights: ui.effective_column_weights(),
             queue_columns: ui.resolved_queue_columns(),
-            browser_filters: Default::default(),
             pl_list_filter: ListFilter::default(),
             pl_items_filter: ListFilter::default(),
             status: String::new(),

@@ -134,14 +134,14 @@ fn on_browser_tracks(app: &mut App, n: usize) {
     app.tab = Tab::Browser;
     app.browser.focus = BrowserCol::Tracks;
     app.browser.tracks_for = Some("al1".into());
-    app.browser.tracks = (0..n).map(track).collect();
-    app.browser.tracks_state.select(Some(0));
+    app.browser.tracks.items = (0..n).map(track).collect();
+    app.browser.tracks.state.select(Some(0));
 }
 
 fn filter_browser_tracks(app: &mut App, needle: &str) {
-    let titles: Vec<String> = app.browser.tracks.iter().map(|t| t.title.clone()).collect();
-    app.browser_filters[2].text = needle.into();
-    app.browser_filters[2].apply(titles.len(), |i| titles[i].contains(needle));
+    let titles: Vec<String> = app.browser.tracks.items.iter().map(|t| t.title.clone()).collect();
+    app.browser.tracks.filter.text = needle.into();
+    app.browser.tracks.filter.apply(titles.len(), |i| titles[i].contains(needle));
 }
 
 #[tokio::test]
@@ -166,7 +166,7 @@ async fn visual_range_inserts_after_the_current_track() {
     app.queue.items = (10..13).map(track).collect();
     app.current = Some(0);
     app.stopped = false;
-    app.browser.tracks_state.select(Some(1));
+    app.browser.tracks.state.select(Some(1));
 
     keys(&mut app, "vjji");
     assert_eq!(queue_keys(&app), ["t10", "t1", "t2", "t3", "t11", "t12"]);
@@ -178,7 +178,7 @@ async fn visual_range_enter_replaces_queue_with_range() {
     let mut app = new_app().await;
     on_browser_tracks(&mut app, 8);
     app.queue.items = (10..13).map(track).collect();
-    app.browser.tracks_state.select(Some(5));
+    app.browser.tracks.state.select(Some(5));
 
     keys(&mut app, "vk");
     app.handle_msg(enter());
@@ -228,7 +228,7 @@ async fn visual_range_adds_playlist_tracks() {
 async fn browser_visual_mode_shows_range_and_label() {
     let mut app = new_app().await;
     on_browser_tracks(&mut app, 8);
-    app.browser.tracks_state.select(Some(1));
+    app.browser.tracks.state.select(Some(1));
     app.stopped = true;
     app.handle_msg(key('v'));
     keys(&mut app, "jj");

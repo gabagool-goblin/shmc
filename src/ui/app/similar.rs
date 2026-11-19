@@ -107,11 +107,11 @@ impl App {
         let real = self.real_at(list)?;
         match list {
             ListRef::Queue => self.queue.items.get(real).map(Seed::of),
-            ListRef::BTracks => self.browser.tracks.get(real).map(Seed::of),
+            ListRef::BTracks => self.browser.tracks.items.get(real).map(Seed::of),
             ListRef::PlItems => self.playlists.items.get(real).map(Seed::of),
             ListRef::SearchDetail => self.search.detail.as_ref()?.tracks.get(real).map(Seed::of),
             ListRef::BArtists => {
-                let a = self.browser.artists.get(real)?;
+                let a = self.browser.artists.items.get(real)?;
                 Some(Seed {
                     key: a.rating_key.clone(),
                     kind: SimilarKind::Artists,
@@ -120,7 +120,7 @@ impl App {
                 })
             }
             ListRef::BAlbums => {
-                let a = self.browser.albums.get(real)?;
+                let a = self.browser.albums.items.get(real)?;
                 Some(Seed {
                     key: a.rating_key.clone(),
                     kind: SimilarKind::Albums,
