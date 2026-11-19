@@ -167,7 +167,8 @@ pub(super) fn buffer_of(app: &mut App, w: u16, h: u16) -> ratatui::buffer::Buffe
     terminal.backend().buffer().clone()
 }
 
-const TABS: [Tab; 5] = [Tab::Queue, Tab::Browser, Tab::Playlists, Tab::Search, Tab::Help];
+const TABS: [Tab; 6] =
+    [Tab::Queue, Tab::Discover, Tab::Browser, Tab::Playlists, Tab::Search, Tab::Help];
 
 /// `block_gap` puts empty rows between the blocks; it gives way before the content's six rows.
 #[tokio::test]
@@ -584,7 +585,7 @@ async fn every_header_border_combo_fits() {
                     app.tab = tab;
                     let g = grid(&mut app, w, h);
                     let tabs = row_text(&g, tab_y);
-                    for name in ["Queue", "Browser", "Playlists", "Search", "Help"] {
+                    for name in ["Queue", "Discover", "Browser", "Playlists", "Search", "Help"] {
                         assert!(
                             tabs.contains(&format!(" {name} ")),
                             "{name} on {tab:?}, {at}: {tabs:?}"

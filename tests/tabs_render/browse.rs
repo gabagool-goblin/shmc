@@ -217,7 +217,7 @@ async fn late_reply_ignored_after_cancelled_jump() {
     app.queue.state.select(Some(0));
     app.tab = Tab::Queue;
     app.handle_msg(key('b'));
-    app.handle_msg(key('3'));
+    app.handle_msg(key('4'));
     sent(&mut plex);
 
     app.handle_msg(Msg::GotoArtist(artist_ar1()));

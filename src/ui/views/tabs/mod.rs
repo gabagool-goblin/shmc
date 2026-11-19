@@ -1,9 +1,11 @@
 mod browser;
+mod discover;
 mod help;
 mod playlists;
 mod search;
 
 pub(super) use browser::draw_browser_tab;
+pub(super) use discover::draw_discover_tab;
 pub(super) use help::draw_help_tab;
 pub(super) use playlists::draw_playlists_tab;
 pub(super) use search::draw_search_tab;
@@ -15,7 +17,7 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::Paragraph;
 use ratatui::Frame;
 
-/// The line above a Search list: what it is, then how many rows.
+/// A list's title line: what it is, then how many rows.
 pub(super) fn draw_list_label(f: &mut Frame, area: Rect, label: &str, count: &str) {
     let line = Line::from(vec![
         Span::styled("▸ ", theme::accent()),

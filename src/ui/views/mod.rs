@@ -21,7 +21,9 @@ use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::text::Line;
 use ratatui::widgets::{Block, BorderType, Borders, Paragraph};
 use ratatui::Frame;
-use tabs::{draw_browser_tab, draw_help_tab, draw_playlists_tab, draw_search_tab};
+use tabs::{
+    draw_browser_tab, draw_discover_tab, draw_help_tab, draw_playlists_tab, draw_search_tab,
+};
 
 pub fn draw(f: &mut Frame, app: &mut App) {
     let area = f.area();
@@ -98,6 +100,10 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 
     let meta_shown = match app.tab {
         Tab::Queue => draw_queue_tab(f, app, content),
+        Tab::Discover => {
+            draw_discover_tab(f, app, content);
+            false
+        }
         Tab::Browser => {
             draw_browser_tab(f, app, content);
             false

@@ -112,7 +112,7 @@ See [Configuration](docs/configuration.md) for help finding your token.
 
 | Key | Action |
 |---|---|
-| `2` | Browser |
+| `2` / `3` | Discover (radio stations) / Browser |
 | `h` `j` `k` `l` / arrows | Navigate |
 | `Enter` | Play selection |
 | `a` / `i` | Add to queue / play next |

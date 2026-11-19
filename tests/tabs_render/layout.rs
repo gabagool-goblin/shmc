@@ -642,7 +642,7 @@ async fn help_descriptions_share_column_and_ellipsize() {
         .collect();
     for w in [30u16, 46, 60, 80, 120, 200] {
         // tall enough that the list does not scroll
-        let frame = render(&mut app, w, 150);
+        let frame = render(&mut app, w, 200);
         let mut cols = std::collections::BTreeSet::new();
         let mut cut = false;
         let pane = frame
@@ -1132,9 +1132,9 @@ async fn compact_row_steps_down_before_tab_clips() {
     app.header_compact = true;
     run_cmd(&mut app, "sleep 15");
     let row = |app: &mut App, w: u16| row_text(&grid(app, w, 24), 1);
-    for w in [120u16, 80, 60, 50, 46] {
+    for w in [120u16, 80, 60, 50, 48] {
         let text = row(&mut app, w);
-        for name in ["Queue", "Browser", "Playlists", "Search", "Help"] {
+        for name in ["Queue", "Discover", "Browser", "Playlists", "Search", "Help"] {
             assert!(text.contains(&format!(" {name} ")), "{name} at {w}: {text:?}");
         }
         assert!(!text.contains('>'), "no state glyph at {w}: {text:?}");
@@ -1143,17 +1143,17 @@ async fn compact_row_steps_down_before_tab_clips() {
     let left_of_tabs = wide.find("sleep 15m").zip(wide.find("Queue")).is_some_and(|(s, q)| s < q);
     assert!(left_of_tabs, "the timer on the left: {wide:?}");
     assert!(wide.contains("Volume: ") && wide.contains('▁'), "the meter at 120: {wide:?}");
-    let mid = row(&mut app, 80);
+    let mid = row(&mut app, 90);
     assert!(
         mid.contains("sleep 15m") && mid.contains('%') && !mid.contains('▁'),
-        "a shorter volume at 80: {mid:?}"
+        "a shorter volume at 90: {mid:?}"
     );
-    let narrow = row(&mut app, 60);
+    let narrow = row(&mut app, 66);
     assert!(
         narrow.contains("sleep 15m") && !narrow.contains('%'),
-        "only the timer at 60: {narrow:?}"
+        "only the timer at 66: {narrow:?}"
     );
-    let tight = row(&mut app, 46);
+    let tight = row(&mut app, 48);
     assert!(!tight.contains("sleep"), "{tight:?}");
 }
 

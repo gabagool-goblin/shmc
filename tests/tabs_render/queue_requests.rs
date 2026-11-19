@@ -188,7 +188,7 @@ fn page(load_id: u64, range: std::ops::Range<usize>, last: bool) -> Msg {
 }
 
 /// What mpv's playlist holds, in order, as the stream URLs the app queued.
-async fn mpv_matches_queue(app: &App) -> bool {
+pub(super) async fn mpv_matches_queue(app: &App) -> bool {
     let list = app.mpv.get_property("playlist").await.expect("mpv playlist");
     let in_mpv: Vec<String> = list
         .as_array()

@@ -116,6 +116,8 @@ impl App {
             }
             Msg::SimilarLoaded { key, label, outcome } => self.similar_loaded(key, label, outcome),
             Msg::RadioLoaded { key, label, outcome } => self.radio_loaded(key, label, outcome),
+            Msg::StationsLoaded(outcome) => self.stations_loaded(outcome),
+            Msg::StationPreview { key, preview } => self.station_preview(key, preview),
             Msg::PlaylistsLoaded(list) => {
                 self.playlists.list.items = list;
                 self.playlists.preview_cache.clear();
@@ -345,6 +347,7 @@ impl App {
             }
         }
         self.preview_playlist();
+        self.follow_station();
     }
 
     /// Whether `pos` is a stale position to ignore. The guard ends on its

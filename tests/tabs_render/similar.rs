@@ -506,7 +506,7 @@ async fn leaving_through_help_clears_the_way_back() {
     app.handle_msg(key_code(KeyCode::Tab));
     app.handle_msg(key_code(KeyCode::Tab));
     assert_eq!(app.tab, Tab::Queue);
-    for _ in 0..3 {
+    for _ in 0..4 {
         app.handle_msg(key_code(KeyCode::Tab));
     }
     assert_eq!(app.tab, Tab::Search);

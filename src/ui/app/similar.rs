@@ -110,6 +110,7 @@ impl App {
             ListRef::BTracks => self.browser.tracks.items.get(real).map(Seed::of),
             ListRef::PlItems => self.playlists.tracks.items.get(real).map(Seed::of),
             ListRef::SearchDetail => self.search.detail.as_ref()?.tracks.get(real).map(Seed::of),
+            ListRef::DTracks => self.discover.tracks.get(real).map(Seed::of),
             ListRef::BArtists => {
                 let a = self.browser.artists.items.get(real)?;
                 Some(Seed {

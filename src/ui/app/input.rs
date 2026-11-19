@@ -65,6 +65,7 @@ fn parse_command(raw: &str) -> Command<'_> {
         ["sleep", arg] => Command::Sleep(arg),
         ["sleep", ..] => Command::BadSleep,
         ["queue"] => Command::Tab(Tab::Queue),
+        ["discover"] => Command::Tab(Tab::Discover),
         ["browser"] => Command::Tab(Tab::Browser),
         ["playlists"] => Command::Tab(Tab::Playlists),
         ["search"] => Command::Tab(Tab::Search),
@@ -571,6 +572,7 @@ impl App {
     pub(super) fn key_ctx(&self) -> KeyCtx {
         match self.tab {
             Tab::Queue => KeyCtx::Queue,
+            Tab::Discover => KeyCtx::Discover,
             Tab::Browser => KeyCtx::Browser,
             Tab::Playlists => KeyCtx::Playlists,
             Tab::Search => KeyCtx::Search,
@@ -663,6 +665,7 @@ impl App {
             Act::GotoAlbum => match self.tab {
                 Tab::Queue => self.goto_album(),
                 Tab::Search => self.reveal_search(),
+                Tab::Discover => self.reveal_discover(),
                 _ => {}
             },
             Act::JumpToPlaying => self.jump_to_playing(),
@@ -796,6 +799,7 @@ mod tests {
         assert_eq!(parse_command("sleep off"), Command::Sleep("off"));
         assert_eq!(parse_command("sleep 1 2"), Command::BadSleep);
         assert_eq!(parse_command("queue"), Command::Tab(Tab::Queue));
+        assert_eq!(parse_command("discover"), Command::Tab(Tab::Discover));
         assert_eq!(parse_command("browser"), Command::Tab(Tab::Browser));
         assert_eq!(parse_command("playlists"), Command::Tab(Tab::Playlists));
         assert_eq!(parse_command("search"), Command::Tab(Tab::Search));

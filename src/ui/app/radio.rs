@@ -15,6 +15,8 @@ const WANT: usize = 30;
 pub enum RadioSeed {
     Track(String),
     Artist(String),
+    /// A library station's key.
+    Station(String),
 }
 
 /// The `s` request whose reply may still open the Search tab's list.
@@ -35,6 +37,17 @@ pub enum RadioOutcome {
     NoClientId,
     /// The play queue failed or came back empty.
     Empty,
+}
+
+impl RadioOutcome {
+    pub(super) fn problem(&self) -> &'static str {
+        match self {
+            RadioOutcome::NoRadio => "radio needs Plex Pass",
+            RadioOutcome::NoStation => "Plex lists no radio for this artist",
+            RadioOutcome::NoClientId => "radio is off: cannot store the client id",
+            RadioOutcome::Tracks(_) | RadioOutcome::Empty => "the station returned no tracks",
+        }
+    }
 }
 
 /// What the worker keeps between radio requests.
@@ -76,7 +89,7 @@ pub(super) async fn run(
     let _ = tx.send(Msg::RadioLoaded { key, label, outcome });
 }
 
-async fn start(
+pub(super) async fn start(
     client: &PlexClient,
     features: &Mutex<Option<Features>>,
     env: &RadioEnv,
@@ -97,6 +110,7 @@ async fn start(
                 return (label, RadioOutcome::Empty);
             }
         },
+        RadioSeed::Station(key) => (key, label),
         RadioSeed::Artist(key) => match client.artist_station(&key).await {
             Ok(Some(s)) => (s.key, if s.title.is_empty() { label } else { s.title }),
             Ok(None) => return (label, RadioOutcome::NoStation),
@@ -157,6 +171,7 @@ impl App {
             ListRef::BTracks => self.browser.tracks.items.get(real).map(Seed::track),
             ListRef::PlItems => self.playlists.tracks.items.get(real).map(Seed::track),
             ListRef::SearchDetail => self.search.detail.as_ref()?.tracks.get(real).map(Seed::track),
+            ListRef::DTracks => self.discover.tracks.get(real).map(Seed::track),
             ListRef::BArtists => {
                 self.browser.artists.items.get(real).map(|a| Seed::artist(&a.rating_key, &a.title))
             }
@@ -212,12 +227,7 @@ impl App {
                 self.search.focused = false;
                 self.goto_tab(Tab::Search);
             }
-            RadioOutcome::NoRadio => self.transient("radio needs Plex Pass".into()),
-            RadioOutcome::NoStation => self.transient("Plex lists no radio for this artist".into()),
-            RadioOutcome::NoClientId => {
-                self.transient("radio is off: cannot store the client id".into());
-            }
-            RadioOutcome::Empty => self.transient("the station returned no tracks".into()),
+            other => self.transient(other.problem().into()),
         }
     }
 }

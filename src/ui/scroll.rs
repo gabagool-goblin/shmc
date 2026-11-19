@@ -69,6 +69,8 @@ pub enum ScrollId {
     PlaylistItems,
     SearchResults,
     SearchDetail,
+    DiscoverStations,
+    DiscoverTracks,
     Help,
     /// The config screen's three panes.
     ConfigSettings,
@@ -79,8 +81,8 @@ pub enum ScrollId {
 /// Offsets, plus the visible heights recorded at draw time for page jumps.
 #[derive(Debug, Default)]
 pub struct ScrollStore {
-    offsets: [usize; 12],
-    vis: [usize; 12],
+    offsets: [usize; 14],
+    vis: [usize; 14],
     /// The next draw centres this list's cursor.
     pub center_once: Option<ScrollId>,
     /// Queue auto-follow: every draw puts the cursor on the top row until the

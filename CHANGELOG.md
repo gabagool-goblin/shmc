@@ -8,6 +8,7 @@ All notable changes to shmc are documented here. The format follows
 
 ### Added
 
+- A Discover tab lists the library's radio stations and shows the highlighted one's tracks; Enter plays them (needs Plex Pass radio and plex.allow_writes).
 - `s` starts track or artist radio from Plex (needs Plex Pass and `plex.allow_writes`).
 - `m` lists tracks, albums or artists that sound like the selected one, from Plex's sonic analysis (needs Plex Pass).
 - `Esc` in the Search tab goes back a step at a time, ending at the tab where `m` was pressed.
@@ -17,6 +18,7 @@ All notable changes to shmc are documented here. The format follows
 
 ### Changed
 
+- Discover is tab 2, so Browser, Playlists, Search and Help move to 3–6.
 - `plex.allow_writes` replaces `plex.set_ratings`; `shmc config --check` names the old key.
 - `r` rates the highlighted track instead of the playing one; on an artist or album it does nothing.
 

@@ -54,7 +54,7 @@ async fn clearing_the_queue_asks_first() {
     assert!(app.queue.items.is_empty(), "a second D confirms");
 
     app.handle_msg(key('D'));
-    app.handle_msg(key('2'));
+    app.handle_msg(key('3'));
     assert_eq!(app.tab, Tab::Browser, "an empty queue asks nothing");
 }
 
