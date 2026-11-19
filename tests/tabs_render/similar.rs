@@ -64,11 +64,11 @@ fn found_albums(key: &str) -> Msg {
 /// The Browser with one artist and one album, the album column in focus.
 async fn on_browser() -> (TestApp, Plex) {
     let (mut app, plex) = new_app_with_plex().await;
-    app.browser.artists =
+    app.browser.artists.items =
         vec![Artist { rating_key: "ar1".into(), title: "Northwind Sounds".into(), thumb: None }];
-    app.browser.artists_state.select(Some(0));
-    app.browser.albums = vec![album("al1", "Evening Satellite")];
-    app.browser.albums_state.select(Some(0));
+    app.browser.artists.state.select(Some(0));
+    app.browser.albums.items = vec![album("al1", "Evening Satellite")];
+    app.browser.albums.state.select(Some(0));
     app.browser.focus = BrowserCol::Albums;
     app.tab = Tab::Browser;
     (app, plex)

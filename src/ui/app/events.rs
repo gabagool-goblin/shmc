@@ -43,9 +43,9 @@ impl App {
                 }
             }
             Msg::ArtistsLoaded(artists) => {
-                self.browser.artists = artists;
+                self.browser.artists.items = artists;
                 self.refilter(ListRef::BArtists);
-                self.browser.artists_state.select(if self.browser.artists.is_empty() {
+                self.browser.artists.state.select(if self.browser.artists.items.is_empty() {
                     None
                 } else {
                     Some(0)
@@ -53,16 +53,16 @@ impl App {
             }
             Msg::AlbumsLoaded { artist_key, albums } => {
                 if self.browser.albums_for.as_deref() == Some(artist_key.as_str()) {
-                    self.browser.albums = albums;
-                    sort_albums(&mut self.browser.albums, &self.album_sort);
-                    self.browser.albums_state.select(if self.browser.albums.is_empty() {
+                    self.browser.albums.items = albums;
+                    sort_albums(&mut self.browser.albums.items, &self.album_sort);
+                    self.browser.albums.state.select(if self.browser.albums.items.is_empty() {
                         None
                     } else {
                         Some(0)
                     });
-                    self.browser.tracks.clear();
+                    self.browser.tracks.items.clear();
                     self.drop_visual(ListRef::BTracks);
-                    self.browser.tracks_state.select(None);
+                    self.browser.tracks.state.select(None);
                     self.browser.tracks_for = None;
                     self.refilter(ListRef::BAlbums);
                     self.continue_goto_artist(&artist_key);
@@ -70,9 +70,9 @@ impl App {
             }
             Msg::TracksLoaded { album_key, tracks } => {
                 if self.browser.tracks_for.as_deref() == Some(album_key.as_str()) {
-                    self.browser.tracks = tracks;
+                    self.browser.tracks.items = tracks;
                     self.drop_visual(ListRef::BTracks);
-                    self.browser.tracks_state.select(if self.browser.tracks.is_empty() {
+                    self.browser.tracks.state.select(if self.browser.tracks.items.is_empty() {
                         None
                     } else {
                         Some(0)
@@ -220,14 +220,14 @@ impl App {
                 }
                 self.browser.focus = BrowserCol::Artists;
                 // the jump selects a real index, which a filter would misplace
-                self.browser_filters[0].clear();
+                self.browser.artists.filter.clear();
                 let key = artist.rating_key.clone();
-                if !self.browser.artists.iter().any(|a| a.rating_key == key) {
-                    self.browser.artists.push(artist);
-                    self.browser.artists.sort_by_key(|a| a.title.to_lowercase());
+                if !self.browser.artists.items.iter().any(|a| a.rating_key == key) {
+                    self.browser.artists.items.push(artist);
+                    self.browser.artists.items.sort_by_key(|a| a.title.to_lowercase());
                 }
-                let pos = self.browser.artists.iter().position(|a| a.rating_key == key);
-                self.browser.artists_state.select(pos);
+                let pos = self.browser.artists.items.iter().position(|a| a.rating_key == key);
+                self.browser.artists.state.select(pos);
                 self.load_albums(key);
             }
             Msg::ArtReady { thumb_path, img, file } => {

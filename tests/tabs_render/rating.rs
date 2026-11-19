@@ -94,16 +94,16 @@ async fn r_rates_the_highlighted_track_and_shift_r_the_playing_one() {
 async fn r_rates_a_browser_track_but_not_an_artist() {
     let (mut app, mut plex) = playing(RatingStyle::One).await;
     app.tab = Tab::Browser;
-    app.browser.artists =
+    app.browser.artists.items =
         vec![Artist { rating_key: "a0".into(), title: "Alpha".into(), thumb: None }];
-    app.browser.artists_state.select(Some(0));
+    app.browser.artists.state.select(Some(0));
     app.browser.focus = BrowserCol::Artists;
     app.handle_msg(key('r'));
     assert!(rates(&mut plex).is_empty());
     assert!(app.status.contains("r rates tracks · R rates the playing track"), "{}", app.status);
 
-    app.browser.tracks = vec![Track { user_rating: Some(10), ..track(5) }];
-    app.browser.tracks_state.select(Some(0));
+    app.browser.tracks.items = vec![Track { user_rating: Some(10), ..track(5) }];
+    app.browser.tracks.state.select(Some(0));
     app.browser.focus = BrowserCol::Tracks;
     app.handle_msg(key('r'));
     assert_eq!(
@@ -282,7 +282,7 @@ fn rated_lists(app: &mut App) {
     let rated = Track { user_rating: Some(7), ..track(0) };
     let list = || vec![rated.clone(), track(2)];
     app.queue.items = list();
-    app.browser.tracks = list();
+    app.browser.tracks.items = list();
     app.browser.focus = BrowserCol::Tracks;
     app.playlists.playlists = vec![playlist(0)];
     app.playlists.items_for = Some("p0".into());

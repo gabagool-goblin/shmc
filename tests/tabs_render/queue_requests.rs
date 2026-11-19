@@ -109,8 +109,8 @@ async fn local_replace_drops_loading_playlist() {
     let seq = resolve_seqs(&mut plex)[0];
 
     app.tab = Tab::Browser;
-    app.browser.tracks = (0..4).map(track).collect();
-    app.browser.tracks_state.select(Some(1));
+    app.browser.tracks.items = (0..4).map(track).collect();
+    app.browser.tracks.state.select(Some(1));
     app.browser.focus = BrowserCol::Tracks;
     app.handle_msg(enter());
     assert_eq!(queue_keys(&app), ["t1", "t2", "t3"]);
@@ -127,8 +127,8 @@ async fn local_append_lands_after_slower_remote_append() {
     let seq = resolve_seqs(&mut plex)[0];
 
     app.tab = Tab::Browser;
-    app.browser.tracks = (0..4).map(track).collect();
-    app.browser.tracks_state.select(Some(2));
+    app.browser.tracks.items = (0..4).map(track).collect();
+    app.browser.tracks.state.select(Some(2));
     app.browser.focus = BrowserCol::Tracks;
     app.handle_msg(key('a'));
     assert!(app.queue.items.is_empty(), "the local append waits for the playlist asked first");

@@ -174,15 +174,15 @@ impl App {
             }
             ListRef::BArtists => {
                 let Some(real) = self.real_at(ListRef::BArtists) else { return };
-                let Some(a) = self.browser.artists.get(real) else { return };
+                let Some(a) = self.browser.artists.items.get(real) else { return };
                 let key = a.rating_key.clone();
-                self.browser_filters[0].clear();
+                self.browser.artists.filter.clear();
                 self.browser.focus = BrowserCol::Albums;
                 self.load_albums(key);
             }
             ListRef::BAlbums => {
                 let Some(real) = self.real_at(ListRef::BAlbums) else { return };
-                let Some(al) = self.browser.albums.get(real) else { return };
+                let Some(al) = self.browser.albums.items.get(real) else { return };
                 let confirm = Confirm::Album { name: al.title.clone() };
                 let key = al.rating_key.clone();
                 let seq = self.issue_seq(true);
@@ -196,8 +196,8 @@ impl App {
             }
             ListRef::BTracks => {
                 let Some(real) = self.real_at(ListRef::BTracks) else { return };
-                let Some(t) = self.browser.tracks.get(real).cloned() else { return };
-                let tracks = self.browser.tracks[real..].to_vec();
+                let Some(t) = self.browser.tracks.items.get(real).cloned() else { return };
+                let tracks = self.browser.tracks.items[real..].to_vec();
                 let confirm = Confirm::FromList { name: t.album.clone() };
                 self.queue_local(tracks, confirm, QueueAction::Replace);
             }
@@ -271,7 +271,7 @@ impl App {
         match self.active_list() {
             ListRef::BArtists => {
                 let Some(real) = self.real_at(ListRef::BArtists) else { return };
-                let Some(a) = self.browser.artists.get(real) else { return };
+                let Some(a) = self.browser.artists.items.get(real) else { return };
                 let confirm = Confirm::Artist { name: a.title.clone() };
                 let key = a.rating_key.clone();
                 let seq = self.issue_seq(action == QueueAction::Replace);
@@ -288,7 +288,7 @@ impl App {
             }
             ListRef::BAlbums => {
                 let Some(real) = self.real_at(ListRef::BAlbums) else { return };
-                let Some(al) = self.browser.albums.get(real) else { return };
+                let Some(al) = self.browser.albums.items.get(real) else { return };
                 let confirm = Confirm::Album { name: al.title.clone() };
                 let key = al.rating_key.clone();
                 let seq = self.issue_seq(action == QueueAction::Replace);
@@ -304,7 +304,7 @@ impl App {
             }
             ListRef::BTracks => {
                 let Some(real) = self.real_at(ListRef::BTracks) else { return };
-                let Some(t) = self.browser.tracks.get(real).cloned() else { return };
+                let Some(t) = self.browser.tracks.items.get(real).cloned() else { return };
                 let confirm = Confirm::Track { title: t.title.clone() };
                 self.queue_local(vec![t], confirm, action);
             }

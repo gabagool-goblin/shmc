@@ -37,15 +37,15 @@ async fn all_tabs_render_at_several_sizes() {
     app.cava_alive = true;
     app.cava_frame = vec![255u8; 20];
 
-    app.browser.artists = (0..40)
+    app.browser.artists.items = (0..40)
         .map(|i| Artist {
             rating_key: format!("a{i}"),
             title: format!("Northwind Sounds {i:02}"),
             thumb: None,
         })
         .collect();
-    app.browser.artists_state.select(Some(3));
-    app.browser.albums = (0..25)
+    app.browser.artists.state.select(Some(3));
+    app.browser.albums.items = (0..25)
         .map(|i| Album {
             rating_key: format!("al{i}"),
             title: format!("Evening Satellite {i:02}"),
@@ -54,9 +54,9 @@ async fn all_tabs_render_at_several_sizes() {
             thumb: None,
         })
         .collect();
-    app.browser.albums_state.select(Some(2));
-    app.browser.tracks = (0..60).map(track).collect();
-    app.browser.tracks_state.select(Some(11));
+    app.browser.albums.state.select(Some(2));
+    app.browser.tracks.items = (0..60).map(track).collect();
+    app.browser.tracks.state.select(Some(11));
     app.browser.focus = BrowserCol::Artists;
     app.browser.albums_for = Some("al2".into());
     app.browser.tracks_for = Some("al2".into());
@@ -303,22 +303,22 @@ async fn browser_cuts_long_artist_name() {
     app.tab = Tab::Browser;
     app.browser.tracks_for = Some("al0".into());
     app.browser.albums_for = Some("al0".into());
-    app.browser.albums = vec![Album {
+    app.browser.albums.items = vec![Album {
         rating_key: "al0".into(),
         title: "Evening Satellite".into(),
         artist: "Northwind Sounds".into(),
         year: Some(2019),
         thumb: None,
     }];
-    app.browser.artists = vec![Artist {
+    app.browser.artists.items = vec![Artist {
         rating_key: "a0".into(),
         title: "A Very Long Artist Name That Will Not Fit In One Column At All".into(),
         thumb: None,
     }];
-    app.browser.artists_state.select(Some(0));
-    app.browser.albums_state.select(Some(0));
-    app.browser.tracks = (0..9).map(track).collect();
-    app.browser.tracks_state.select(Some(0));
+    app.browser.artists.state.select(Some(0));
+    app.browser.albums.state.select(Some(0));
+    app.browser.tracks.items = (0..9).map(track).collect();
+    app.browser.tracks.state.select(Some(0));
     app.browser.focus = BrowserCol::Artists;
     let br = render(&mut app, 120, 40);
     assert!(br.contains('…'), "long artist name must be truncated with …\n{br}");
@@ -330,7 +330,7 @@ async fn browser_track_filter_shows_counts_and_no_matches() {
     app.tab = Tab::Browser;
     app.browser.tracks_for = Some("al0".into());
     app.browser.albums_for = Some("al0".into());
-    app.browser.tracks = (0..9)
+    app.browser.tracks.items = (0..9)
         .map(|i| Track {
             title: [
                 "Cyan Sea", "Crimson", "Alpha", "Beta", "Gamma", "Delta", "Epsilon", "Zeta", "Eta",
@@ -341,24 +341,27 @@ async fn browser_track_filter_shows_counts_and_no_matches() {
             ..track(i)
         })
         .collect();
-    app.browser.tracks_state.select(Some(0));
+    app.browser.tracks.state.select(Some(0));
     app.browser.focus = BrowserCol::Tracks;
-    app.browser_filters[2].text = "c".into();
-    app.browser_filters[2].typing = true;
-    let tracks = app.browser.tracks.clone();
-    app.browser_filters[2].apply(tracks.len(), |i| tracks[i].title.to_lowercase().contains("c"));
+    app.browser.tracks.filter.text = "c".into();
+    app.browser.tracks.filter.typing = true;
+    let tracks = app.browser.tracks.items.clone();
+    app.browser.tracks.filter.apply(tracks.len(), |i| tracks[i].title.to_lowercase().contains("c"));
     let f1 = render(&mut app, 120, 40);
     assert!(f1.contains("Tracks 2/9"), "live filter counter must read Tracks 2/9\n{f1}");
     assert!(f1.contains("Cyan Sea") && f1.contains("Crimson"), "matching rows shown\n{f1}");
     assert!(!f1.contains("Alpha"), "non-matching rows hidden\n{f1}");
-    app.browser_filters[2].typing = false;
+    app.browser.tracks.filter.typing = false;
     let f2 = render(&mut app, 120, 40);
     assert!(
         f2.contains("filter: c (2/9)"),
         "after Enter the indicator moves to the column top\n{f2}"
     );
-    app.browser_filters[2].text = "cx".into();
-    app.browser_filters[2].apply(tracks.len(), |i| tracks[i].title.to_lowercase().contains("cx"));
+    app.browser.tracks.filter.text = "cx".into();
+    app.browser
+        .tracks
+        .filter
+        .apply(tracks.len(), |i| tracks[i].title.to_lowercase().contains("cx"));
     let f3 = render(&mut app, 120, 40);
     assert!(f3.contains("No matches"), "zero matches must show No matches\n{f3}");
 }
@@ -584,12 +587,12 @@ async fn browser_track_columns_stable_across_albums() {
     app.tab = Tab::Browser;
     app.browser.focus = BrowserCol::Tracks;
 
-    app.browser.tracks = (0..9).map(track).collect();
+    app.browser.tracks.items = (0..9).map(track).collect();
     app.browser.tracks_for = Some("al0".into());
     let small = render(&mut app, 120, 40);
     let small_x = column_of(&small, "Starfall! 0");
 
-    app.browser.tracks = (0..100).map(track).collect();
+    app.browser.tracks.items = (0..100).map(track).collect();
     app.browser.tracks_for = Some("al1".into());
     let big = render(&mut app, 120, 40);
     let big_x = column_of(&big, "Starfall! 0");
@@ -606,9 +609,9 @@ async fn thousand_track_album_prints_numbers() {
     let mut app = new_app().await;
     app.tab = Tab::Browser;
     app.browser.focus = BrowserCol::Tracks;
-    app.browser.tracks = (0..1000).map(track).collect();
+    app.browser.tracks.items = (0..1000).map(track).collect();
     app.browser.tracks_for = Some("al0".into());
-    app.browser.tracks_state.select(Some(999));
+    app.browser.tracks.state.select(Some(999));
 
     let frame = render(&mut app, 120, 40);
     let row = frame
@@ -781,7 +784,7 @@ async fn durations_over_an_hour_are_not_clipped() {
     let tracks = vec![long(0, 3725), long(1, 36_000), long(2, 599)];
     queue_app_with_art(&mut app, false);
     app.queue.items = tracks.clone();
-    app.browser.tracks = tracks;
+    app.browser.tracks.items = tracks;
     app.browser.tracks_for = Some("al1".into());
     for tab in [Tab::Queue, Tab::Browser] {
         app.tab = tab;

@@ -43,19 +43,19 @@ pub(super) fn draw_browser_tab(f: &mut Frame, app: &mut App, area: Rect) {
 
     {
         let pane = artists_pane;
-        let raw = app.browser.artists.len();
-        let total = app.browser_filters[0].len(raw);
-        let (content, bar) = begin_list(f, pane, total, &app.browser_filters[0], raw);
-        let cursor = app.browser.artists_state.selected();
+        let raw = app.browser.artists.items.len();
+        let total = app.browser.artists.filter.len(raw);
+        let (content, bar) = begin_list(f, pane, total, &app.browser.artists.filter, raw);
+        let cursor = app.browser.artists.state.selected();
         let (offset, visible) = window(app, ScrollId::BrowserArtists, cursor, total, content);
-        if total == 0 && app.browser_filters[0].is_active() {
+        if total == 0 && app.browser.artists.filter.is_active() {
             no_matches(f, content);
         } else {
-            let text = app.browser_filters[0].text.as_str();
+            let text = app.browser.artists.filter.text.as_str();
             let items = build_range(offset, visible, total, |fi, items: &mut Vec<ListItem>| {
-                let real = app.browser_filters[0].real(fi, raw);
+                let real = app.browser.artists.filter.real(fi, raw);
                 let title =
-                    theme::ellipsize(&clean(&app.browser.artists[real].title), content.width);
+                    theme::ellipsize(&clean(&app.browser.artists.items[real].title), content.width);
                 items.push(ListItem::new(Line::from(spans_clean(title, text, theme::text()))));
             });
             render_list(f, content, items, cursor, offset, hl(focus == BrowserCol::Artists));
@@ -67,22 +67,22 @@ pub(super) fn draw_browser_tab(f: &mut Frame, app: &mut App, area: Rect) {
     // Too narrow: the title shortens first, then the artist goes, never the year.
     {
         let pane = albums_pane;
-        let raw = app.browser.albums.len();
-        let total = app.browser_filters[1].len(raw);
-        let (content, bar) = begin_list(f, pane, total, &app.browser_filters[1], raw);
-        let cursor = app.browser.albums_state.selected();
+        let raw = app.browser.albums.items.len();
+        let total = app.browser.albums.filter.len(raw);
+        let (content, bar) = begin_list(f, pane, total, &app.browser.albums.filter, raw);
+        let cursor = app.browser.albums.state.selected();
         let (offset, visible) = window(app, ScrollId::BrowserAlbums, cursor, total, content);
         // unknown means no artist suffix
         let browsed = app.browser.albums_for.as_deref().and_then(|key| {
-            app.browser.artists.iter().find(|a| a.rating_key == key).map(|a| clean(&a.title))
+            app.browser.artists.items.iter().find(|a| a.rating_key == key).map(|a| clean(&a.title))
         });
-        if total == 0 && app.browser_filters[1].is_active() {
+        if total == 0 && app.browser.albums.filter.is_active() {
             no_matches(f, content);
         } else {
-            let text = app.browser_filters[1].text.as_str();
+            let text = app.browser.albums.filter.text.as_str();
             let items = build_range(offset, visible, total, |fi, items: &mut Vec<ListItem>| {
-                let real = app.browser_filters[1].real(fi, raw);
-                let a = &app.browser.albums[real];
+                let real = app.browser.albums.filter.real(fi, raw);
+                let a = &app.browser.albums.items[real];
                 let artist = clean(&a.artist);
                 let other =
                     !artist.is_empty() && browsed.as_deref().is_some_and(|b| b != artist.as_str());
@@ -113,20 +113,20 @@ pub(super) fn draw_browser_tab(f: &mut Frame, app: &mut App, area: Rect) {
 
     {
         let pane = tracks_pane;
-        let raw = app.browser.tracks.len();
-        let total = app.browser_filters[2].len(raw);
-        let ind = indicator_text(&app.browser_filters[2], raw);
+        let raw = app.browser.tracks.items.len();
+        let total = app.browser.tracks.filter.len(raw);
+        let ind = indicator_text(&app.browser.tracks.filter, raw);
         // The printed number is a position, so the loaded count bounds it.
         let num_w = track_number_width(raw);
         let cols_c = [
             Constraint::Length(num_w),
             Constraint::Min(10),
             Constraint::Length(len_col_width(
-                app.browser.tracks.iter().filter_map(|t| t.duration_ms).max(),
+                app.browser.tracks.items.iter().filter_map(|t| t.duration_ms).max(),
             )),
         ];
         let frame = table_frame(f, pane, total, &cols_c, None, ind);
-        let cursor = app.browser.tracks_state.selected();
+        let cursor = app.browser.tracks.state.selected();
         let visible = frame.rows.height as usize;
         let offset = app.scroll.update(
             ScrollId::BrowserTracks,
@@ -136,19 +136,19 @@ pub(super) fn draw_browser_tab(f: &mut Frame, app: &mut App, area: Rect) {
             app.scrolloff,
         );
         if total == 0 {
-            if app.browser_filters[2].is_active() {
+            if app.browser.tracks.filter.is_active() {
                 no_matches(f, frame.rows);
             }
         } else {
-            let needle = app.browser_filters[2].text.as_str();
+            let needle = app.browser.tracks.filter.text.as_str();
             let parent_artist = parent_artist(app);
             let cur_key = app.current_track().map(|t| t.rating_key.clone());
             let end = (offset + visible).min(total);
             let selected = app.visual_range();
             let mut rows: Vec<Row> = Vec::with_capacity(end.saturating_sub(offset));
             for fi in offset..end {
-                let real = app.browser_filters[2].real(fi, raw);
-                let t = &app.browser.tracks[real];
+                let real = app.browser.tracks.filter.real(fi, raw);
+                let t = &app.browser.tracks.items[real];
                 let playing = cur_key.as_deref() == Some(t.rating_key.as_str());
                 let base = if playing {
                     theme::accent().add_modifier(Modifier::BOLD)
@@ -202,7 +202,7 @@ pub(super) fn draw_browser_tab(f: &mut Frame, app: &mut App, area: Rect) {
 /// The cleaned artist of the album loaded in the tracks pane.
 fn parent_artist(app: &App) -> Option<String> {
     let key = app.browser.tracks_for.as_deref()?;
-    app.browser.albums.iter().find(|a| a.rating_key == key).map(|a| clean(&a.artist))
+    app.browser.albums.items.iter().find(|a| a.rating_key == key).map(|a| clean(&a.artist))
 }
 
 pub(super) fn draw_playlists_tab(f: &mut Frame, app: &mut App, area: Rect) {

@@ -35,22 +35,22 @@ fn scope_label(l: ListRef) -> &'static str {
 impl App {
     pub fn load_albums(&mut self, artist_key: String) {
         self.browser.albums_for = Some(artist_key.clone());
-        self.browser.albums.clear();
-        self.browser.albums_state.select(None);
-        self.browser_filters[1].clear(); // new artist = new album list
-        self.browser.tracks.clear();
+        self.browser.albums.items.clear();
+        self.browser.albums.state.select(None);
+        self.browser.albums.filter.clear(); // new artist = new album list
+        self.browser.tracks.items.clear();
         self.drop_visual(ListRef::BTracks);
-        self.browser.tracks_state.select(None);
+        self.browser.tracks.state.select(None);
         self.browser.tracks_for = None;
         let _ = self.plex.tx.send(PlexCmd::LoadAlbums(artist_key));
     }
 
     pub fn load_tracks(&mut self, album_key: String) {
         self.browser.tracks_for = Some(album_key.clone());
-        self.browser.tracks.clear();
+        self.browser.tracks.items.clear();
         self.drop_visual(ListRef::BTracks);
-        self.browser.tracks_state.select(None);
-        self.browser_filters[2].clear();
+        self.browser.tracks.state.select(None);
+        self.browser.tracks.filter.clear();
         let _ = self.plex.tx.send(PlexCmd::LoadTracks(album_key));
     }
 
@@ -117,8 +117,9 @@ impl App {
         }
         let pg = self.pending_goto.take().expect("wanted checked above");
         let Some(album_key) = pg.album_key.clone() else { return };
-        if let Some(pos) = self.browser.albums.iter().position(|a| a.rating_key == album_key) {
-            self.browser.albums_state.select(Some(pos));
+        if let Some(pos) = self.browser.albums.items.iter().position(|a| a.rating_key == album_key)
+        {
+            self.browser.albums.state.select(Some(pos));
             self.browser.focus = BrowserCol::Tracks;
             self.load_tracks(album_key);
             self.pending_goto = Some(pg); // the tracks select the row
@@ -136,8 +137,9 @@ impl App {
         }
         let pg = self.pending_goto.take().expect("wanted checked above");
         let Some(track_key) = pg.track_key else { return };
-        if let Some(pos) = self.browser.tracks.iter().position(|t| t.rating_key == track_key) {
-            self.browser.tracks_state.select(Some(pos));
+        if let Some(pos) = self.browser.tracks.items.iter().position(|t| t.rating_key == track_key)
+        {
+            self.browser.tracks.state.select(Some(pos));
             self.scroll.center_once = Some(ScrollId::BrowserTracks);
         }
     }
@@ -168,9 +170,9 @@ impl App {
     pub(super) fn filter(&self, l: ListRef) -> Option<&ListFilter> {
         match l {
             ListRef::Queue => Some(&self.queue.filter),
-            ListRef::BArtists => Some(&self.browser_filters[0]),
-            ListRef::BAlbums => Some(&self.browser_filters[1]),
-            ListRef::BTracks => Some(&self.browser_filters[2]),
+            ListRef::BArtists => Some(&self.browser.artists.filter),
+            ListRef::BAlbums => Some(&self.browser.albums.filter),
+            ListRef::BTracks => Some(&self.browser.tracks.filter),
             ListRef::PlList => Some(&self.pl_list_filter),
             ListRef::PlItems => Some(&self.pl_items_filter),
             ListRef::Search | ListRef::SearchDetail | ListRef::Help => None,
@@ -180,9 +182,9 @@ impl App {
     pub(super) fn filter_mut(&mut self, l: ListRef) -> Option<&mut ListFilter> {
         match l {
             ListRef::Queue => Some(&mut self.queue.filter),
-            ListRef::BArtists => Some(&mut self.browser_filters[0]),
-            ListRef::BAlbums => Some(&mut self.browser_filters[1]),
-            ListRef::BTracks => Some(&mut self.browser_filters[2]),
+            ListRef::BArtists => Some(&mut self.browser.artists.filter),
+            ListRef::BAlbums => Some(&mut self.browser.albums.filter),
+            ListRef::BTracks => Some(&mut self.browser.tracks.filter),
             ListRef::PlList => Some(&mut self.pl_list_filter),
             ListRef::PlItems => Some(&mut self.pl_items_filter),
             ListRef::Search | ListRef::SearchDetail | ListRef::Help => None,
@@ -192,9 +194,9 @@ impl App {
     pub(super) fn total_len(&self, l: ListRef) -> usize {
         match l {
             ListRef::Queue => self.queue.items.len(),
-            ListRef::BArtists => self.browser.artists.len(),
-            ListRef::BAlbums => self.browser.albums.len(),
-            ListRef::BTracks => self.browser.tracks.len(),
+            ListRef::BArtists => self.browser.artists.items.len(),
+            ListRef::BAlbums => self.browser.albums.items.len(),
+            ListRef::BTracks => self.browser.tracks.items.len(),
             ListRef::PlList => self.playlists.playlists.len(),
             ListRef::PlItems => self.playlists.items.len(),
             ListRef::Search => self.search.hits.len(),
@@ -216,9 +218,9 @@ impl App {
     pub(super) fn cursor_of(&self, l: ListRef) -> Option<usize> {
         match l {
             ListRef::Queue => self.queue.state.selected(),
-            ListRef::BArtists => self.browser.artists_state.selected(),
-            ListRef::BAlbums => self.browser.albums_state.selected(),
-            ListRef::BTracks => self.browser.tracks_state.selected(),
+            ListRef::BArtists => self.browser.artists.state.selected(),
+            ListRef::BAlbums => self.browser.albums.state.selected(),
+            ListRef::BTracks => self.browser.tracks.state.selected(),
             ListRef::PlList => self.playlists.state.selected(),
             ListRef::PlItems => self.playlists.items_state.selected(),
             ListRef::Search => self.search.state.selected(),
@@ -249,9 +251,9 @@ impl App {
         let vis = self.vis_len(l);
         match l {
             ListRef::Queue => f(&mut self.queue.state, vis),
-            ListRef::BArtists => f(&mut self.browser.artists_state, vis),
-            ListRef::BAlbums => f(&mut self.browser.albums_state, vis),
-            ListRef::BTracks => f(&mut self.browser.tracks_state, vis),
+            ListRef::BArtists => f(&mut self.browser.artists.state, vis),
+            ListRef::BAlbums => f(&mut self.browser.albums.state, vis),
+            ListRef::BTracks => f(&mut self.browser.tracks.state, vis),
             ListRef::PlList => f(&mut self.playlists.state, vis),
             ListRef::PlItems => f(&mut self.playlists.items_state, vis),
             ListRef::Search => f(&mut self.search.state, vis),
@@ -336,7 +338,7 @@ impl App {
                     // like Enter, but no refetch when the albums shown are this
                     // artist's
                     let Some(real) = self.real_at(ListRef::BArtists) else { return };
-                    let Some(a) = self.browser.artists.get(real) else { return };
+                    let Some(a) = self.browser.artists.items.get(real) else { return };
                     if self.browser.albums_for.as_deref() == Some(a.rating_key.as_str()) {
                         self.browser.focus = BrowserCol::Albums;
                     } else {
@@ -345,7 +347,7 @@ impl App {
                 }
                 BrowserCol::Albums => {
                     if let Some(real) = self.real_at(ListRef::BAlbums) {
-                        if let Some(album) = self.browser.albums.get(real) {
+                        if let Some(album) = self.browser.albums.items.get(real) {
                             let key = album.rating_key.clone();
                             self.browser.focus = BrowserCol::Tracks;
                             self.load_tracks(key);
@@ -434,9 +436,9 @@ impl App {
     fn row_title(&self, l: ListRef, real: usize) -> Option<&str> {
         match l {
             ListRef::Queue => self.queue.items.get(real).map(|t| t.title.as_str()),
-            ListRef::BArtists => self.browser.artists.get(real).map(|a| a.title.as_str()),
-            ListRef::BAlbums => self.browser.albums.get(real).map(|a| a.title.as_str()),
-            ListRef::BTracks => self.browser.tracks.get(real).map(|t| t.title.as_str()),
+            ListRef::BArtists => self.browser.artists.items.get(real).map(|a| a.title.as_str()),
+            ListRef::BAlbums => self.browser.albums.items.get(real).map(|a| a.title.as_str()),
+            ListRef::BTracks => self.browser.tracks.items.get(real).map(|t| t.title.as_str()),
             ListRef::PlList => self.playlists.playlists.get(real).map(|p| p.title.as_str()),
             ListRef::PlItems => self.playlists.items.get(real).map(|t| t.title.as_str()),
             ListRef::Search => self.search.hits.get(real).map(|h| h.title.as_str()),
@@ -480,9 +482,9 @@ impl App {
                 }
             }
             ListRef::BTracks => {
-                let pos = self.browser.tracks.iter().position(|t| t.rating_key == key);
-                if let Some(p) = pos.and_then(|r| self.browser_filters[2].cursor_of(r)) {
-                    self.browser.tracks_state.select(Some(p));
+                let pos = self.browser.tracks.items.iter().position(|t| t.rating_key == key);
+                if let Some(p) = pos.and_then(|r| self.browser.tracks.filter.cursor_of(r)) {
+                    self.browser.tracks.state.select(Some(p));
                     if center {
                         self.scroll.center_once = Some(ScrollId::BrowserTracks);
                     }
@@ -506,15 +508,15 @@ impl App {
         match self.tab {
             Tab::Browser => match self.browser.focus {
                 BrowserCol::Tracks => {
-                    self.browser_filters[2].clear();
+                    self.browser.tracks.filter.clear();
                     self.browser.focus = BrowserCol::Albums;
                 }
                 BrowserCol::Albums => {
-                    self.browser_filters[1].clear();
+                    self.browser.albums.filter.clear();
                     self.browser.focus = BrowserCol::Artists;
                 }
                 BrowserCol::Artists => {
-                    self.browser_filters[0].clear();
+                    self.browser.artists.filter.clear();
                     self.goto_tab(Tab::Queue);
                 }
             },
@@ -571,19 +573,22 @@ impl App {
                 });
             }
             ListRef::BArtists => {
-                let items = &self.browser.artists;
-                self.browser_filters[0].apply(items.len(), |i| needle.found_in(&items[i].title));
+                let items = &self.browser.artists.items;
+                self.browser
+                    .artists
+                    .filter
+                    .apply(items.len(), |i| needle.found_in(&items[i].title));
             }
             ListRef::BAlbums => {
-                let items = &self.browser.albums;
-                self.browser_filters[1].apply(items.len(), |i| {
+                let items = &self.browser.albums.items;
+                self.browser.albums.filter.apply(items.len(), |i| {
                     let a = &items[i];
                     needle.found_in(&a.title) || needle.found_in(&a.artist)
                 });
             }
             ListRef::BTracks => {
-                let items = &self.browser.tracks;
-                self.browser_filters[2].apply(items.len(), |i| {
+                let items = &self.browser.tracks.items;
+                self.browser.tracks.filter.apply(items.len(), |i| {
                     let t = &items[i];
                     needle.found_in(&t.title)
                         || needle.found_in(&t.artist)

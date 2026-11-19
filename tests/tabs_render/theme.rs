@@ -31,14 +31,14 @@ async fn background_fills_unstyled_cells_on_every_tab() {
     queue_app_with_art(&mut app, false);
     app.cava_alive = true;
     app.cava_frame = vec![255u8; 20];
-    app.browser.artists = (0..40)
+    app.browser.artists.items = (0..40)
         .map(|i| Artist {
             rating_key: format!("a{i}"),
             title: format!("Artist {i:02}"),
             thumb: None,
         })
         .collect();
-    app.browser.artists_state.select(Some(3));
+    app.browser.artists.state.select(Some(3));
 
     for name in ["catppuccin-latte", "nord"] {
         let themed = preset_theme(name);

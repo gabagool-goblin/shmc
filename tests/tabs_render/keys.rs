@@ -326,19 +326,19 @@ async fn gg_runs_what_it_is_bound_to() {
     let keys = key_table("[keys.browser]\ntop = [\"Home\"]\nbottom = [\"gg\"]\n");
     let mut app = new_app_with_keys(&keys).await;
     app.tab = Tab::Browser;
-    app.browser.artists = (0..10)
+    app.browser.artists.items = (0..10)
         .map(|i| Artist {
             rating_key: format!("a{i}"),
             title: format!("Artist {i:02}"),
             thumb: None,
         })
         .collect();
-    app.browser.artists_state.select(Some(0));
+    app.browser.artists.state.select(Some(0));
 
     app.handle_msg(key('g'));
     app.handle_msg(key('g'));
 
-    assert_eq!(app.browser.artists_state.selected(), Some(9));
+    assert_eq!(app.browser.artists.state.selected(), Some(9));
 }
 
 #[tokio::test]
@@ -363,14 +363,14 @@ async fn paste_with_no_focus_changes_nothing() {
         let mut app = new_app().await;
         app.tab = tab;
         app.queue.items = (0..3).map(track).collect();
-        app.browser_filters[0].text = "Northwind".into();
+        app.browser.artists.filter.text = "Northwind".into();
         app.search.input = "kept".into();
 
         // `/` and `\r` in the paste must not start a filter or a search
         app.handle_msg(Msg::Paste("/night\r".into()));
 
-        assert_eq!(app.browser_filters[0].text, "Northwind", "{tab:?}");
-        assert!(!app.browser_filters[0].typing, "{tab:?}");
+        assert_eq!(app.browser.artists.filter.text, "Northwind", "{tab:?}");
+        assert!(!app.browser.artists.filter.typing, "{tab:?}");
         assert!(app.queue.filter.text.is_empty(), "{tab:?}: no filter was started");
         assert!(!app.queue.filter.typing, "{tab:?}");
         assert_eq!(app.search.input, "kept", "{tab:?}");
@@ -425,7 +425,7 @@ async fn g_letter_jumps_to_first_matching_title() {
     let (mut app, mut plex_rx) = new_app_with_plex().await;
     app.tab = Tab::Browser;
     app.browser.focus = BrowserCol::Artists;
-    app.browser.artists = ["Alpha", "Beta", "Bravo", "Charlie"]
+    app.browser.artists.items = ["Alpha", "Beta", "Bravo", "Charlie"]
         .iter()
         .enumerate()
         .map(|(i, title)| Artist {
@@ -434,28 +434,28 @@ async fn g_letter_jumps_to_first_matching_title() {
             thumb: None,
         })
         .collect();
-    app.browser.artists_state.select(Some(0));
+    app.browser.artists.state.select(Some(0));
 
     app.handle_msg(key('g'));
     app.handle_msg(key('b'));
-    assert_eq!(app.browser.artists_state.selected(), Some(1));
+    assert_eq!(app.browser.artists.state.selected(), Some(1));
 
     // 'a' is append here, but after `g` it jumps
     app.handle_msg(key('g'));
     app.handle_msg(key('a'));
-    assert_eq!(app.browser.artists_state.selected(), Some(0));
+    assert_eq!(app.browser.artists.state.selected(), Some(0));
     assert_eq!(app.status, "jump: A");
     assert!(plex_rx.try_recv().is_err(), "'g a' must not append the selection");
 
     // likewise 'c' (loop-file)
     app.handle_msg(key('g'));
     app.handle_msg(key('c'));
-    assert_eq!(app.browser.artists_state.selected(), Some(3));
+    assert_eq!(app.browser.artists.state.selected(), Some(3));
     assert!(!app.loop_file, "'g c' must jump, not toggle loop-file");
 
     app.handle_msg(key('g'));
     app.handle_msg(key('d'));
-    assert_eq!(app.browser.artists_state.selected(), Some(3));
+    assert_eq!(app.browser.artists.state.selected(), Some(3));
     assert!(app.status.contains("no row starts with D"));
 }
 
