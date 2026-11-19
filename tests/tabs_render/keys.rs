@@ -10,30 +10,30 @@ fn key_table(text: &str) -> KeyTable {
 #[tokio::test]
 async fn arrow_keys_wrap_at_list_ends() {
     let mut app = new_app().await;
-    app.queue = (0..6).map(track).collect();
-    app.queue_state.select(Some(0));
+    app.queue.items = (0..6).map(track).collect();
+    app.queue.state.select(Some(0));
     app.tab = Tab::Queue;
 
     app.handle_msg(key_code(KeyCode::Up));
-    assert_eq!(app.queue_state.selected(), Some(5), "up from the top wraps to the bottom");
+    assert_eq!(app.queue.state.selected(), Some(5), "up from the top wraps to the bottom");
 
     app.handle_msg(key_code(KeyCode::Down));
-    assert_eq!(app.queue_state.selected(), Some(0), "down from the bottom wraps to the top");
+    assert_eq!(app.queue.state.selected(), Some(0), "down from the bottom wraps to the top");
 
-    app.queue_state.select(Some(3));
+    app.queue.state.select(Some(3));
     app.handle_msg(key('j'));
-    assert_eq!(app.queue_state.selected(), Some(4), "j moves down as usual");
-    app.queue_state.select(Some(0));
+    assert_eq!(app.queue.state.selected(), Some(4), "j moves down as usual");
+    app.queue.state.select(Some(0));
     app.handle_msg(key('k'));
-    assert_eq!(app.queue_state.selected(), Some(5), "k wraps too");
+    assert_eq!(app.queue.state.selected(), Some(5), "k wraps too");
 }
 
 /// The next key press drops the status, but not one that press sets itself.
 #[tokio::test]
 async fn status_clears_on_next_key() {
     let mut app = new_app().await;
-    app.queue = (0..10).map(track).collect();
-    app.queue_state.select(Some(0));
+    app.queue.items = (0..10).map(track).collect();
+    app.queue.state.select(Some(0));
 
     // disarm queue follow first; that has its own status
     app.handle_msg(key('j'));
@@ -55,7 +55,7 @@ fn ctrl(c: char) -> Msg {
 async fn ctrl_c_quits_while_typing() {
     for mode in ["search", "filter", "command"] {
         let mut app = new_app().await;
-        app.queue = (0..3).map(track).collect();
+        app.queue.items = (0..3).map(track).collect();
         match mode {
             "search" => {
                 app.tab = Tab::Search;
@@ -68,7 +68,7 @@ async fn ctrl_c_quits_while_typing() {
         app.handle_msg(ctrl('x'));
         let typed = match mode {
             "search" => app.search.input.clone(),
-            "filter" => app.queue_filter.text.clone(),
+            "filter" => app.queue.filter.text.clone(),
             _ => app.command.text.clone(),
         };
         assert_eq!(typed, "a", "{mode}: Ctrl-X must not insert text");
@@ -125,13 +125,13 @@ async fn colon_commands_accept_the_prompt_prefix() {
 #[tokio::test]
 async fn colon_commands_cover_playback_modes_and_tabs() {
     let mut app = new_app().await;
-    app.queue = vec![track(0), track(1)];
+    app.queue.items = vec![track(0), track(1)];
     app.current = Some(0);
     app.stopped = false;
 
     run_cmd(&mut app, "stop");
     assert!(app.stopped, ":stop must keep the queue but stop playback");
-    assert_eq!(app.queue.len(), 2);
+    assert_eq!(app.queue.items.len(), 2);
 
     run_cmd(&mut app, "play");
     assert!(!app.stopped, ":play must restart the current track");
@@ -158,9 +158,9 @@ async fn colon_commands_cover_playback_modes_and_tabs() {
 
     app.tab = Tab::Queue;
     app.current = Some(1);
-    app.queue_state.select(Some(0));
+    app.queue.state.select(Some(0));
     run_cmd(&mut app, "playing");
-    assert_eq!(app.queue_state.selected(), Some(1));
+    assert_eq!(app.queue.state.selected(), Some(1));
 
     run_cmd(&mut app, "browser");
     assert_eq!(app.tab, Tab::Browser);
@@ -241,8 +241,8 @@ async fn hints_name_rebound_keys() {
     let keys = key_table("[keys.queue]\nremove = [\"X\"]\n[keys.playlists]\nactivate = [\"Z\"]\n");
     let mut app = new_app_with_keys(&keys).await;
     app.tab = Tab::Queue;
-    app.queue = (0..3).map(track).collect();
-    app.queue_state.select(Some(0));
+    app.queue.items = (0..3).map(track).collect();
+    app.queue.state.select(Some(0));
     app.handle_msg(key('v'));
     assert!(app.status.contains("X remove"), "{:?}", app.status);
     assert!(!app.status.contains("d remove"), "{:?}", app.status);
@@ -279,15 +279,15 @@ async fn rebound_key_replaces_old_binding() {
     let keys = key_table("[keys.queue]\nremove = [\"Delete\"]\n");
     let mut app = new_app_with_keys(&keys).await;
     app.tab = Tab::Queue;
-    app.queue = (0..4).map(track).collect();
-    app.queue_state.select(Some(1));
+    app.queue.items = (0..4).map(track).collect();
+    app.queue.state.select(Some(1));
 
     app.handle_msg(key('d'));
-    assert_eq!(app.queue.len(), 4, "d is not remove any more");
+    assert_eq!(app.queue.items.len(), 4, "d is not remove any more");
 
     app.handle_msg(key_code(KeyCode::Delete));
     assert_eq!(
-        app.queue.iter().map(|t| t.rating_key.as_str()).collect::<Vec<_>>(),
+        app.queue.items.iter().map(|t| t.rating_key.as_str()).collect::<Vec<_>>(),
         vec!["t0", "t2", "t3"]
     );
 }
@@ -306,19 +306,19 @@ async fn ctrl_c_quits_when_quit_unbound() {
 async fn clear_confirm_accepts_rebound_key() {
     let keys = key_table("[keys.queue]\nclear = [\"X\"]\n");
     let mut app = new_app_with_keys(&keys).await;
-    app.queue = (0..3).map(track).collect();
+    app.queue.items = (0..3).map(track).collect();
     app.current = Some(0);
     app.stopped = false;
 
     app.handle_msg(key('D'));
-    assert_eq!(app.queue.len(), 3, "D is not clear any more");
+    assert_eq!(app.queue.items.len(), 3, "D is not clear any more");
 
     app.handle_msg(key('X'));
-    assert_eq!(app.queue.len(), 3, "the first press only asks");
+    assert_eq!(app.queue.items.len(), 3, "the first press only asks");
     assert!(app.status.contains('X'), "the question names the key: {}", app.status);
 
     app.handle_msg(key('X'));
-    assert!(app.queue.is_empty(), "the rebound key confirms too");
+    assert!(app.queue.items.is_empty(), "the rebound key confirms too");
 }
 
 #[tokio::test]
@@ -345,13 +345,13 @@ async fn gg_runs_what_it_is_bound_to() {
 async fn paste_into_filter_inserts_and_refilters() {
     let mut app = new_app().await;
     app.tab = Tab::Queue;
-    app.queue = (0..12).map(track).collect();
-    app.queue_state.select(Some(0));
-    app.queue_filter.typing = true;
+    app.queue.items = (0..12).map(track).collect();
+    app.queue.state.select(Some(0));
+    app.queue.filter.typing = true;
 
     app.handle_msg(Msg::Paste("Starfall! 9".into()));
 
-    assert_eq!(app.queue_filter.text, "Starfall! 9");
+    assert_eq!(app.queue.filter.text, "Starfall! 9");
     let (text, _, shown, total) = app.filter_typing().expect("still typing");
     assert_eq!(text, "Starfall! 9");
     assert_eq!((shown, total), (1, 12), "the paste must re-apply the filter");
@@ -362,7 +362,7 @@ async fn paste_with_no_focus_changes_nothing() {
     for tab in [Tab::Browser, Tab::Queue] {
         let mut app = new_app().await;
         app.tab = tab;
-        app.queue = (0..3).map(track).collect();
+        app.queue.items = (0..3).map(track).collect();
         app.browser_filters[0].text = "Northwind".into();
         app.search.input = "kept".into();
 
@@ -371,8 +371,8 @@ async fn paste_with_no_focus_changes_nothing() {
 
         assert_eq!(app.browser_filters[0].text, "Northwind", "{tab:?}");
         assert!(!app.browser_filters[0].typing, "{tab:?}");
-        assert!(app.queue_filter.text.is_empty(), "{tab:?}: no filter was started");
-        assert!(!app.queue_filter.typing, "{tab:?}");
+        assert!(app.queue.filter.text.is_empty(), "{tab:?}: no filter was started");
+        assert!(!app.queue.filter.typing, "{tab:?}");
         assert_eq!(app.search.input, "kept", "{tab:?}");
         assert!(app.search.last_query.is_empty(), "{tab:?}");
         assert!(!app.search.focused, "{tab:?}: a paste must not steal focus");
@@ -475,7 +475,7 @@ async fn sleep_timer_cycles_and_pauses_at_deadline() {
     assert!(app.sleep_timer_label().is_none());
 
     // firing the posted timer pauses playback and clears it
-    app.queue = (0..3).map(track).collect();
+    app.queue.items = (0..3).map(track).collect();
     app.current = Some(1);
     app.stopped = false;
     let (tx, mut rx) = unbounded_channel();
@@ -521,7 +521,7 @@ async fn g_keeps_non_letter_bindings() {
 #[tokio::test]
 async fn sleep_timer_keeps_a_paused_track_paused() {
     let mut app = new_app().await;
-    app.queue = (0..3).map(track).collect();
+    app.queue.items = (0..3).map(track).collect();
     app.current = Some(0);
     app.stopped = false;
     app.paused = true;

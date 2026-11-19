@@ -10,7 +10,7 @@ type Sent = UnboundedReceiver<Report>;
 /// Three tracks with `t1` loaded and reporting on.
 async fn loaded() -> (TestApp, Sent) {
     let mut app = new_app().await;
-    app.queue = (0..3).map(track).collect();
+    app.queue.items = (0..3).map(track).collect();
     app.current = Some(1);
     app.stopped = false;
     let (tx, rx) = unbounded_channel();
@@ -63,7 +63,7 @@ async fn a_track_left_before_thirty_seconds_sends_nothing() {
 #[tokio::test]
 async fn a_short_track_played_to_its_end_counts() {
     let (mut app, mut rx) = loaded().await;
-    app.queue[1].duration_ms = Some(20_000);
+    app.queue.items[1].duration_ms = Some(20_000);
     app.handle_msg(Msg::Mpv(MpvEvent::FileLoaded));
     play(&mut app, 0, 19);
     end(&mut app, "eof");

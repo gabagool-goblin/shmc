@@ -106,7 +106,7 @@ impl App {
         let list = self.active_list();
         let real = self.real_at(list)?;
         match list {
-            ListRef::Queue => self.queue.get(real).map(Seed::of),
+            ListRef::Queue => self.queue.items.get(real).map(Seed::of),
             ListRef::BTracks => self.browser.tracks.get(real).map(Seed::of),
             ListRef::PlItems => self.playlists.items.get(real).map(Seed::of),
             ListRef::SearchDetail => self.search.detail.as_ref()?.tracks.get(real).map(Seed::of),

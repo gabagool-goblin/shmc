@@ -428,7 +428,7 @@ impl App {
     }
 
     fn save_queue_as_playlist(&mut self, name: &str) {
-        if self.queue.is_empty() {
+        if self.queue.items.is_empty() {
             self.transient_err("the queue is empty".into());
             return;
         }
@@ -439,7 +439,7 @@ impl App {
             self.transient_err("a save is already running".into());
             return;
         }
-        let keys = self.queue.iter().map(|t| t.rating_key.clone()).collect();
+        let keys = self.queue.items.iter().map(|t| t.rating_key.clone()).collect();
         self.saving = true;
         let _ = self.plex.tx.send(PlexCmd::SavePlaylist { name: name.to_string(), keys });
         self.transient("saving playlist…".into());
@@ -702,8 +702,8 @@ impl App {
                     // stop mpv), then remove, unless `>` went nowhere.
                     if self.consume {
                         if let Some(i) = self.current {
-                            let moves = self.queue.len() > 1
-                                && (i + 1 < self.queue.len() || self.loop_playlist);
+                            let moves = self.queue.items.len() > 1
+                                && (i + 1 < self.queue.items.len() || self.loop_playlist);
                             if moves {
                                 self.consume_finished(i);
                             }

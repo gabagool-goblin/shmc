@@ -126,7 +126,7 @@ async fn found_tracks_open_in_the_search_tab() {
 async fn reply_for_an_older_request_is_dropped() {
     let (mut app, mut plex) = on_queue().await;
     app.handle_msg(key('m'));
-    app.queue_state.select(Some(5));
+    app.queue.state.select(Some(5));
     app.handle_msg(key('m'));
     let asked: Vec<_> = requests(&mut plex).into_iter().map(|r| r.0).collect();
     assert_eq!(asked, ["t2", "t5"]);

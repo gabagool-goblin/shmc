@@ -8,9 +8,9 @@ use shmc::ui::app::BrowserCol;
 /// Three tracks with `t1` playing and highlighted, and writes allowed.
 async fn playing(style: RatingStyle) -> (TestApp, tokio::sync::mpsc::UnboundedReceiver<PlexCmd>) {
     let (mut app, plex) = new_app_with_plex().await;
-    app.queue = (0..3).map(track).collect();
+    app.queue.items = (0..3).map(track).collect();
     app.current = Some(1);
-    app.queue_state.select(Some(1));
+    app.queue.state.select(Some(1));
     app.stopped = false;
     app.allow_writes = true;
     app.rating_style = style;
@@ -78,8 +78,8 @@ async fn one_style_toggles_without_asking() {
 #[tokio::test]
 async fn r_rates_the_highlighted_track_and_shift_r_the_playing_one() {
     let (mut app, mut plex) = playing(RatingStyle::Five).await;
-    app.queue[2].user_rating = Some(6);
-    app.queue_state.select(Some(2));
+    app.queue.items[2].user_rating = Some(6);
+    app.queue.state.select(Some(2));
     app.handle_msg(key('r'));
     assert!(app.status.contains("rate Starfall! 2 (***..)"), "{}", app.status);
     app.handle_msg(key('4'));
@@ -184,7 +184,7 @@ async fn one_star_style_shows_a_single_star() {
 async fn known_rating_is_not_fetched_again() {
     let (mut app, mut plex) = playing(RatingStyle::Five).await;
     let full = AudioInfo { sample_rate_hz: Some(44100), ..Default::default() };
-    app.queue = (0..2).map(|_| Track { audio: full.clone(), ..track(0) }).collect();
+    app.queue.items = (0..2).map(|_| Track { audio: full.clone(), ..track(0) }).collect();
     app.handle_msg(playlist_pos(0));
     let asked = |plex: &mut _| {
         sent(plex).iter().filter(|c| matches!(c, PlexCmd::LoadTrackInfo(k) if k == "t0")).count()
@@ -219,7 +219,7 @@ async fn rating_never_moves_the_title() {
             assert_eq!(rated, bare, "{w}");
         }
 
-        app.queue[1].title = "Long title ".repeat(8);
+        app.queue.items[1].title = "Long title ".repeat(8);
         app.ratings.remove("t1");
         let bare = title_row(&mut app, w);
         app.ratings.insert("t1".into(), Some(7));
@@ -241,11 +241,11 @@ async fn compact_line_shows_the_rating_after_the_title() {
         let screen = render(&mut app, 80, 24);
         assert!(screen.contains("Starfall! 1 ****. - Northwind Sounds"), "{style:?}\n{screen}");
 
-        app.queue[1].title = "x".repeat(40);
+        app.queue.items[1].title = "x".repeat(40);
         let rated = render(&mut app, 50, 24);
         app.ratings.remove("t1");
         assert_eq!(rated, render(&mut app, 50, 24), "{style:?}");
-        app.queue[1].title = "Starfall! 1".into();
+        app.queue.items[1].title = "Starfall! 1".into();
         app.ratings.insert("t1".into(), Some(7));
     }
 }
@@ -281,7 +281,7 @@ fn row_of(screen: &str, title: &str) -> String {
 fn rated_lists(app: &mut App) {
     let rated = Track { user_rating: Some(7), ..track(0) };
     let list = || vec![rated.clone(), track(2)];
-    app.queue = list();
+    app.queue.items = list();
     app.browser.tracks = list();
     app.browser.focus = BrowserCol::Tracks;
     app.playlists.playlists = vec![playlist(0)];
@@ -333,7 +333,7 @@ async fn every_track_list_shows_the_rating_after_the_title() {
 #[tokio::test]
 async fn rated_message_changes_the_queue_row() {
     let (mut app, _plex) = playing(RatingStyle::Five).await;
-    app.queue[0].user_rating = Some(7);
+    app.queue.items[0].user_rating = Some(7);
     assert!(row_of(&render(&mut app, 120, 30), "Starfall! 0").contains("Starfall! 0 4*"));
     app.handle_msg(Msg::Rated { rating_key: "t0".into(), rating: Some(10), title: "x".into() });
     assert!(row_of(&render(&mut app, 120, 30), "Starfall! 0").contains("Starfall! 0 5*"));
@@ -345,12 +345,12 @@ async fn rated_message_changes_the_queue_row() {
 #[tokio::test]
 async fn long_title_keeps_the_rating_and_a_narrow_column_drops_it() {
     let (mut app, _plex) = playing(RatingStyle::Five).await;
-    app.queue[0].title = "A very long title that cannot fit".into();
-    app.queue[0].user_rating = Some(7);
+    app.queue.items[0].title = "A very long title that cannot fit".into();
+    app.queue.items[0].user_rating = Some(7);
     let row = row_of(&render(&mut app, 100, 30), "A very");
     assert!(row.contains("… 4*"), "{row}");
 
-    app.queue[0].title = "Starfall! 0".into();
+    app.queue.items[0].title = "Starfall! 0".into();
     app.column_weights = [1, 1, 1];
     let (rated, unrated) = {
         let rated = render(&mut app, 25, 30);
@@ -365,7 +365,7 @@ async fn long_title_keeps_the_rating_and_a_narrow_column_drops_it() {
 #[tokio::test]
 async fn one_style_shows_a_star_and_off_shows_none() {
     let (mut app, _plex) = playing(RatingStyle::One).await;
-    app.queue[0].user_rating = Some(7);
+    app.queue.items[0].user_rating = Some(7);
     let row = row_of(&render(&mut app, 120, 30), "Starfall! 0");
     assert!(row.contains("Starfall! 0 *") && !row.contains("**"), "{row}");
     app.rating_style = RatingStyle::Off;
@@ -376,8 +376,8 @@ async fn one_style_shows_a_star_and_off_shows_none() {
 #[tokio::test]
 async fn rating_is_dim_except_on_the_playing_row() {
     let (mut app, _plex) = playing(RatingStyle::Five).await;
-    app.queue[0].user_rating = Some(7);
-    app.queue[1].user_rating = Some(7);
+    app.queue.items[0].user_rating = Some(7);
+    app.queue.items[1].user_rating = Some(7);
     let buf = super::theme::buffer_of(&mut app, 120, 30);
     let style_at = |row: &str, text: &str| {
         let y = (0..buf.area.height)

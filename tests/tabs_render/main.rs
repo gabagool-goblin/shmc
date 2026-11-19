@@ -279,13 +279,13 @@ fn end_file_eof() -> Msg {
 
 /// Applies `needle` as the queue filter, matching on the title.
 fn filter_queue(app: &mut App, needle: &str) {
-    let titles: Vec<String> = app.queue.iter().map(|t| t.title.clone()).collect();
-    app.queue_filter.text = needle.into();
-    app.queue_filter.apply(titles.len(), |i| titles[i].contains(needle));
+    let titles: Vec<String> = app.queue.items.iter().map(|t| t.title.clone()).collect();
+    app.queue.filter.text = needle.into();
+    app.queue.filter.apply(titles.len(), |i| titles[i].contains(needle));
 }
 
 fn queue_keys(app: &App) -> Vec<String> {
-    app.queue.iter().map(|t| t.rating_key.clone()).collect()
+    app.queue.items.iter().map(|t| t.rating_key.clone()).collect()
 }
 
 fn on_playlist(app: &mut App, i: usize) {
@@ -308,8 +308,8 @@ fn grid(app: &mut App, w: u16, h: u16) -> Vec<Vec<String>> {
 fn queue_app_with_art(app: &mut App, art: bool) {
     app.art_enabled = art;
     app.picker = art.then(|| ratatui_image::picker::Picker::from_fontsize((10, 20)));
-    app.queue = (0..30).map(track).collect();
-    app.queue_state.select(Some(2));
+    app.queue.items = (0..30).map(track).collect();
+    app.queue.state.select(Some(2));
     app.current = Some(2);
     app.stopped = false;
     app.tab = Tab::Queue;

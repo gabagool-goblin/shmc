@@ -272,7 +272,7 @@ impl App {
                 let wanted = self.current_track().map(|t| t.rating_key.as_str())
                     == Some(rating_key.as_str());
                 if wanted {
-                    if let Some(t) = self.current.and_then(|i| self.queue.get_mut(i)) {
+                    if let Some(t) = self.current.and_then(|i| self.queue.items.get_mut(i)) {
                         t.audio = audio.clone();
                     }
                     self.audio_cache.insert(rating_key, audio.clone());
@@ -410,7 +410,7 @@ impl App {
                             let p = p as usize;
                             // stale: the queue shrank (consume) before mpv's
                             // correction; `current` must not point past the end
-                            if p >= self.queue.len() {
+                            if p >= self.queue.items.len() {
                                 return;
                             }
                             if self.stale_position(p) {
@@ -446,13 +446,15 @@ impl App {
                     let marker = self.failed_at.or(self.current);
                     self.failed_at = marker;
                     let title = marker
-                        .and_then(|i| self.queue.get(i))
+                        .and_then(|i| self.queue.items.get(i))
                         .map(|t| t.title.clone())
                         .unwrap_or_else(|| "track".into());
                     // with repeat on mpv wraps; the streak limit ends a queue
                     // where everything fails
-                    let more = (self.loop_playlist && self.queue.len() > 1)
-                        || marker.map_or(!self.queue.is_empty(), |f| f + 1 < self.queue.len());
+                    let more = (self.loop_playlist && self.queue.items.len() > 1)
+                        || marker.map_or(!self.queue.items.is_empty(), |f| {
+                            f + 1 < self.queue.items.len()
+                        });
                     tracing::info!(
                         track = %crate::redact::escape_field(&title),
                         streak = self.err_streak,
@@ -620,7 +622,7 @@ mod tests {
             UiConfig::default(),
             &KeyTable::default(),
         );
-        app.queue = (0..2).map(cover_track).collect();
+        app.queue.items = (0..2).map(cover_track).collect();
         let thumb = |i: usize| format!("/library/metadata/al{i}/thumb");
         let loads = |rx: &mut tokio::sync::mpsc::UnboundedReceiver<PlexCmd>| {
             let mut paths = Vec::new();

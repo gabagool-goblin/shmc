@@ -51,7 +51,7 @@ impl App {
         let list = self.active_list();
         let real = self.real_at(list)?;
         let track = match list {
-            ListRef::Queue => self.queue.get(real),
+            ListRef::Queue => self.queue.items.get(real),
             ListRef::BTracks => self.browser.tracks.get(real),
             ListRef::PlItems => self.playlists.items.get(real),
             ListRef::SearchDetail => self.search.detail.as_ref()?.tracks.get(real),

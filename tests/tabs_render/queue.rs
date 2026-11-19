@@ -11,15 +11,15 @@ fn end_file_error() -> Msg {
 #[tokio::test]
 async fn clear_queue_stops_and_drops_the_cover() {
     let mut app = new_app().await;
-    app.queue = (0..6).map(track).collect();
-    app.queue_state.select(Some(2));
+    app.queue.items = (0..6).map(track).collect();
+    app.queue.state.select(Some(2));
     app.current = Some(2);
     app.stopped = false;
     app.art.img = Some(Arc::new(image::DynamicImage::new_rgba8(4, 4)));
 
     app.clear_queue();
 
-    assert!(app.queue.is_empty(), "the queue must be empty");
+    assert!(app.queue.items.is_empty(), "the queue must be empty");
     assert_eq!(app.current, None, "nothing is playing any more");
     assert!(app.stopped, "clearing the queue must stop playback");
     assert!(app.art.img.is_none(), "the cover must go with the track");
@@ -31,27 +31,27 @@ async fn clear_queue_stops_and_drops_the_cover() {
 #[tokio::test]
 async fn clearing_the_queue_asks_first() {
     let mut app = new_app().await;
-    app.queue = (0..6).map(track).collect();
+    app.queue.items = (0..6).map(track).collect();
     app.current = Some(2);
     app.stopped = false;
 
     app.handle_msg(key('D'));
-    assert_eq!(app.queue.len(), 6, "nothing is cleared before the answer");
+    assert_eq!(app.queue.items.len(), 6, "nothing is cleared before the answer");
     assert!(app.status.contains("6 tracks"), "the question says how many: {}", app.status);
     app.handle_msg(key('x'));
-    assert_eq!(app.queue.len(), 6, "another key cancels");
+    assert_eq!(app.queue.items.len(), 6, "another key cancels");
     assert_eq!(app.current, Some(2));
 
     run_cmd(&mut app, "clear");
-    assert_eq!(app.queue.len(), 6, ":clear asks too");
+    assert_eq!(app.queue.items.len(), 6, ":clear asks too");
     app.handle_msg(key('y'));
-    assert!(app.queue.is_empty());
+    assert!(app.queue.items.is_empty());
     assert!(app.stopped);
 
-    app.queue = (0..4).map(track).collect();
+    app.queue.items = (0..4).map(track).collect();
     app.handle_msg(key('D'));
     app.handle_msg(key('D'));
-    assert!(app.queue.is_empty(), "a second D confirms");
+    assert!(app.queue.items.is_empty(), "a second D confirms");
 
     app.handle_msg(key('D'));
     app.handle_msg(key('2'));
@@ -62,7 +62,7 @@ async fn clearing_the_queue_asks_first() {
 #[tokio::test]
 async fn held_d_asks_but_does_not_clear() {
     let mut app = new_app().await;
-    app.queue = (0..5).map(track).collect();
+    app.queue.items = (0..5).map(track).collect();
     app.handle_msg(key('D'));
     for _ in 0..5 {
         app.handle_msg(Msg::Key(Event::Key(KeyEvent::new_with_kind(
@@ -71,10 +71,10 @@ async fn held_d_asks_but_does_not_clear() {
             KeyEventKind::Repeat,
         ))));
     }
-    assert_eq!(app.queue.len(), 5, "repeats do not confirm");
+    assert_eq!(app.queue.items.len(), 5, "repeats do not confirm");
     assert!(app.status.contains("5 tracks"), "the question stays up: {}", app.status);
     app.handle_msg(key('D'));
-    assert!(app.queue.is_empty(), "a fresh press does");
+    assert!(app.queue.items.is_empty(), "a fresh press does");
 }
 
 /// Under a filter a consume must keep the cursor on the same item.
@@ -82,20 +82,20 @@ async fn held_d_asks_but_does_not_clear() {
 async fn consume_keeps_cursor_on_item_under_filter() {
     let mut app = new_app().await;
     app.tab = Tab::Queue;
-    app.queue = (0..30).map(track).collect();
+    app.queue.items = (0..30).map(track).collect();
     app.current = Some(5); // finished track is outside the filtered view
     app.stopped = false;
     app.consume = true;
     filter_queue(&mut app, "Starfall! 2");
     // matches: 2, 12, 20..=29; cursor on the last, real index 29
-    let cursor = app.queue_filter.cursor_of(29).expect("visible");
-    app.queue_state.select(Some(cursor));
+    let cursor = app.queue.filter.cursor_of(29).expect("visible");
+    app.queue.state.select(Some(cursor));
 
     app.handle_msg(end_file_eof());
 
-    let sel = app.queue_state.selected().expect("a row is highlighted");
-    let real = app.queue_filter.real(sel, app.queue.len());
-    assert_eq!(app.queue[real].rating_key, "t29", "the cursor moved to another item");
+    let sel = app.queue.state.selected().expect("a row is highlighted");
+    let real = app.queue.filter.real(sel, app.queue.items.len());
+    assert_eq!(app.queue.items[real].rating_key, "t29", "the cursor moved to another item");
 }
 
 /// Removing the playing track hands playback to the one that slid in (random
@@ -103,27 +103,27 @@ async fn consume_keeps_cursor_on_item_under_filter() {
 #[tokio::test]
 async fn removing_the_playing_track_hands_playback_on() {
     let mut app = new_app().await;
-    app.queue = (0..5).map(track).collect();
+    app.queue.items = (0..5).map(track).collect();
     app.current = Some(2);
     app.stopped = false;
 
     app.remove_from_queue(2);
-    assert_eq!(app.queue.len(), 4);
+    assert_eq!(app.queue.items.len(), 4);
     assert_eq!(app.current, Some(2), "the track that slid in should take over");
     assert!(!app.stopped, "playback must carry on");
 
     app.current = Some(3);
     app.remove_from_queue(3);
-    assert_eq!(app.queue.len(), 3);
+    assert_eq!(app.queue.items.len(), 3);
     assert_eq!(app.current, None);
     assert!(app.stopped, "removing the last track stops playback");
 
-    app.queue = (0..5).map(track).collect();
+    app.queue.items = (0..5).map(track).collect();
     app.random = true;
     app.current = Some(1);
     app.stopped = false;
     app.remove_from_queue(1);
-    assert_eq!(app.queue.len(), 4);
+    assert_eq!(app.queue.items.len(), 4);
     assert!(!app.stopped, "random mode should hand playback on too");
     assert!(app.current.is_some(), "and it should be playing somewhere");
     app.random = false;
@@ -134,15 +134,15 @@ async fn removing_the_playing_track_hands_playback_on() {
 #[tokio::test]
 async fn burst_of_failures_stops_playback() {
     let mut app = new_app().await;
-    app.queue = (0..5).map(track).collect();
-    app.queue_state.select(Some(0));
+    app.queue.items = (0..5).map(track).collect();
+    app.queue.state.select(Some(0));
     app.current = Some(2);
     app.stopped = false;
 
     app.handle_msg(end_file_error());
     assert!(!app.stopped, "one bad file must not stop playback");
     assert_eq!(app.failed_at, Some(2), "the broken track is remembered");
-    assert_eq!(app.queue.len(), 5, "the queue must survive the failure");
+    assert_eq!(app.queue.items.len(), 5, "the queue must survive the failure");
     assert!(app.status_error, "failures are shown as errors");
     assert!(
         app.status.contains("Starfall! 2 failed to play") && app.status.contains("skipping"),
@@ -156,7 +156,7 @@ async fn burst_of_failures_stops_playback() {
     app.handle_msg(end_file_error());
     assert!(app.stopped, "a burst of failures must stop playback");
     assert_eq!(app.failed_at, Some(2), "the FIRST failure of the burst sticks");
-    assert_eq!(app.queue.len(), 5, "the queue must survive the failure");
+    assert_eq!(app.queue.items.len(), 5, "the queue must survive the failure");
     assert!(
         app.status.contains("Starfall! 2 failed to play") && app.status.contains("press >"),
         "the message must name the track and say how to continue: {}",
@@ -174,7 +174,7 @@ async fn burst_of_failures_stops_playback() {
 #[tokio::test]
 async fn successful_load_resets_failure_streak() {
     let mut app = new_app().await;
-    app.queue = (0..5).map(track).collect();
+    app.queue.items = (0..5).map(track).collect();
     app.current = Some(1);
     app.stopped = false;
 
@@ -200,7 +200,7 @@ async fn successful_load_resets_failure_streak() {
 #[tokio::test]
 async fn failure_run_with_position_events_stops() {
     let mut app = new_app().await;
-    app.queue = (0..5).map(track).collect();
+    app.queue.items = (0..5).map(track).collect();
     app.current = Some(0);
     app.stopped = false;
 
@@ -217,7 +217,7 @@ async fn failure_run_with_position_events_stops() {
 #[tokio::test]
 async fn failing_last_track_wraps_with_repeat() {
     let mut app = new_app().await;
-    app.queue = (0..4).map(track).collect();
+    app.queue.items = (0..4).map(track).collect();
     app.current = Some(3);
     app.stopped = false;
     app.loop_playlist = true;
@@ -235,7 +235,7 @@ async fn failing_last_track_wraps_with_repeat() {
 #[tokio::test]
 async fn last_track_failure_says_pick_another() {
     let mut app = new_app().await;
-    app.queue = (0..3).map(track).collect();
+    app.queue.items = (0..3).map(track).collect();
     app.current = Some(2);
     app.stopped = false;
 
@@ -274,29 +274,29 @@ async fn loop_keys_toggle_off_again() {
 #[tokio::test]
 async fn consume_removes_finished_entry() {
     let mut app = new_app().await;
-    app.queue = (0..3).map(track).collect();
+    app.queue.items = (0..3).map(track).collect();
     app.current = Some(0);
     app.stopped = false;
     app.consume = true;
 
     app.handle_msg(end_file_eof());
 
-    assert_eq!(app.queue.len(), 2);
-    assert_eq!(app.queue[0].title, "Starfall! 1");
+    assert_eq!(app.queue.items.len(), 2);
+    assert_eq!(app.queue.items[0].title, "Starfall! 1");
     assert_eq!(app.current, Some(0));
     assert!(!app.stopped);
 
     drop(app); // one app at a time: it holds the suite's lock
 
     let mut app = new_app().await;
-    app.queue = vec![track(0)];
+    app.queue.items = vec![track(0)];
     app.current = Some(0);
     app.stopped = false;
     app.consume = true;
 
     app.handle_msg(end_file_eof());
 
-    assert!(app.queue.is_empty());
+    assert!(app.queue.items.is_empty());
     assert_eq!(app.current, None);
     assert!(app.stopped);
 }
@@ -304,7 +304,7 @@ async fn consume_removes_finished_entry() {
 #[tokio::test]
 async fn track_info_updates_entry_and_cache() {
     let mut app = new_app().await;
-    app.queue = vec![track(0)];
+    app.queue.items = vec![track(0)];
     app.current = Some(0);
     let audio = AudioInfo {
         codec: Some("flac".into()),
@@ -320,14 +320,14 @@ async fn track_info_updates_entry_and_cache() {
     });
 
     assert_eq!(app.audio, audio);
-    assert_eq!(app.queue[0].audio.sample_rate_hz, Some(44100));
+    assert_eq!(app.queue.items[0].audio.sample_rate_hz, Some(44100));
     assert!(app.audio_cache.contains_key("t0"));
 }
 
 #[tokio::test]
 async fn play_next_inserts_after_the_current_track() {
     let mut app = new_app().await;
-    app.queue = vec![track(0), track(1)];
+    app.queue.items = vec![track(0), track(1)];
     app.current = Some(0);
     app.browser.tracks = (0..3).map(|i| track(10 + i)).collect();
     app.browser.tracks_state.select(Some(1));
@@ -337,7 +337,7 @@ async fn play_next_inserts_after_the_current_track() {
     app.handle_msg(key('i'));
 
     assert_eq!(
-        app.queue.iter().map(|t| t.rating_key.as_str()).collect::<Vec<_>>(),
+        app.queue.items.iter().map(|t| t.rating_key.as_str()).collect::<Vec<_>>(),
         vec!["t0", "t11", "t1"]
     );
     assert_eq!(app.current, Some(0));
@@ -346,23 +346,23 @@ async fn play_next_inserts_after_the_current_track() {
 #[tokio::test]
 async fn queue_reorder_moves_selected_and_playing_rows() {
     let mut app = new_app().await;
-    app.queue = (0..3).map(track).collect();
+    app.queue.items = (0..3).map(track).collect();
     app.current = Some(0);
-    app.queue_state.select(Some(0));
+    app.queue.state.select(Some(0));
     app.tab = Tab::Queue;
 
     app.handle_msg(key('J'));
 
     assert_eq!(
-        app.queue.iter().map(|t| t.rating_key.as_str()).collect::<Vec<_>>(),
+        app.queue.items.iter().map(|t| t.rating_key.as_str()).collect::<Vec<_>>(),
         vec!["t1", "t0", "t2"]
     );
     assert_eq!(app.current, Some(1));
-    assert_eq!(app.queue_state.selected(), Some(1));
+    assert_eq!(app.queue.state.selected(), Some(1));
 
     app.handle_msg(key('K'));
     assert_eq!(
-        app.queue.iter().map(|t| t.rating_key.as_str()).collect::<Vec<_>>(),
+        app.queue.items.iter().map(|t| t.rating_key.as_str()).collect::<Vec<_>>(),
         vec!["t0", "t1", "t2"]
     );
     assert_eq!(app.current, Some(0));
@@ -371,34 +371,34 @@ async fn queue_reorder_moves_selected_and_playing_rows() {
 #[tokio::test]
 async fn shuffle_keeps_current_first_and_restores() {
     let mut app = new_app().await;
-    app.queue = (0..6).map(track).collect();
+    app.queue.items = (0..6).map(track).collect();
     app.current = Some(2);
-    app.queue_state.select(Some(2));
-    let original: Vec<String> = app.queue.iter().map(|t| t.rating_key.clone()).collect();
+    app.queue.state.select(Some(2));
+    let original: Vec<String> = app.queue.items.iter().map(|t| t.rating_key.clone()).collect();
 
     app.handle_msg(key('z'));
     assert!(app.random);
-    assert_eq!(app.queue[0].rating_key, "t2");
+    assert_eq!(app.queue.items[0].rating_key, "t2");
     assert_eq!(app.current, Some(0));
-    assert_eq!(app.queue.len(), 6);
+    assert_eq!(app.queue.items.len(), 6);
 
     app.handle_msg(key('z'));
     assert!(!app.random);
-    assert_eq!(app.queue.iter().map(|t| t.rating_key.clone()).collect::<Vec<_>>(), original);
+    assert_eq!(app.queue.items.iter().map(|t| t.rating_key.clone()).collect::<Vec<_>>(), original);
     assert_eq!(app.current, Some(2));
 }
 
 #[tokio::test]
 async fn reshuffle_keeps_the_current_track_first() {
     let mut app = new_app().await;
-    app.queue = (0..6).map(track).collect();
+    app.queue.items = (0..6).map(track).collect();
     app.current = Some(3);
-    app.queue_state.select(Some(3));
+    app.queue.state.select(Some(3));
 
     app.handle_msg(key('Z'));
 
     assert!(app.random);
-    assert_eq!(app.queue[0].rating_key, "t3");
+    assert_eq!(app.queue.items[0].rating_key, "t3");
     assert_eq!(app.current, Some(0));
 }
 
@@ -406,9 +406,9 @@ async fn reshuffle_keeps_the_current_track_first() {
 async fn queue_follow_pins_playing_until_browse() {
     let mut app = new_app().await;
     app.tab = Tab::Queue;
-    app.queue = (0..300).map(track).collect();
+    app.queue.items = (0..300).map(track).collect();
     app.current = Some(0);
-    app.queue_state.select(Some(0));
+    app.queue.state.select(Some(0));
     app.stopped = false;
 
     let _ = render(&mut app, 120, 40);
@@ -417,7 +417,7 @@ async fn queue_follow_pins_playing_until_browse() {
 
     app.handle_msg(playlist_pos(80));
     let _ = render(&mut app, 120, 40);
-    assert_eq!(app.queue_state.selected(), Some(80));
+    assert_eq!(app.queue.state.selected(), Some(80));
     assert_eq!(
         app.scroll.offset(ScrollId::Queue),
         80,
@@ -433,7 +433,7 @@ async fn queue_follow_pins_playing_until_browse() {
 
     // browsing pauses the follow
     app.handle_msg(key('j'));
-    assert_eq!(app.queue_state.selected(), Some(81));
+    assert_eq!(app.queue.state.selected(), Some(81));
     let _ = render(&mut app, 120, 40);
     assert_eq!(
         app.scroll.offset(ScrollId::Queue),
@@ -443,7 +443,7 @@ async fn queue_follow_pins_playing_until_browse() {
     app.handle_msg(playlist_pos(100));
     let _ = render(&mut app, 120, 40);
     assert_eq!(
-        app.queue_state.selected(),
+        app.queue.state.selected(),
         Some(81),
         "a track change must not yank a browsing cursor"
     );
@@ -452,12 +452,12 @@ async fn queue_follow_pins_playing_until_browse() {
     // `o` re-arms it
     app.handle_msg(key('o'));
     let _ = render(&mut app, 120, 40);
-    assert_eq!(app.queue_state.selected(), Some(100));
+    assert_eq!(app.queue.state.selected(), Some(100));
     assert_eq!(app.scroll.offset(ScrollId::Queue), 100);
 
     app.handle_msg(playlist_pos(110));
     let _ = render(&mut app, 120, 40);
-    assert_eq!(app.queue_state.selected(), Some(110));
+    assert_eq!(app.queue.state.selected(), Some(110));
     assert_eq!(app.scroll.offset(ScrollId::Queue), 110);
 }
 
@@ -467,9 +467,9 @@ async fn queue_follow_pins_playing_until_browse() {
 async fn first_step_after_o_does_not_scroll() {
     let mut app = new_app().await;
     app.tab = Tab::Queue;
-    app.queue = (0..300).map(track).collect();
+    app.queue.items = (0..300).map(track).collect();
     app.current = Some(80);
-    app.queue_state.select(Some(80));
+    app.queue.state.select(Some(80));
     app.stopped = false;
     let _ = render(&mut app, 120, 40);
     let visible = app.scroll.visible(ScrollId::Queue);
@@ -478,7 +478,7 @@ async fn first_step_after_o_does_not_scroll() {
 
     app.handle_msg(key('o'));
     let _ = render(&mut app, 120, 40);
-    assert_eq!(app.queue_state.selected(), Some(80));
+    assert_eq!(app.queue.state.selected(), Some(80));
     assert_eq!(app.scroll.offset(ScrollId::Queue), 80);
 
     // steps up to the bottom margin keep the pane where the pin left it
@@ -486,7 +486,7 @@ async fn first_step_after_o_does_not_scroll() {
     for row in 81..first_scroll {
         app.handle_msg(key('j'));
         let _ = render(&mut app, 120, 40);
-        assert_eq!(app.queue_state.selected(), Some(row));
+        assert_eq!(app.queue.state.selected(), Some(row));
         assert_eq!(
             app.scroll.offset(ScrollId::Queue),
             80,
@@ -497,7 +497,7 @@ async fn first_step_after_o_does_not_scroll() {
     // the margin scrolls one row, then normal scrolling resumes
     app.handle_msg(key('j'));
     let _ = render(&mut app, 120, 40);
-    assert_eq!(app.queue_state.selected(), Some(first_scroll));
+    assert_eq!(app.queue.state.selected(), Some(first_scroll));
     assert_eq!(app.scroll.offset(ScrollId::Queue), 81);
 }
 
@@ -508,9 +508,9 @@ async fn move_after_o_does_not_repin_row() {
     for follow in [true, false] {
         let mut app = new_app().await;
         app.tab = Tab::Queue;
-        app.queue = (0..300).map(track).collect();
+        app.queue.items = (0..300).map(track).collect();
         app.current = Some(80);
-        app.queue_state.select(Some(80));
+        app.queue.state.select(Some(80));
         app.stopped = false;
         app.auto_follow = follow;
         let _ = render(&mut app, 120, 40);
@@ -520,7 +520,7 @@ async fn move_after_o_does_not_repin_row() {
         app.handle_msg(key('o'));
         app.handle_msg(key('j'));
         let _ = render(&mut app, 120, 40);
-        assert_eq!(app.queue_state.selected(), Some(81), "auto_follow {follow}");
+        assert_eq!(app.queue.state.selected(), Some(81), "auto_follow {follow}");
         assert_eq!(
             app.scroll.offset(ScrollId::Queue),
             compute_offset(81, before, visible, 300, app.scrolloff),
@@ -534,9 +534,9 @@ async fn move_after_o_does_not_repin_row() {
 async fn queue_end_wrap_jumps_to_top() {
     let mut app = new_app().await;
     app.tab = Tab::Queue;
-    app.queue = (0..300).map(track).collect();
+    app.queue.items = (0..300).map(track).collect();
     app.current = Some(299);
-    app.queue_state.select(Some(299));
+    app.queue.state.select(Some(299));
     app.stopped = false;
     app.handle_msg(key('o'));
     let _ = render(&mut app, 120, 40);
@@ -549,7 +549,7 @@ async fn queue_end_wrap_jumps_to_top() {
 
     app.handle_msg(key('j'));
     let _ = render(&mut app, 120, 40);
-    assert_eq!(app.queue_state.selected(), Some(0));
+    assert_eq!(app.queue.state.selected(), Some(0));
     assert_eq!(app.scroll.offset(ScrollId::Queue), 0);
 }
 
@@ -557,18 +557,18 @@ async fn queue_end_wrap_jumps_to_top() {
 async fn queue_follow_does_not_fight_the_filter() {
     let mut app = new_app().await;
     app.tab = Tab::Queue;
-    app.queue = (0..120).map(track).collect();
+    app.queue.items = (0..120).map(track).collect();
     app.current = Some(0);
-    app.queue_state.select(Some(0));
+    app.queue.state.select(Some(0));
     app.stopped = false;
 
     filter_queue(&mut app, "Starfall! 9");
-    assert!(app.queue_filter.cursor_of(0).is_none(), "test filter must hide the playing track");
+    assert!(app.queue.filter.cursor_of(0).is_none(), "test filter must hide the playing track");
 
     app.handle_msg(playlist_pos(90));
     let _ = render(&mut app, 120, 40);
     assert_eq!(
-        app.queue_state.selected(),
+        app.queue.state.selected(),
         Some(0),
         "auto-follow must leave a filtered queue alone"
     );
@@ -577,7 +577,7 @@ async fn queue_follow_does_not_fight_the_filter() {
     filter_queue(&mut app, "Starfall! 90");
     app.handle_msg(key('o'));
     let _ = render(&mut app, 120, 40);
-    assert_eq!(app.queue_state.selected(), Some(0));
+    assert_eq!(app.queue.state.selected(), Some(0));
     assert_eq!(app.scroll.offset(ScrollId::Queue), 0);
 }
 
@@ -585,13 +585,13 @@ async fn queue_follow_does_not_fight_the_filter() {
 async fn queue_gg_and_shift_g_reach_the_ends() {
     let mut app = new_app().await;
     app.tab = Tab::Queue;
-    app.queue = (0..10).map(track).collect();
-    app.queue_state.select(Some(4));
+    app.queue.items = (0..10).map(track).collect();
+    app.queue.state.select(Some(4));
 
     keys(&mut app, "G");
-    assert_eq!(app.queue_state.selected(), Some(9));
+    assert_eq!(app.queue.state.selected(), Some(9));
     keys(&mut app, "gg");
-    assert_eq!(app.queue_state.selected(), Some(0));
+    assert_eq!(app.queue.state.selected(), Some(0));
     assert_eq!(app.tab, Tab::Queue, "g no longer opens the Browser");
 }
 
@@ -599,21 +599,21 @@ async fn queue_gg_and_shift_g_reach_the_ends() {
 async fn undo_restores_the_last_removed_track() {
     let mut app = new_app().await;
     app.tab = Tab::Queue;
-    app.queue = (0..4).map(track).collect();
+    app.queue.items = (0..4).map(track).collect();
     app.current = Some(1);
-    app.queue_state.select(Some(2));
+    app.queue.state.select(Some(2));
     app.stopped = false;
 
     app.handle_msg(key('d'));
     assert_eq!(
-        app.queue.iter().map(|t| t.rating_key.as_str()).collect::<Vec<_>>(),
+        app.queue.items.iter().map(|t| t.rating_key.as_str()).collect::<Vec<_>>(),
         vec!["t0", "t1", "t3"]
     );
     assert_eq!(app.current, Some(1));
 
     app.handle_msg(key('u'));
     assert_eq!(
-        app.queue.iter().map(|t| t.rating_key.as_str()).collect::<Vec<_>>(),
+        app.queue.items.iter().map(|t| t.rating_key.as_str()).collect::<Vec<_>>(),
         vec!["t0", "t1", "t2", "t3"]
     );
     assert_eq!(app.current, Some(1), "non-playing removal leaves playback put");
@@ -627,13 +627,13 @@ async fn undo_restores_the_last_removed_track() {
 async fn repeated_undo_restores_removals_newest_first() {
     let mut app = new_app().await;
     app.tab = Tab::Queue;
-    app.queue = (0..8).map(track).collect();
-    app.queue_state.select(Some(5));
+    app.queue.items = (0..8).map(track).collect();
+    app.queue.state.select(Some(5));
     app.stopped = true;
     let original = queue_keys(&app);
 
     app.handle_msg(key('d'));
-    app.queue_state.select(Some(1));
+    app.queue.state.select(Some(1));
     app.handle_msg(key('v'));
     app.handle_msg(key('j'));
     app.handle_msg(key('d'));
@@ -651,8 +651,8 @@ async fn repeated_undo_restores_removals_newest_first() {
 async fn another_queue_change_drops_the_undo_history() {
     let mut app = new_app().await;
     app.tab = Tab::Queue;
-    app.queue = (0..4).map(track).collect();
-    app.queue_state.select(Some(0));
+    app.queue.items = (0..4).map(track).collect();
+    app.queue.state.select(Some(0));
     app.stopped = true;
 
     app.handle_msg(key('d'));
@@ -669,14 +669,14 @@ async fn another_queue_change_drops_the_undo_history() {
 async fn undo_history_is_capped_at_twenty() {
     let mut app = new_app().await;
     app.tab = Tab::Queue;
-    app.queue = (0..21).map(track).collect();
-    app.queue_state.select(Some(0));
+    app.queue.items = (0..21).map(track).collect();
+    app.queue.state.select(Some(0));
     app.stopped = true;
 
     for _ in 0..21 {
         app.handle_msg(key('d'));
     }
-    assert!(app.queue.is_empty());
+    assert!(app.queue.items.is_empty());
     for _ in 0..21 {
         app.handle_msg(key('u'));
     }
@@ -689,28 +689,28 @@ async fn undo_history_is_capped_at_twenty() {
 async fn undo_after_removing_playing_keeps_next_playing() {
     let mut app = new_app().await;
     app.tab = Tab::Queue;
-    app.queue = (0..3).map(track).collect();
+    app.queue.items = (0..3).map(track).collect();
     app.current = Some(1);
-    app.queue_state.select(Some(1));
+    app.queue.state.select(Some(1));
     app.stopped = false;
 
     app.handle_msg(key('d'));
     assert_eq!(app.current, Some(1), "the track that slid in starts");
-    assert_eq!(app.queue[1].rating_key, "t2");
+    assert_eq!(app.queue.items[1].rating_key, "t2");
 
     app.handle_msg(key('u'));
-    assert_eq!(app.queue[1].rating_key, "t1");
+    assert_eq!(app.queue.items[1].rating_key, "t1");
     assert_eq!(app.current, Some(2), "playback stays on t2 at its new index");
-    assert_eq!(app.queue[2].rating_key, "t2");
+    assert_eq!(app.queue.items[2].rating_key, "t2");
 }
 
 #[tokio::test]
 async fn auto_follow_can_be_disabled() {
     let mut app = new_app().await;
     app.tab = Tab::Queue;
-    app.queue = (0..300).map(track).collect();
+    app.queue.items = (0..300).map(track).collect();
     app.current = Some(0);
-    app.queue_state.select(Some(0));
+    app.queue.state.select(Some(0));
     app.stopped = false;
 
     app.handle_msg(key('j'));
@@ -739,18 +739,18 @@ async fn auto_follow_can_be_disabled() {
     );
     app.handle_msg(key('j'));
     let _ = render(&mut app, 120, 40);
-    assert_eq!(app.queue_state.selected(), Some(81));
+    assert_eq!(app.queue.state.selected(), Some(81));
     assert_eq!(
         app.scroll.offset(ScrollId::Queue),
         jump_offset,
         "browsing from the one-shot jump must not scroll the pane"
     );
 
-    let selected = app.queue_state.selected();
+    let selected = app.queue.state.selected();
     app.handle_msg(playlist_pos(120));
     let _ = render(&mut app, 120, 40);
     assert_eq!(
-        app.queue_state.selected(),
+        app.queue.state.selected(),
         selected,
         "disabled auto-follow must not move the cursor"
     );
@@ -762,13 +762,13 @@ async fn auto_follow_can_be_disabled() {
 async fn stale_playlist_pos_keeps_current_track() {
     let mut app = new_app().await;
     app.tab = Tab::Queue;
-    app.queue = (0..3).map(track).collect();
+    app.queue.items = (0..3).map(track).collect();
     app.current = Some(1);
     app.consume = true;
     app.stopped = false;
 
     app.handle_msg(end_file_eof());
-    assert_eq!(app.queue.len(), 2);
+    assert_eq!(app.queue.items.len(), 2);
     assert_eq!(app.current, Some(1), "the next track takes the freed slot");
 
     app.handle_msg(playlist_pos(2));
@@ -783,7 +783,7 @@ async fn stale_playlist_pos_keeps_current_track() {
 async fn play_next_after_consume_does_not_panic() {
     let mut app = new_app().await;
     app.tab = Tab::Queue;
-    app.queue = (0..3).map(track).collect();
+    app.queue.items = (0..3).map(track).collect();
     app.current = Some(1);
     app.consume = true;
     app.stopped = false;
@@ -797,8 +797,8 @@ async fn play_next_after_consume_does_not_panic() {
     app.browser.tracks_state.select(Some(0));
 
     app.handle_msg(key('i'));
-    assert_eq!(app.queue.len(), 3, "the track was queued after the current one");
-    assert_eq!(app.queue[2].rating_key, "t10");
+    assert_eq!(app.queue.items.len(), 3, "the track was queued after the current one");
+    assert_eq!(app.queue.items[2].rating_key, "t10");
 }
 
 /// The consume guard stays armed (mpv sends no position for the advance); the
@@ -807,13 +807,13 @@ async fn play_next_after_consume_does_not_panic() {
 async fn next_after_a_consume_follows_mpv() {
     let mut app = new_app().await;
     app.tab = Tab::Queue;
-    app.queue = (0..6).map(track).collect();
+    app.queue.items = (0..6).map(track).collect();
     app.current = Some(0);
     app.consume = true;
     app.stopped = false;
 
     app.handle_msg(end_file_eof());
-    assert_eq!(app.queue.len(), 5);
+    assert_eq!(app.queue.items.len(), 5);
     assert_eq!(app.current, Some(0));
 
     // consume off: `>` only moves, and must clear the old guard
@@ -829,13 +829,13 @@ async fn next_after_a_consume_follows_mpv() {
 async fn next_with_consume_removes_left_track() {
     let mut app = new_app().await;
     app.tab = Tab::Queue;
-    app.queue = (0..4).map(track).collect();
+    app.queue.items = (0..4).map(track).collect();
     app.current = Some(1);
     app.consume = true;
     app.stopped = false;
 
     app.handle_msg(key('>'));
-    let keys: Vec<_> = app.queue.iter().map(|t| t.rating_key.as_str()).collect();
+    let keys: Vec<_> = app.queue.items.iter().map(|t| t.rating_key.as_str()).collect();
     assert_eq!(keys, ["t0", "t2", "t3"]);
     assert_eq!(app.current, Some(1), "current is the entry that was next");
 
@@ -845,7 +845,7 @@ async fn next_with_consume_removes_left_track() {
     assert_eq!(app.current, Some(1));
 
     app.handle_msg(end_file_eof());
-    let keys: Vec<_> = app.queue.iter().map(|t| t.rating_key.as_str()).collect();
+    let keys: Vec<_> = app.queue.items.iter().map(|t| t.rating_key.as_str()).collect();
     assert_eq!(keys, ["t0", "t3"]);
 }
 
@@ -854,24 +854,24 @@ async fn next_with_consume_removes_left_track() {
 async fn next_with_consume_on_the_last_entry() {
     let mut app = new_app().await;
     app.tab = Tab::Queue;
-    app.queue = (0..3).map(track).collect();
+    app.queue.items = (0..3).map(track).collect();
     app.current = Some(2);
     app.consume = true;
     app.stopped = false;
 
     app.handle_msg(key('>'));
-    assert_eq!(app.queue.len(), 3, "repeat off: nothing to leave to");
+    assert_eq!(app.queue.items.len(), 3, "repeat off: nothing to leave to");
 
     app.loop_playlist = true;
     app.handle_msg(key('>'));
-    let keys: Vec<_> = app.queue.iter().map(|t| t.rating_key.as_str()).collect();
+    let keys: Vec<_> = app.queue.items.iter().map(|t| t.rating_key.as_str()).collect();
     assert_eq!(keys, ["t0", "t1"]);
     assert_eq!(app.current, Some(0), "wrapped to the first entry");
 
-    app.queue.truncate(1);
+    app.queue.items.truncate(1);
     app.current = Some(0);
     app.handle_msg(key('>'));
-    assert_eq!(app.queue.len(), 1, "a lone track wraps to itself");
+    assert_eq!(app.queue.items.len(), 1, "a lone track wraps to itself");
 }
 
 /// Plays the position events mpv sends during a reorder; the stale ones must
@@ -880,11 +880,11 @@ fn reorder_storm(app: &mut App, plex: &mut tokio::sync::mpsc::UnboundedReceiver<
     let expected = app.current.expect("a reorder only guards a playing track");
     let playing_thumb = app.current_track().and_then(|t| t.thumb.clone());
     let playing_key = app.current_track().map(|t| t.rating_key.clone());
-    for pos in (0..app.queue.len()).filter(|&p| p != expected) {
+    for pos in (0..app.queue.items.len()).filter(|&p| p != expected) {
         app.handle_msg(playlist_pos(pos));
         assert_eq!(app.current, Some(expected), "stale position {pos} moved the current track");
         assert_eq!(
-            app.queue_state.selected(),
+            app.queue.state.selected(),
             Some(expected),
             "stale position {pos} bounced the queue cursor"
         );
@@ -917,11 +917,11 @@ async fn reorder_ignores_intermediate_positions() {
     let (mut app, mut plex) = new_app_with_plex().await;
     app.art_enabled = true;
     app.tab = Tab::Queue;
-    app.queue = (0..60)
+    app.queue.items = (0..60)
         .map(|i| Track { thumb: Some(format!("/library/metadata/t{i}/thumb")), ..track(i) })
         .collect();
     app.current = Some(20);
-    app.queue_state.select(Some(20));
+    app.queue.state.select(Some(20));
     app.stopped = false;
 
     // shuffle on pins the playing entry first
@@ -946,18 +946,18 @@ async fn reorder_ignores_intermediate_positions() {
 #[tokio::test]
 async fn shuffle_off_restores_large_queue_quickly() {
     let mut app = new_app().await;
-    app.queue = (0..50_000).map(track).collect();
+    app.queue.items = (0..50_000).map(track).collect();
     app.current = Some(31_337);
-    app.queue_state.select(Some(31_337));
+    app.queue.state.select(Some(31_337));
     app.stopped = false;
-    let original: Vec<String> = app.queue.iter().map(|t| t.rating_key.clone()).collect();
+    let original: Vec<String> = app.queue.items.iter().map(|t| t.rating_key.clone()).collect();
 
     let started = std::time::Instant::now();
     app.handle_msg(key('z')); // shuffle on (snapshot + reorder)
     app.handle_msg(key('z')); // ... and back off (the restore path)
     let elapsed = started.elapsed();
 
-    let restored: Vec<String> = app.queue.iter().map(|t| t.rating_key.clone()).collect();
+    let restored: Vec<String> = app.queue.items.iter().map(|t| t.rating_key.clone()).collect();
     assert_eq!(restored, original, "z off restores the original order");
     assert_eq!(app.current, Some(31_337), "playback stays on the same track");
     assert!(
@@ -977,20 +977,20 @@ fn named(i: usize, title: &str) -> Track {
 async fn i_in_the_queue_does_nothing() {
     let mut app = new_app().await;
     app.tab = Tab::Queue;
-    app.queue = (0..4).map(track).collect();
+    app.queue.items = (0..4).map(track).collect();
     app.current = Some(1);
-    app.queue_state.select(Some(2));
+    app.queue.state.select(Some(2));
     app.stopped = false;
 
-    let before: Vec<String> = app.queue.iter().map(|t| t.rating_key.clone()).collect();
+    let before: Vec<String> = app.queue.items.iter().map(|t| t.rating_key.clone()).collect();
     app.handle_msg(key('i'));
 
     assert_eq!(
-        app.queue.iter().map(|t| t.rating_key.clone()).collect::<Vec<_>>(),
+        app.queue.items.iter().map(|t| t.rating_key.clone()).collect::<Vec<_>>(),
         before,
         "`i` must not insert anything in the Queue"
     );
-    assert_eq!(app.queue_state.selected(), Some(2));
+    assert_eq!(app.queue.state.selected(), Some(2));
     assert_eq!(app.current, Some(1));
 }
 
@@ -999,22 +999,22 @@ async fn i_in_the_queue_does_nothing() {
 async fn shuffle_keeps_highlighted_track_under_filter() {
     let mut app = new_app().await;
     app.tab = Tab::Queue;
-    app.queue = (0..50).map(track).collect();
+    app.queue.items = (0..50).map(track).collect();
     app.current = Some(20);
     app.stopped = false;
 
     filter_queue(&mut app, "Starfall! 1");
     // real 12 ("Starfall! 12") is the 4th matching row
-    let cursor = app.queue_filter.cursor_of(12).expect("row is visible");
-    app.queue_state.select(Some(cursor));
+    let cursor = app.queue.filter.cursor_of(12).expect("row is visible");
+    app.queue.state.select(Some(cursor));
     assert_ne!(cursor, 12, "the test filter must make cursor and index differ");
 
     for label in ["shuffle on", "shuffle off"] {
         app.handle_msg(key('z'));
-        let selected = app.queue_state.selected().expect("a row stays highlighted");
-        let real = app.queue_filter.real(selected, app.queue.len());
+        let selected = app.queue.state.selected().expect("a row stays highlighted");
+        let real = app.queue.filter.real(selected, app.queue.items.len());
         assert_eq!(
-            app.queue[real].rating_key, "t12",
+            app.queue.items[real].rating_key, "t12",
             "{label} moved the highlight off the selected track"
         );
     }
@@ -1025,18 +1025,18 @@ async fn shuffle_keeps_highlighted_track_under_filter() {
 async fn stopped_next_resumes_highlighted_row_under_filter() {
     let mut app = new_app().await;
     app.tab = Tab::Queue;
-    app.queue = (0..50).map(track).collect();
+    app.queue.items = (0..50).map(track).collect();
     app.stopped = true;
 
     filter_queue(&mut app, "Starfall! 1");
     // real 12 ("Starfall! 12") is the 4th matching row
-    let cursor = app.queue_filter.cursor_of(12).expect("row is visible");
-    app.queue_state.select(Some(cursor));
+    let cursor = app.queue.filter.cursor_of(12).expect("row is visible");
+    app.queue.state.select(Some(cursor));
     assert_ne!(cursor, 12, "the test filter must make cursor and index differ");
 
     app.handle_msg(key('>'));
     assert_eq!(app.current, Some(12), "`>` must resume the track the cursor highlights");
-    assert_eq!(app.queue[12].rating_key, "t12");
+    assert_eq!(app.queue.items[12].rating_key, "t12");
 }
 
 /// Under a filter Enter must leave the highlight on the row it started.
@@ -1044,22 +1044,22 @@ async fn stopped_next_resumes_highlighted_row_under_filter() {
 async fn play_queue_index_highlights_filtered_row() {
     let mut app = new_app().await;
     app.tab = Tab::Queue;
-    app.queue = (0..50).map(track).collect();
+    app.queue.items = (0..50).map(track).collect();
     app.current = Some(0);
     app.stopped = false;
 
     filter_queue(&mut app, "Starfall! 1");
     // real 13 ("Starfall! 13") is the 5th matching row
-    let cursor = app.queue_filter.cursor_of(13).expect("row is visible");
-    app.queue_state.select(Some(cursor));
+    let cursor = app.queue.filter.cursor_of(13).expect("row is visible");
+    app.queue.state.select(Some(cursor));
     assert_ne!(cursor, 13, "the test filter must make cursor and index differ");
 
     app.handle_msg(enter());
 
     assert_eq!(app.current, Some(13), "Enter must still start the highlighted track");
-    assert_eq!(app.queue[13].rating_key, "t13");
+    assert_eq!(app.queue.items[13].rating_key, "t13");
     assert_eq!(
-        app.queue_state.selected(),
+        app.queue.state.selected(),
         Some(cursor),
         "the highlight must stay on the row showing the started track"
     );
@@ -1071,9 +1071,9 @@ async fn play_queue_index_highlights_filtered_row() {
 async fn reorder_carries_failure_marker_with_track() {
     let mut app = new_app().await;
     app.tab = Tab::Queue;
-    app.queue = (0..5).map(track).collect();
+    app.queue.items = (0..5).map(track).collect();
     app.current = Some(2);
-    app.queue_state.select(Some(2));
+    app.queue.state.select(Some(2));
     app.stopped = false;
 
     app.handle_msg(end_file_error());
@@ -1081,12 +1081,12 @@ async fn reorder_carries_failure_marker_with_track() {
 
     app.handle_msg(key('K'));
     assert_eq!(app.failed_at, Some(1), "a single move remaps the marker");
-    assert_eq!(app.queue[1].rating_key, "t2");
+    assert_eq!(app.queue.items[1].rating_key, "t2");
 
     app.handle_msg(key('z'));
     let marker = app.failed_at.expect("a permutation keeps the marker");
     assert_eq!(
-        app.queue[marker].rating_key, "t2",
+        app.queue.items[marker].rating_key, "t2",
         "shuffle must leave the marker on the failed track"
     );
 
@@ -1100,7 +1100,7 @@ async fn reorder_carries_failure_marker_with_track() {
 async fn play_next_highlights_inserted_track_under_filter() {
     let mut app = new_app().await;
     app.tab = Tab::Browser;
-    app.queue = ["Apple", "Box", "Cat", "Fox", "Goat"]
+    app.queue.items = ["Apple", "Box", "Cat", "Fox", "Goat"]
         .iter()
         .enumerate()
         .map(|(i, title)| named(i, title))
@@ -1116,11 +1116,11 @@ async fn play_next_highlights_inserted_track_under_filter() {
 
     app.handle_msg(key('i'));
 
-    assert_eq!(app.queue[1].title, "Xylophone", "queued after the current track");
-    let cursor = app.queue_state.selected().expect("a row is highlighted");
-    assert_eq!(cursor, app.queue_filter.cursor_of(1).expect("the inserted track is visible"));
+    assert_eq!(app.queue.items[1].title, "Xylophone", "queued after the current track");
+    let cursor = app.queue.state.selected().expect("a row is highlighted");
+    assert_eq!(cursor, app.queue.filter.cursor_of(1).expect("the inserted track is visible"));
     assert_eq!(
-        app.queue_filter.real(cursor, app.queue.len()),
+        app.queue.filter.real(cursor, app.queue.items.len()),
         1,
         "the highlight must stay on the inserted track"
     );
@@ -1133,7 +1133,7 @@ async fn playing_app(
 ) -> (TestApp, tokio::sync::mpsc::UnboundedReceiver<mpv::MpvCmd>) {
     let mut app = new_app().await;
     app.tab = Tab::Queue;
-    app.queue = (0..5).map(track).collect();
+    app.queue.items = (0..5).map(track).collect();
     app.current = Some(current);
     app.stopped = false;
     app.position = position;
@@ -1150,7 +1150,7 @@ async fn prev_restarts_track_past_threshold() {
     assert!(matches!(rx.try_recv(), Ok(mpv::MpvCmd::SeekAbs(t)) if t == 0.0));
     assert_eq!(app.position, 0.0);
     assert_eq!(app.current, Some(2));
-    assert_eq!(app.queue.len(), 5);
+    assert_eq!(app.queue.items.len(), 5);
 
     app.handle_msg(key('<'));
     assert!(matches!(rx.try_recv(), Ok(mpv::MpvCmd::Prev)));
@@ -1170,13 +1170,13 @@ async fn media_prev_restarts_the_track() {
 async fn media_next_with_consume_removes_the_skipped_track() {
     let mut app = new_app().await;
     app.tab = Tab::Queue;
-    app.queue = (0..4).map(track).collect();
+    app.queue.items = (0..4).map(track).collect();
     app.current = Some(1);
     app.consume = true;
     app.stopped = false;
 
     app.handle_msg(Msg::Mpv(mpv::MpvEvent::MediaKey(mpv::MediaKey::Next)));
-    let keys: Vec<_> = app.queue.iter().map(|t| t.rating_key.as_str()).collect();
+    let keys: Vec<_> = app.queue.items.iter().map(|t| t.rating_key.as_str()).collect();
     assert_eq!(keys, ["t0", "t2", "t3"]);
     assert_eq!(app.current, Some(1), "current is the entry that was next");
 }
@@ -1188,7 +1188,7 @@ async fn media_stop_stops_without_quitting() {
     app.handle_msg(Msg::Mpv(mpv::MpvEvent::MediaKey(mpv::MediaKey::Stop)));
     assert!(matches!(rx.try_recv(), Ok(mpv::MpvCmd::Stop)));
     assert!(app.stopped);
-    assert_eq!(app.queue.len(), 5);
+    assert_eq!(app.queue.items.len(), 5);
     assert!(!app.should_quit);
 }
 
@@ -1242,7 +1242,7 @@ async fn prev_on_first_entry_restarts_unless_repeat() {
 #[tokio::test]
 async fn stop_cancels_a_replace_still_in_flight() {
     let (mut app, mut plex) = new_app_with_plex().await;
-    app.queue = (0..3).map(track).collect();
+    app.queue.items = (0..3).map(track).collect();
     app.current = Some(0);
     app.stopped = false;
     on_playlist(&mut app, 0);
@@ -1278,9 +1278,9 @@ async fn save_sends_whole_queue_even_when_filtered() {
     run_cmd(&mut app, "save Road trip");
     assert!(saves(&mut plex_rx).is_empty(), "an empty queue sends nothing");
 
-    app.queue = (0..4).map(track).collect();
-    app.queue_filter.text = "Starfall! 2".into();
-    app.queue_filter.apply(4, |i| i == 2);
+    app.queue.items = (0..4).map(track).collect();
+    app.queue.filter.text = "Starfall! 2".into();
+    app.queue.filter.apply(4, |i| i == 2);
     run_cmd(&mut app, "save Road trip");
     assert_eq!(
         saves(&mut plex_rx),

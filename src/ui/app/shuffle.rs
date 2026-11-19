@@ -140,13 +140,13 @@ impl App {
         if self.random {
             return;
         }
-        if self.queue.is_empty() {
+        if self.queue.items.is_empty() {
             self.random = true;
             self.shuffle_snapshot = None;
             self.transient("shuffle on".into());
             return;
         }
-        self.shuffle_snapshot = Some(ShuffleSnapshot { order: self.queue.clone() });
+        self.shuffle_snapshot = Some(ShuffleSnapshot { order: self.queue.items.clone() });
         let order = self.shuffled_order_keep_current();
         self.apply_queue_order(order);
         self.random = true;
@@ -163,11 +163,11 @@ impl App {
             // match, with slots bucketed per key to stay O(n).
             let order = {
                 let mut remaining: HashMap<&str, VecDeque<usize>> = HashMap::new();
-                for (i, t) in self.queue.iter().enumerate() {
+                for (i, t) in self.queue.items.iter().enumerate() {
                     remaining.entry(t.rating_key.as_str()).or_default().push_back(i);
                 }
-                let mut used = vec![false; self.queue.len()];
-                let mut order = Vec::with_capacity(self.queue.len());
+                let mut used = vec![false; self.queue.items.len()];
+                let mut order = Vec::with_capacity(self.queue.items.len());
                 for wanted in &snapshot.order {
                     if let Some(idx) =
                         remaining.get_mut(wanted.rating_key.as_str()).and_then(VecDeque::pop_front)
@@ -184,7 +184,7 @@ impl App {
                 }
                 order
             };
-            if order.len() == self.queue.len() {
+            if order.len() == self.queue.items.len() {
                 self.apply_queue_order(order);
             }
         }
@@ -193,7 +193,7 @@ impl App {
     }
 
     pub(super) fn reshuffle_queue(&mut self) {
-        if self.queue.len() < 2 {
+        if self.queue.items.len() < 2 {
             self.transient("queue too short to shuffle".into());
             return;
         }
@@ -223,10 +223,10 @@ impl App {
     }
 
     fn shuffled_order_keep_current(&self) -> Vec<usize> {
-        let mut rest: Vec<usize> = (0..self.queue.len()).collect();
-        let mut order = Vec::with_capacity(self.queue.len());
+        let mut rest: Vec<usize> = (0..self.queue.items.len()).collect();
+        let mut order = Vec::with_capacity(self.queue.items.len());
         if let Some(current) = self.current {
-            if current < self.queue.len() {
+            if current < self.queue.items.len() {
                 order.push(current);
                 rest.retain(|&i| i != current);
             }
@@ -240,11 +240,11 @@ impl App {
     /// Reorders the app queue and mpv's playlist in lockstep (`order[new] =
     /// old`), one track at a time from slot 0.
     fn apply_queue_order(&mut self, order: Vec<usize>) {
-        if order.len() != self.queue.len() {
+        if order.len() != self.queue.items.len() {
             return;
         }
-        let old_current = self.current.filter(|&c| c < self.queue.len());
-        let old_selected = self.queue_state.selected();
+        let old_current = self.current.filter(|&c| c < self.queue.items.len());
+        let old_selected = self.queue.state.selected();
         // the cursor counts filtered rows; the plan is by real slot
         let old_selected_real = self.real_at(ListRef::Queue);
         let Some(plan) = queue_move_plan(&order, old_current) else {
@@ -255,9 +255,10 @@ impl App {
         }
         // move, don't clone: a long queue is a lot to duplicate on the UI thread
         let mut old: Vec<Option<Track>> =
-            std::mem::take(&mut self.queue).into_iter().map(Some).collect();
-        self.queue = order.iter().filter_map(|&i| old.get_mut(i).and_then(Option::take)).collect();
-        debug_assert_eq!(self.queue.len(), order.len(), "the plan validated a permutation");
+            std::mem::take(&mut self.queue.items).into_iter().map(Some).collect();
+        self.queue.items =
+            order.iter().filter_map(|&i| old.get_mut(i).and_then(Option::take)).collect();
+        debug_assert_eq!(self.queue.items.len(), order.len(), "the plan validated a permutation");
         self.removed.clear();
         self.drop_visual(ListRef::Queue);
         self.current = plan.play;
@@ -271,7 +272,7 @@ impl App {
         self.refilter(ListRef::Queue);
         let vis = self.vis_len(ListRef::Queue);
         if vis == 0 {
-            self.queue_state.select(None);
+            self.queue.state.select(None);
             self.follow_queue();
             return;
         }
@@ -279,30 +280,30 @@ impl App {
         // the playing track, then the old cursor
         let selected = old_selected_real
             .and_then(|s| plan.position.get(s).copied())
-            .and_then(|real| self.queue_filter.cursor_of(real))
-            .or_else(|| self.current.and_then(|c| self.queue_filter.cursor_of(c)))
+            .and_then(|real| self.queue.filter.cursor_of(real))
+            .or_else(|| self.current.and_then(|c| self.queue.filter.cursor_of(c)))
             .or_else(|| old_selected.map(|s| s.min(vis - 1)))
             .unwrap_or(0);
-        self.queue_state.select(Some(selected.min(vis - 1)));
+        self.queue.state.select(Some(selected.min(vis - 1)));
         self.follow_queue();
     }
 
     /// `>` while stopped: after a failure the track following the broken one,
     /// otherwise the cursor's row.
     pub(super) fn play_from_stopped(&mut self) {
-        if self.queue.is_empty() {
+        if self.queue.items.is_empty() {
             self.transient("queue is empty".into());
             return;
         }
         let idx = match self.failed_at {
-            Some(f) if self.loop_playlist => (f + 1) % self.queue.len(),
+            Some(f) if self.loop_playlist => (f + 1) % self.queue.items.len(),
             Some(f) => f + 1,
             None => match self.real_at(ListRef::Queue) {
                 Some(real) => real,
-                None => self.queue_state.selected().unwrap_or(0),
+                None => self.queue.state.selected().unwrap_or(0),
             },
         };
-        if idx >= self.queue.len() {
+        if idx >= self.queue.items.len() {
             self.transient("end of the queue".into());
             return;
         }
