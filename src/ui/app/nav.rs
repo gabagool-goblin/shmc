@@ -35,9 +35,7 @@ fn scope_label(l: ListRef) -> &'static str {
 impl App {
     pub fn load_albums(&mut self, artist_key: String) {
         self.browser.albums_for = Some(artist_key.clone());
-        self.browser.albums.items.clear();
-        self.browser.albums.state.select(None);
-        self.browser.albums.filter.clear(); // new artist = new album list
+        self.browser.albums.clear(); // new artist = new album list
         self.browser.tracks.items.clear();
         self.drop_visual(ListRef::BTracks);
         self.browser.tracks.state.select(None);
@@ -47,10 +45,8 @@ impl App {
 
     pub fn load_tracks(&mut self, album_key: String) {
         self.browser.tracks_for = Some(album_key.clone());
-        self.browser.tracks.items.clear();
+        self.browser.tracks.clear();
         self.drop_visual(ListRef::BTracks);
-        self.browser.tracks.state.select(None);
-        self.browser.tracks.filter.clear();
         let _ = self.plex.tx.send(PlexCmd::LoadTracks(album_key));
     }
 
