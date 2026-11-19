@@ -86,6 +86,7 @@ pub enum Act {
     ToggleConsume,
     SleepTimer,
     Rate,
+    RatePlaying,
     Similar,
     Radio,
 }
@@ -138,6 +139,7 @@ const ACT_NAMES: &[(&str, Act)] = &[
     ("toggle_consume", Act::ToggleConsume),
     ("sleep_timer", Act::SleepTimer),
     ("rate", Act::Rate),
+    ("rate_playing", Act::RatePlaying),
     ("similar", Act::Similar),
     ("radio", Act::Radio),
 ];
@@ -184,7 +186,8 @@ pub const BINDINGS: &[Binding] = &[
     Binding { ctx: KeyCtx::Global, keys: &["c"], act: Act::ToggleSingle, desc: "single (loop track)" },
     Binding { ctx: KeyCtx::Global, keys: &["C"], act: Act::ToggleConsume, desc: "consume (remove played tracks)" },
     Binding { ctx: KeyCtx::Global, keys: &["S"], act: Act::SleepTimer, desc: "sleep timer: 15, 30 or 60 minutes, or off" },
-    Binding { ctx: KeyCtx::Global, keys: &["r"], act: Act::Rate, desc: "rate the playing track" },
+    Binding { ctx: KeyCtx::Global, keys: &["r"], act: Act::Rate, desc: "rate the highlighted track" },
+    Binding { ctx: KeyCtx::Global, keys: &["R"], act: Act::RatePlaying, desc: "rate the playing track" },
     Binding { ctx: KeyCtx::Queue, keys: &["k", "Up"], act: Act::MoveUp, desc: "move up" },
     Binding { ctx: KeyCtx::Queue, keys: &["j", "Down"], act: Act::MoveDown, desc: "move down" },
     Binding { ctx: KeyCtx::Queue, keys: &["PgUp"], act: Act::PageUp, desc: "page up" },

@@ -216,6 +216,7 @@ pub enum Msg {
     Rated {
         rating_key: String,
         rating: Option<u8>,
+        title: String,
     },
     Mpv(MpvEvent),
     Cava(Vec<u8>),

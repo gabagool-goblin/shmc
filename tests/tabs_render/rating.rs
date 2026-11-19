@@ -1,15 +1,16 @@
-//! Star ratings: what `r` sends and what the header shows.
+//! Star ratings: what `r` and `R` send and what the header shows.
 
 use super::*;
 use shmc::config::RatingStyle;
-use shmc::plex::models::{HitKind, SearchHit};
+use shmc::plex::models::{Artist, HitKind, SearchHit};
 use shmc::ui::app::BrowserCol;
 
-/// Three tracks with `t1` playing and writes allowed.
+/// Three tracks with `t1` playing and highlighted, and writes allowed.
 async fn playing(style: RatingStyle) -> (TestApp, tokio::sync::mpsc::UnboundedReceiver<PlexCmd>) {
     let (mut app, plex) = new_app_with_plex().await;
     app.queue = (0..3).map(track).collect();
     app.current = Some(1);
+    app.queue_state.select(Some(1));
     app.stopped = false;
     app.allow_writes = true;
     app.rating_style = style;
@@ -20,7 +21,7 @@ fn rates(plex: &mut tokio::sync::mpsc::UnboundedReceiver<PlexCmd>) -> Vec<(Strin
     sent(plex)
         .into_iter()
         .filter_map(|c| match c {
-            PlexCmd::Rate { key, rating } => Some((key, rating)),
+            PlexCmd::Rate { key, rating, .. } => Some((key, rating)),
             _ => None,
         })
         .collect()
@@ -73,6 +74,57 @@ async fn one_style_toggles_without_asking() {
     assert_eq!(rates(&mut plex), [("t1".to_string(), None)]);
 }
 
+/// `r` rates the highlighted row and `R` the playing track.
+#[tokio::test]
+async fn r_rates_the_highlighted_track_and_shift_r_the_playing_one() {
+    let (mut app, mut plex) = playing(RatingStyle::Five).await;
+    app.queue[2].user_rating = Some(6);
+    app.queue_state.select(Some(2));
+    app.handle_msg(key('r'));
+    assert!(app.status.contains("rate Starfall! 2 (***..)"), "{}", app.status);
+    app.handle_msg(key('4'));
+    app.handle_msg(key('R'));
+    assert!(app.status.contains("rate Starfall! 1 (not rated)"), "{}", app.status);
+    app.handle_msg(key('2'));
+    assert_eq!(rates(&mut plex), [("t2".to_string(), Some(8)), ("t1".to_string(), Some(4))]);
+}
+
+/// `r` works in the Browser's track column and only hints on an artist.
+#[tokio::test]
+async fn r_rates_a_browser_track_but_not_an_artist() {
+    let (mut app, mut plex) = playing(RatingStyle::One).await;
+    app.tab = Tab::Browser;
+    app.browser.artists =
+        vec![Artist { rating_key: "a0".into(), title: "Alpha".into(), thumb: None }];
+    app.browser.artists_state.select(Some(0));
+    app.browser.focus = BrowserCol::Artists;
+    app.handle_msg(key('r'));
+    assert!(rates(&mut plex).is_empty());
+    assert!(app.status.contains("r rates tracks · R rates the playing track"), "{}", app.status);
+
+    app.browser.tracks = vec![Track { user_rating: Some(10), ..track(5) }];
+    app.browser.tracks_state.select(Some(0));
+    app.browser.focus = BrowserCol::Tracks;
+    app.handle_msg(key('r'));
+    assert_eq!(
+        rates(&mut plex),
+        [("t5".to_string(), None)],
+        "one star toggles the row's own rating"
+    );
+}
+
+/// The confirmation names the track even when it is not in the queue.
+#[tokio::test]
+async fn confirmation_names_a_track_outside_the_queue() {
+    let (mut app, _plex) = playing(RatingStyle::Five).await;
+    app.handle_msg(Msg::Rated {
+        rating_key: "t9".into(),
+        rating: Some(8),
+        title: "Elsewhere".into(),
+    });
+    assert!(app.status.contains("rated Elsewhere: ****"), "{}", app.status);
+}
+
 /// Writing off, the style off or nothing playing sends nothing.
 #[tokio::test]
 async fn refused_rating_sends_nothing() {
@@ -89,7 +141,8 @@ async fn refused_rating_sends_nothing() {
 
     app.rating_style = RatingStyle::Five;
     app.stopped = true;
-    app.handle_msg(key('r'));
+    app.handle_msg(key('R'));
+    assert!(app.status.contains("nothing playing"), "{}", app.status);
     app.handle_msg(key('4'));
     assert!(rates(&mut plex).is_empty());
 }
@@ -110,10 +163,10 @@ async fn header_follows_metadata_and_confirmed_writes() {
     });
     let row: String = title_row(&mut app, 100).iter().collect();
     assert!(row.contains("Starfall! 1 ****."), "{row}");
-    app.handle_msg(Msg::Rated { rating_key: "t1".into(), rating: Some(10) });
+    app.handle_msg(Msg::Rated { rating_key: "t1".into(), rating: Some(10), title: "x".into() });
     let row: String = title_row(&mut app, 100).iter().collect();
     assert!(row.contains("Starfall! 1 *****"), "{row}");
-    app.handle_msg(Msg::Rated { rating_key: "t1".into(), rating: None });
+    app.handle_msg(Msg::Rated { rating_key: "t1".into(), rating: None, title: "x".into() });
     let row: String = title_row(&mut app, 100).iter().collect();
     assert!(!row.contains('*'), "{row}");
 }
@@ -282,9 +335,9 @@ async fn rated_message_changes_the_queue_row() {
     let (mut app, _plex) = playing(RatingStyle::Five).await;
     app.queue[0].user_rating = Some(7);
     assert!(row_of(&render(&mut app, 120, 30), "Starfall! 0").contains("Starfall! 0 4*"));
-    app.handle_msg(Msg::Rated { rating_key: "t0".into(), rating: Some(10) });
+    app.handle_msg(Msg::Rated { rating_key: "t0".into(), rating: Some(10), title: "x".into() });
     assert!(row_of(&render(&mut app, 120, 30), "Starfall! 0").contains("Starfall! 0 5*"));
-    app.handle_msg(Msg::Rated { rating_key: "t0".into(), rating: None });
+    app.handle_msg(Msg::Rated { rating_key: "t0".into(), rating: None, title: "x".into() });
     assert!(!row_of(&render(&mut app, 120, 30), "Starfall! 0").contains('*'));
 }
 

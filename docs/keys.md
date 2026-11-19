@@ -19,7 +19,8 @@ Press `?` or `5` to open Help. It lists all current key bindings, including chan
 | `Z` | Reshuffle queue |
 | `C` | Toggle consume |
 | `S` | Sleep timer: 15, 30 or 60 minutes, or off |
-| `r` | Rate the playing track |
+| `r` | Rate the highlighted track |
+| `R` | Rate the playing track |
 | `:` | Open command line |
 
 Shuffle reorders the queue, keeping the playing track first. Turning it off restores the original order. Tracks added while shuffle is on go to the end.
@@ -28,7 +29,7 @@ Consume removes a track after it plays. Skipping with `>` also removes the track
 
 The sleep timer pauses playback when it expires. The header shows the remaining time. Use `:sleep 20` for a custom duration or `:sleep off` to cancel it.
 
-The header shows the playing track's rating: five stars, one star or none, set by `ui.rating_style`. The compact layout shows it after the title on the now-playing line, and under the cover when `ui.art_metadata` is on. Track lists show a rated track's rating after its title, `4★` or, with one star, `★`. With `plex.allow_writes = true`, `r` rates it: `1` to `5`, or `0` to clear; with one star, `r` toggles the star. Ratings live in Plex, so other Plex apps see them.
+The header shows the playing track's rating: five stars, one star or none, set by `ui.rating_style`. The compact layout shows it after the title on the now-playing line, and under the cover when `ui.art_metadata` is on. Track lists show a rated track's rating after its title, `4★` or, with one star, `★`. With `plex.allow_writes = true`, `r` rates the highlighted track and `R` the playing one: `1` to `5`, or `0` to clear; with one star, they toggle the star. Ratings live in Plex, so other Plex apps see them.
 
 `m` on a track, album or artist lists the ones that sound like it, from Plex's sonic analysis, which needs Plex Pass. The list opens in the Search tab, closest first, with a Match column, and the usual keys work on it. Similar albums include the artist's own. `Esc` goes back a step at a time, ending at the tab where `m` was pressed.
 

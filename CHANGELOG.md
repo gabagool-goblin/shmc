@@ -13,10 +13,12 @@ All notable changes to shmc are documented here. The format follows
 - `Esc` in the Search tab goes back a step at a time, ending at the tab where `m` was pressed.
 - `v` selects a range in the Search tab's album view and similar list.
 - Track lists show a rated track's rating after its title.
+- `R` rates the playing track from any tab.
 
 ### Changed
 
 - `plex.allow_writes` replaces `plex.set_ratings`; `shmc config --check` names the old key.
+- `r` rates the highlighted track instead of the playing one; on an artist or album it does nothing.
 
 ### Fixed
 
