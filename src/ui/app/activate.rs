@@ -14,36 +14,36 @@ impl App {
     pub(super) fn preview_playlist(&mut self) {
         if self.tab != Tab::Playlists
             || self.playlists.focus != PlaylistsCol::List
-            || self.pl_list_filter.typing
+            || self.playlists.list.filter.typing
         {
             self.preview_blocked = None;
             return;
         }
         let Some(real) = self.real_at(ListRef::PlList) else { return };
-        let Some(pl) = self.playlists.playlists.get(real) else { return };
+        let Some(pl) = self.playlists.list.items.get(real) else { return };
         let key = pl.rating_key.clone();
         if self.preview_blocked.as_deref() == Some(key.as_str()) {
             return;
         }
         self.preview_blocked = None;
         let total = pl.item_count.map(|n| n as usize);
-        if self.playlists.items_for.as_deref() == Some(key.as_str()) {
+        if self.playlists.tracks_for.as_deref() == Some(key.as_str()) {
             return;
         }
         self.preview_epoch = self.preview_epoch.wrapping_add(1);
-        self.playlists.items_for = Some(key.clone());
-        self.playlists.items_total = total;
-        self.playlists.items.clear();
+        self.playlists.tracks_for = Some(key.clone());
+        self.playlists.tracks_total = total;
+        self.playlists.tracks.items.clear();
         self.drop_visual(ListRef::PlItems);
-        self.playlists.items_state.select(Some(0));
-        self.pl_items_filter.clear();
+        self.playlists.tracks.state.select(Some(0));
+        self.playlists.tracks.filter.clear();
 
         if self.preview_tracks == 0 {
-            self.playlists.items_for = None;
+            self.playlists.tracks_for = None;
             return;
         }
         if let Some(cached) = self.playlists.preview_cache.get(&key).cloned() {
-            self.playlists.items = cached;
+            self.playlists.tracks.items = cached;
             self.drop_visual(ListRef::PlItems);
             self.announce_preview_cap();
             return;
@@ -63,7 +63,7 @@ impl App {
 
     pub(super) fn selected_playlist_key(&self) -> Option<String> {
         let real = self.real_at(ListRef::PlList)?;
-        self.playlists.playlists.get(real).map(|p| p.rating_key.clone())
+        self.playlists.list.items.get(real).map(|p| p.rating_key.clone())
     }
 
     pub(super) fn load_playlist_preview(&mut self, key: String) {
@@ -76,11 +76,11 @@ impl App {
         if self.tab != Tab::Playlists {
             return;
         }
-        let Some(total) = self.playlists.items_total else { return };
+        let Some(total) = self.playlists.tracks_total else { return };
         if self.preview_tracks == 0 || total <= self.preview_tracks {
             return;
         }
-        let shown = self.playlists.items.len();
+        let shown = self.playlists.tracks.items.len();
         let mut msg = format!("preview: {shown} of {total} tracks");
         if let Some(key) = self.keymap.first_key(KeyCtx::Playlists, &Act::Activate) {
             msg.push_str(&format!("; {key} adds all"));
@@ -203,7 +203,7 @@ impl App {
             }
             ListRef::PlList => {
                 let Some(real) = self.real_at(ListRef::PlList) else { return };
-                let Some(pl) = self.playlists.playlists.get(real) else { return };
+                let Some(pl) = self.playlists.list.items.get(real) else { return };
                 let confirm = Confirm::Playlist { name: pl.title.clone() };
                 let key = pl.rating_key.clone();
                 let count = pl.item_count;
@@ -211,9 +211,9 @@ impl App {
             }
             ListRef::PlItems => {
                 let Some(real) = self.real_at(ListRef::PlItems) else { return };
-                let Some(t) = self.playlists.items.get(real).cloned() else { return };
-                let Some(key) = self.playlists.items_for.clone() else { return };
-                let row = self.playlists.playlists.iter().find(|p| p.rating_key == key);
+                let Some(t) = self.playlists.tracks.items.get(real).cloned() else { return };
+                let Some(key) = self.playlists.tracks_for.clone() else { return };
+                let row = self.playlists.list.items.iter().find(|p| p.rating_key == key);
                 let name = row.map(|p| p.title.clone()).unwrap_or_else(|| "playlist".into());
                 // the preview is the first page, so its index is the playlist's
                 // index, and the remainder is what the question must name
@@ -310,7 +310,7 @@ impl App {
             }
             ListRef::PlList => {
                 let Some(real) = self.real_at(ListRef::PlList) else { return };
-                let Some(pl) = self.playlists.playlists.get(real) else { return };
+                let Some(pl) = self.playlists.list.items.get(real) else { return };
                 let confirm = Confirm::Playlist { name: pl.title.clone() };
                 let key = pl.rating_key.clone();
                 let count = pl.item_count;
@@ -318,13 +318,13 @@ impl App {
             }
             ListRef::PlItems => {
                 let Some(real) = self.real_at(ListRef::PlItems) else { return };
-                let Some(t) = self.playlists.items.get(real).cloned() else { return };
+                let Some(t) = self.playlists.tracks.items.get(real).cloned() else { return };
                 if action == QueueAction::PlayNext {
                     let confirm = Confirm::Track { title: t.title.clone() };
                     self.queue_local(vec![t], confirm, QueueAction::PlayNext);
                 } else {
-                    let Some(key) = self.playlists.items_for.clone() else { return };
-                    let row = self.playlists.playlists.iter().find(|p| p.rating_key == key);
+                    let Some(key) = self.playlists.tracks_for.clone() else { return };
+                    let row = self.playlists.list.items.iter().find(|p| p.rating_key == key);
                     let name = row.map(|p| p.title.clone()).unwrap_or_else(|| "playlist".into());
                     // `real` is the position in the playlist (first-page preview)
                     let remainder = row

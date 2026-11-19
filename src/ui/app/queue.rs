@@ -413,7 +413,9 @@ impl App {
             (ListRef::BTracks, _) => {
                 (&self.browser.tracks.items, Some(&self.browser.tracks.filter))
             }
-            (ListRef::PlItems, _) => (&self.playlists.items, Some(&self.pl_items_filter)),
+            (ListRef::PlItems, _) => {
+                (&self.playlists.tracks.items, Some(&self.playlists.tracks.filter))
+            }
             (ListRef::SearchDetail, Some(d)) => (&d.tracks, None),
             _ => return,
         };

@@ -284,9 +284,9 @@ fn rated_lists(app: &mut App) {
     app.queue.items = list();
     app.browser.tracks.items = list();
     app.browser.focus = BrowserCol::Tracks;
-    app.playlists.playlists = vec![playlist(0)];
-    app.playlists.items_for = Some("p0".into());
-    app.playlists.items = list();
+    app.playlists.list.items = vec![playlist(0)];
+    app.playlists.tracks_for = Some("p0".into());
+    app.playlists.tracks.items = list();
     app.playlists.focus = PlaylistsCol::Items;
     let hit = |t: &Track, rating| SearchHit {
         kind: HitKind::Track,

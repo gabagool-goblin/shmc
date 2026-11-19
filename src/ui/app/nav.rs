@@ -173,8 +173,8 @@ impl App {
             ListRef::BArtists => Some(&self.browser.artists.filter),
             ListRef::BAlbums => Some(&self.browser.albums.filter),
             ListRef::BTracks => Some(&self.browser.tracks.filter),
-            ListRef::PlList => Some(&self.pl_list_filter),
-            ListRef::PlItems => Some(&self.pl_items_filter),
+            ListRef::PlList => Some(&self.playlists.list.filter),
+            ListRef::PlItems => Some(&self.playlists.tracks.filter),
             ListRef::Search | ListRef::SearchDetail | ListRef::Help => None,
         }
     }
@@ -185,8 +185,8 @@ impl App {
             ListRef::BArtists => Some(&mut self.browser.artists.filter),
             ListRef::BAlbums => Some(&mut self.browser.albums.filter),
             ListRef::BTracks => Some(&mut self.browser.tracks.filter),
-            ListRef::PlList => Some(&mut self.pl_list_filter),
-            ListRef::PlItems => Some(&mut self.pl_items_filter),
+            ListRef::PlList => Some(&mut self.playlists.list.filter),
+            ListRef::PlItems => Some(&mut self.playlists.tracks.filter),
             ListRef::Search | ListRef::SearchDetail | ListRef::Help => None,
         }
     }
@@ -197,8 +197,8 @@ impl App {
             ListRef::BArtists => self.browser.artists.items.len(),
             ListRef::BAlbums => self.browser.albums.items.len(),
             ListRef::BTracks => self.browser.tracks.items.len(),
-            ListRef::PlList => self.playlists.playlists.len(),
-            ListRef::PlItems => self.playlists.items.len(),
+            ListRef::PlList => self.playlists.list.items.len(),
+            ListRef::PlItems => self.playlists.tracks.items.len(),
             ListRef::Search => self.search.hits.len(),
             ListRef::SearchDetail => {
                 self.search.detail.as_ref().map(|d| d.tracks.len()).unwrap_or(0)
@@ -221,8 +221,8 @@ impl App {
             ListRef::BArtists => self.browser.artists.state.selected(),
             ListRef::BAlbums => self.browser.albums.state.selected(),
             ListRef::BTracks => self.browser.tracks.state.selected(),
-            ListRef::PlList => self.playlists.state.selected(),
-            ListRef::PlItems => self.playlists.items_state.selected(),
+            ListRef::PlList => self.playlists.list.state.selected(),
+            ListRef::PlItems => self.playlists.tracks.state.selected(),
             ListRef::Search => self.search.state.selected(),
             ListRef::SearchDetail => self.search.detail.as_ref().and_then(|d| d.state.selected()),
             ListRef::Help => self.help_state.selected(),
@@ -254,8 +254,8 @@ impl App {
             ListRef::BArtists => f(&mut self.browser.artists.state, vis),
             ListRef::BAlbums => f(&mut self.browser.albums.state, vis),
             ListRef::BTracks => f(&mut self.browser.tracks.state, vis),
-            ListRef::PlList => f(&mut self.playlists.state, vis),
-            ListRef::PlItems => f(&mut self.playlists.items_state, vis),
+            ListRef::PlList => f(&mut self.playlists.list.state, vis),
+            ListRef::PlItems => f(&mut self.playlists.tracks.state, vis),
             ListRef::Search => f(&mut self.search.state, vis),
             ListRef::SearchDetail => {
                 if let Some(d) = self.search.detail.as_mut() {
@@ -324,7 +324,7 @@ impl App {
             }
             Tab::Playlists if self.playlists.focus == PlaylistsCol::Items => {
                 // going back to the playlist list clears its track filter
-                self.pl_items_filter.clear();
+                self.playlists.tracks.filter.clear();
                 self.playlists.focus = PlaylistsCol::List;
             }
             _ => {}
@@ -356,7 +356,7 @@ impl App {
                 }
                 _ => {}
             },
-            Tab::Playlists if !self.playlists.items.is_empty() => {
+            Tab::Playlists if !self.playlists.tracks.items.is_empty() => {
                 self.playlists.focus = PlaylistsCol::Items;
             }
             _ => {}
@@ -439,8 +439,8 @@ impl App {
             ListRef::BArtists => self.browser.artists.items.get(real).map(|a| a.title.as_str()),
             ListRef::BAlbums => self.browser.albums.items.get(real).map(|a| a.title.as_str()),
             ListRef::BTracks => self.browser.tracks.items.get(real).map(|t| t.title.as_str()),
-            ListRef::PlList => self.playlists.playlists.get(real).map(|p| p.title.as_str()),
-            ListRef::PlItems => self.playlists.items.get(real).map(|t| t.title.as_str()),
+            ListRef::PlList => self.playlists.list.items.get(real).map(|p| p.title.as_str()),
+            ListRef::PlItems => self.playlists.tracks.items.get(real).map(|t| t.title.as_str()),
             ListRef::Search => self.search.hits.get(real).map(|h| h.title.as_str()),
             ListRef::SearchDetail => self
                 .search
@@ -491,9 +491,9 @@ impl App {
                 }
             }
             ListRef::PlItems => {
-                let pos = self.playlists.items.iter().position(|t| t.rating_key == key);
-                if let Some(p) = pos.and_then(|r| self.pl_items_filter.cursor_of(r)) {
-                    self.playlists.items_state.select(Some(p));
+                let pos = self.playlists.tracks.items.iter().position(|t| t.rating_key == key);
+                if let Some(p) = pos.and_then(|r| self.playlists.tracks.filter.cursor_of(r)) {
+                    self.playlists.tracks.state.select(Some(p));
                     if center {
                         self.scroll.center_once = Some(ScrollId::PlaylistItems);
                     }
@@ -596,12 +596,12 @@ impl App {
                 });
             }
             ListRef::PlList => {
-                let items = &self.playlists.playlists;
-                self.pl_list_filter.apply(items.len(), |i| needle.found_in(&items[i].title));
+                let items = &self.playlists.list.items;
+                self.playlists.list.filter.apply(items.len(), |i| needle.found_in(&items[i].title));
             }
             ListRef::PlItems => {
-                let items = &self.playlists.items;
-                self.pl_items_filter.apply(items.len(), |i| {
+                let items = &self.playlists.tracks.items;
+                self.playlists.tracks.filter.apply(items.len(), |i| {
                     let t = &items[i];
                     needle.found_in(&t.title)
                         || needle.found_in(&t.artist)
