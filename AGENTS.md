@@ -131,6 +131,8 @@
 
 ### Plex
 
+- The player never calls `PlexClient`: it sends a `PlexCmd` and applies the
+  `Msg` reply. Plex HTTP lives in `src/plex/` and runs on the worker.
 - Never rely on `limit` (`/playlists/<key>/items` ignores it): page with
   `X-Plex-Container-Start`/`-Size` through `get_all_paged`.
 - Bulk endpoints have no `<Stream>`; sample rate and bit depth come from
