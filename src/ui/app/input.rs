@@ -666,6 +666,7 @@ impl App {
                 Tab::Queue => self.goto_album(),
                 Tab::Search => self.reveal_search(),
                 Tab::Discover => self.reveal_discover(),
+                Tab::Playlists => self.reveal_playlist_track(),
                 _ => {}
             },
             Act::JumpToPlaying => self.jump_to_playing(),

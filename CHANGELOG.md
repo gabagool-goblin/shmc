@@ -8,7 +8,7 @@ All notable changes to shmc are documented here. The format follows
 
 ### Added
 
-- `p` picks tracks as stops and `P` builds a Sonic Adventure, a path of sonically close tracks through them (needs Plex Pass).
+- `w` picks tracks as stops and `W` builds a Sonic Adventure, a path of sonically close tracks through them (needs Plex Pass).
 - Radio keeps going as the queue nears its end, and the Queue tab shows the station's name.
 - A Discover tab lists the library's radio stations and shows the highlighted one's tracks; Enter plays them (needs Plex Pass radio and plex.allow_writes).
 - `s` starts track or artist radio from Plex (needs Plex Pass and `plex.allow_writes`).
@@ -21,6 +21,8 @@ All notable changes to shmc are documented here. The format follows
 ### Changed
 
 - Discover is tab 2, so Browser, Playlists, Search and Help move to 3–6.
+- The sleep timer moves from `S` to `t`.
+- `b` works on a playlist's tracks, and `o` in Discover and Search.
 - `plex.allow_writes` replaces `plex.set_ratings`; `shmc config --check` names the old key.
 - `r` rates the highlighted track instead of the playing one; on an artist or album it does nothing.
 

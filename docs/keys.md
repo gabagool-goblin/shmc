@@ -18,7 +18,7 @@ Press `?` or `6` to open Help. It lists all current key bindings, including chan
 | `z` | Toggle shuffle |
 | `Z` | Reshuffle queue |
 | `C` | Toggle consume |
-| `S` | Sleep timer: 15, 30 or 60 minutes, or off |
+| `t` | Sleep timer: 15, 30 or 60 minutes, or off |
 | `r` | Rate the highlighted track |
 | `R` | Rate the playing track |
 | `:` | Open command line |
@@ -35,7 +35,7 @@ The header shows the playing track's rating: five stars, one star or none, set b
 
 `s` on a track or artist starts its Plex radio, which needs Plex Pass and `plex.allow_writes`. The tracks open in the Search tab like similar tracks, and `s` again starts a fresh station. `Enter` on a row plays the list from there as a radio, which keeps going: shmc reads more tracks as the queue nears its end. While it plays, the Queue tab shows the station name and shuffle is off. Replacing or clearing the queue ends it.
 
-`p` on a track adds it as a stop of a Sonic Adventure, up to 10, and the bottom row lists the stops. `P` builds a path of sonically close tracks through them, which needs Plex Pass, and opens it in the Search tab like similar tracks. `Esc` clears the stops first, then goes back as usual.
+`w` on a track adds it as a stop (a waypoint) of a Sonic Adventure, up to 10, and the bottom row lists the stops. `W` builds a path of sonically close tracks through them, which needs Plex Pass, and opens it in the Search tab like similar tracks. `Esc` clears the stops first, then goes back as usual.
 
 On macOS, the media keys and the Control Center buttons work like shmc's own keys: play/pause like `Space`, next and previous like `>` and `<`, fast-forward and rewind seek 5 seconds, and stop like `:stop`. To leave the media keys alone, add `--input-media-keys=no` to `mpv.extra_args`.
 
@@ -51,7 +51,7 @@ These keys work in all tab lists and Help, except where noted.
 | `g` + letter | Jump to the first row starting with that letter |
 | `h`, `l`, `Left`, `Right` | Switch columns (Discover, Browser, Playlists) |
 | `/` | Filter; starts a new search in Search. Not available in Discover or Help |
-| `o` | Jump to the playing track (Queue, Browser, Playlists) |
+| `o` | Jump to the playing track |
 | `v` | Select a range (Queue, Discover, Browser, Playlists and Search tracks) |
 
 After `g`, the next letter always triggers a jump, even if it's bound to another action. For example, `g a` jumps rather than adding. Other keys keep their normal bindings, so `g 2` still switches tabs.
@@ -98,7 +98,7 @@ The Discover tab lists the library's radio stations, which need Plex Pass. The h
 | `Enter` | Replace queue and play |
 | `a` | Add artist, album, playlist or track to the queue |
 | `i` | Insert after the playing track |
-| `b` | Open Search result in Browser |
+| `b` | Open the playlist track or Search result in Browser |
 | `Esc`, `Backspace` | Browser: go back one column; from artists, return to Queue |
 | `Esc` | Search: go back a step |
 
@@ -190,7 +190,7 @@ If `[keys]` contains an invalid section, action, key name or duplicate binding w
 | `toggle_repeat` | `x` | global |
 | `toggle_single` | `c` | global |
 | `toggle_consume` | `C` | global |
-| `sleep_timer` | `S` | global |
+| `sleep_timer` | `t` | global |
 | `move_up`, `move_down` | `k`, `Up`; `j`, `Down` | queue, discover, browser, playlists, search, help |
 | `page_up`, `page_down` | `PgUp`; `PgDn` | queue, discover, browser, playlists, search, help |
 | `top`, `bottom` | `gg`, `Home`; `G`, `End` | queue, discover, browser, playlists, search, help |
@@ -199,14 +199,14 @@ If `[keys]` contains an invalid section, action, key name or duplicate binding w
 | `add` | `a` | discover, browser, playlists, search |
 | `play_next` | `i` | discover, browser, playlists, search |
 | `visual` | `v` | queue, discover, browser, playlists, search |
-| `jump_to_playing` | `o` | queue, browser, playlists |
+| `jump_to_playing` | `o` | queue, discover, browser, playlists, search |
 | `filter` | `/` | queue, browser, playlists |
 | `play` | `Enter` | queue |
 | `remove` | `d` | queue |
 | `undo` | `u` | queue |
 | `clear` | `D` | queue |
 | `move_track_down`, `move_track_up` | `J`, `K` | queue |
-| `show_in_browser` | `b` | queue, discover, search |
+| `show_in_browser` | `b` | queue, discover, playlists, search |
 | `search` | `/` | search |
 | `back` | `Esc`, `BSpace` (browser); `Esc` (queue, discover, playlists, search); `Esc`, `q` (help) | queue, discover, browser, playlists, search, help |
-| `adventure_add`, `adventure_build` | `p`, `P` | queue, discover, browser, playlists, search |
+| `adventure_add`, `adventure_build` | `w`, `W` | queue, discover, browser, playlists, search |

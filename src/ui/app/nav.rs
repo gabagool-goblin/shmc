@@ -63,6 +63,20 @@ impl App {
         self.reveal(t.grandparent_rating_key, t.parent_rating_key, Some(t.rating_key));
     }
 
+    pub(super) fn reveal_playlist_track(&mut self) {
+        if self.active_list() != ListRef::PlItems {
+            return;
+        }
+        let Some(real) = self.real_at(ListRef::PlItems) else { return };
+        let Some(t) = self.playlists.tracks.items.get(real) else { return };
+        let (artist, album, track) = (
+            t.grandparent_rating_key.clone(),
+            t.parent_rating_key.clone(),
+            Some(t.rating_key.clone()),
+        );
+        self.reveal(artist, album, track);
+    }
+
     /// Search results and the album view's tracks.
     pub(super) fn reveal_search(&mut self) {
         use crate::plex::HitKind;
@@ -519,6 +533,36 @@ impl App {
                     self.playlists.tracks.state.select(Some(p));
                     if center {
                         self.scroll.center_once = Some(ScrollId::PlaylistItems);
+                    }
+                }
+            }
+            ListRef::DTracks => {
+                if let Some(p) = self.discover.tracks.iter().position(|t| t.rating_key == key) {
+                    self.discover.tracks_state.select(Some(p));
+                    if center {
+                        self.scroll.center_once = Some(ScrollId::DiscoverTracks);
+                    }
+                }
+            }
+            ListRef::SearchDetail => {
+                let Some(d) = self.search.detail.as_mut() else { return };
+                if let Some(p) = d.tracks.iter().position(|t| t.rating_key == key) {
+                    d.state.select(Some(p));
+                    if center {
+                        self.scroll.center_once = Some(ScrollId::SearchDetail);
+                    }
+                }
+            }
+            ListRef::Search => {
+                let hit = self
+                    .search
+                    .hits
+                    .iter()
+                    .position(|h| h.kind == crate::plex::HitKind::Track && h.rating_key == key);
+                if let Some(p) = hit {
+                    self.search.state.select(Some(p));
+                    if center {
+                        self.scroll.center_once = Some(ScrollId::SearchResults);
                     }
                 }
             }
