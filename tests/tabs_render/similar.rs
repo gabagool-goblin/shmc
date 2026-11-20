@@ -3,7 +3,7 @@
 use super::*;
 use ratatui::widgets::TableState;
 use shmc::plex::models::{Album, Artist, HitKind, SearchHit};
-use shmc::ui::app::{BrowserCol, SimilarKind, SimilarOutcome};
+use shmc::ui::app::{BrowserCol, ListKind, ListRequest, SimilarKind, SimilarOutcome};
 
 type Plex = tokio::sync::mpsc::UnboundedReceiver<PlexCmd>;
 
@@ -118,7 +118,7 @@ async fn found_tracks_open_in_the_search_tab() {
     assert_eq!(keys, ["t10", "t11", "t12"]);
     assert_eq!(d.matches, Some(vec![Some(96), Some(95), Some(90)]));
     assert_eq!(d.state.selected(), Some(0));
-    assert!(app.search.similar_request.is_none());
+    assert!(app.search.list_request.is_none());
 }
 
 /// Only the reply for the latest `m` applies.
@@ -253,7 +253,10 @@ async fn found_albums_replace_the_search_results() {
     let _ = sent(&mut plex);
     app.handle_msg(key('j'));
     app.handle_msg(enter());
-    assert_eq!(app.search.detail_request.as_deref(), Some("al22"));
+    assert_eq!(
+        app.search.list_request.as_ref().map(|r| (r.key.as_str(), r.kind)),
+        Some(("al22", ListKind::Album))
+    );
 }
 
 /// Without Plex Pass, an unanalysed track or no result the list stays where it was.
@@ -276,7 +279,7 @@ async fn empty_outcomes_leave_the_tab_and_the_list_alone() {
         app.handle_msg(Msg::SimilarLoaded { key: "t2".into(), label: "x".into(), outcome });
         assert_eq!(app.tab, Tab::Queue);
         assert_eq!(app.search.detail.as_ref().map(|d| d.key.as_str()), Some("al1"));
-        assert!(app.search.similar_request.is_none());
+        assert!(app.search.list_request.is_none());
     }
 }
 
@@ -537,7 +540,8 @@ async fn the_way_back_keeps_its_first_tab() {
     app.handle_msg(key('m'));
     app.handle_msg(found_albums("al1"));
     for i in 0..30 {
-        app.search.detail_request = Some(format!("al{i}"));
+        app.search.list_request =
+            Some(ListRequest { key: format!("al{i}"), kind: ListKind::Album, origin: Tab::Search });
         app.handle_msg(album_loaded(&format!("al{i}")));
     }
     for _ in 0..25 {

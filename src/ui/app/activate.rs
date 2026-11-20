@@ -1,6 +1,6 @@
 use super::{
-    App, BrowserCol, Confirm, ListRef, Msg, PendingPlaylist, PlaylistsCol, PlexCmd, QueueAction,
-    Tab,
+    App, BrowserCol, Confirm, ListKind, ListRef, Msg, PendingPlaylist, PlaylistsCol, PlexCmd,
+    QueueAction, Tab,
 };
 use crate::ui::keymap::{Act, KeyCtx};
 use crate::ui::playlist_load::PlaylistLoad;
@@ -245,8 +245,11 @@ impl App {
                         self.transient("loading…".into());
                     }
                     HitKind::Album => {
-                        self.clear_list_requests();
-                        self.search.detail_request = Some(hit.rating_key.clone());
+                        self.search.request_list(
+                            hit.rating_key.clone(),
+                            ListKind::Album,
+                            Tab::Search,
+                        );
                         let _ = self.plex.tx.send(PlexCmd::LoadAlbumDetail {
                             key: hit.rating_key,
                             label: hit.title,

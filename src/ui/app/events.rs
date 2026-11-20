@@ -1,5 +1,5 @@
 use super::{
-    sort_albums, App, BrowserCol, ListRef, Msg, PlaylistsCol, PlexCmd, SearchDetail, Tab,
+    sort_albums, App, BrowserCol, ListKind, ListRef, Msg, PlaylistsCol, PlexCmd, SearchDetail, Tab,
     FAILED_STREAK_LIMIT,
 };
 use crate::config::RatingStyle;
@@ -92,13 +92,12 @@ impl App {
                         Some(0)
                     });
                     self.set_search_detail(None);
-                    self.clear_list_requests();
+                    self.search.clear_list_request();
                     self.transient(format!("{} results for {:?}", self.search.hits.len(), query));
                 }
             }
             Msg::SearchAlbumLoaded { key, label, tracks } => {
-                if self.search.detail_request.as_deref() == Some(key.as_str()) {
-                    self.search.detail_request = None;
+                if self.search.take_list_request(&key, |k| k == ListKind::Album).is_some() {
                     self.push_back_for_detail(Tab::Search);
                     let mut state = TableState::default();
                     if !tracks.is_empty() {

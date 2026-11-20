@@ -20,6 +20,7 @@ mod discover;
 mod events;
 mod input;
 mod list;
+mod list_request;
 mod nav;
 mod plex_worker;
 mod queue;
@@ -32,11 +33,12 @@ mod similar;
 
 pub use discover::{DiscoverCol, DiscoverView, Preview, StationsLoad, StationsOutcome};
 pub use list::FilteredList;
+pub use list_request::{ListKind, ListRequest};
 pub use plex_worker::{spawn_plex_worker, PlexCmd, PlexHandle};
 use queue::PosGuard;
-pub use radio::{ActiveRadio, RadioEnv, RadioOutcome, RadioRequest, RadioSeed};
+pub use radio::{ActiveRadio, RadioEnv, RadioOutcome, RadioSeed};
 pub use search_back::{SavedResults, SearchBack};
-pub use similar::{SimilarHits, SimilarKind, SimilarOutcome, SimilarRequest};
+pub use similar::{SimilarHits, SimilarKind, SimilarOutcome};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Tab {
@@ -326,10 +328,7 @@ pub struct SearchState {
     /// Oldest first.
     pub history: Vec<String>,
     history_pos: Option<usize>,
-    /// The album being loaded for the drill-in.
-    pub detail_request: Option<String>,
-    pub similar_request: Option<SimilarRequest>,
-    pub radio_request: Option<RadioRequest>,
+    pub list_request: Option<ListRequest>,
     /// Set while `hits` are a similar albums or artists list, not a search result.
     pub similar: Option<SimilarHits>,
     /// What Esc steps back through, oldest first.

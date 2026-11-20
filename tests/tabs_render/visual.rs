@@ -1,5 +1,5 @@
 use super::*;
-use shmc::ui::app::BrowserCol;
+use shmc::ui::app::{BrowserCol, ListKind, ListRequest};
 
 #[tokio::test]
 async fn visual_range_above_playing_removes_and_undoes() {
@@ -279,7 +279,8 @@ async fn visual_anchor_dropped_on_new_search_detail() {
     app.handle_msg(key('v'));
     assert!(app.visual.is_some());
 
-    app.search.detail_request = Some("al2".into());
+    app.search.list_request =
+        Some(ListRequest { key: "al2".into(), kind: ListKind::Album, origin: Tab::Search });
     app.handle_msg(Msg::SearchAlbumLoaded {
         key: "al2".into(),
         label: "Other".into(),
