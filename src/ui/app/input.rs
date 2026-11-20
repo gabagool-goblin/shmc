@@ -301,7 +301,7 @@ impl App {
                     }
                     self.search.last_query = q.clone();
                     self.set_search_detail(None);
-                    self.clear_list_requests();
+                    self.search.clear_list_request();
                     let _ = self.plex.tx.send(PlexCmd::Search(q));
                     self.transient("searching…".into());
                 }

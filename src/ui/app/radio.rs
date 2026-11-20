@@ -1,7 +1,7 @@
 //! Plex radio: `s` on a track or an artist, and the station the queue plays from.
 
 use super::plex_worker::cached_features;
-use super::{App, Confirm, ListRef, Msg, PlexCmd, SearchDetail, Tab};
+use super::{App, Confirm, ListKind, ListRef, Msg, PlexCmd, SearchDetail, Tab};
 use crate::plex::radio::{RadioQueue, ReadOn};
 use crate::plex::sonic::Features;
 use crate::plex::{HitKind, PlexClient, Track};
@@ -35,14 +35,6 @@ pub enum RadioSeed {
     Artist(String),
     /// A library station's key.
     Station(String),
-}
-
-/// The `s` request whose reply may still open the Search tab's list.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RadioRequest {
-    pub key: String,
-    /// The tab `s` was pressed in.
-    pub origin: Tab,
 }
 
 #[derive(Debug)]
@@ -232,8 +224,7 @@ impl App {
             );
             return;
         }
-        self.clear_list_requests();
-        self.search.radio_request = Some(RadioRequest { key: seed.key.clone(), origin: self.tab });
+        self.search.request_list(seed.key.clone(), ListKind::Radio, self.tab);
         let _ = self.plex.tx.send(PlexCmd::StartRadio {
             key: seed.key,
             seed: seed.seed,
@@ -243,7 +234,7 @@ impl App {
     }
 
     pub(super) fn radio_loaded(&mut self, key: String, label: String, outcome: RadioOutcome) {
-        let Some(req) = self.search.radio_request.take_if(|r| r.key == key) else {
+        let Some(req) = self.search.take_list_request(&key, |k| k == ListKind::Radio) else {
             return;
         };
         match outcome {

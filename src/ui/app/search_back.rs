@@ -61,7 +61,7 @@ impl App {
 
     /// Esc: cancels pending requests, then takes one step back.
     pub(super) fn search_back(&mut self) {
-        self.clear_list_requests();
+        self.search.clear_list_request();
         match self.search.back.pop() {
             Some(SearchBack::Tab(t)) => self.goto_tab(t),
             Some(SearchBack::Results(s)) => {

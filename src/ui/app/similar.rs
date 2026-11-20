@@ -1,7 +1,7 @@
 //! `m`: tracks, albums or artists that sound like the selected one, from Plex's
 //! sonic analysis.
 
-use super::{App, ListRef, PlexCmd, SearchDetail, Tab};
+use super::{App, ListKind, ListRef, PlexCmd, SearchDetail, Tab};
 use crate::plex::{HitKind, SearchHit, Track};
 use ratatui::widgets::TableState;
 
@@ -32,15 +32,6 @@ impl SimilarKind {
             Self::Artists => "artists",
         }
     }
-}
-
-/// The `m` request whose reply may still open the Search tab's list.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct SimilarRequest {
-    pub key: String,
-    pub kind: SimilarKind,
-    /// The tab `m` was pressed in.
-    pub origin: Tab,
 }
 
 /// Labels the Search tab's results while they are a similar albums or artists list.
@@ -139,9 +130,7 @@ impl App {
             self.transient("m works on a track, album or artist".into());
             return;
         };
-        self.clear_list_requests();
-        self.search.similar_request =
-            Some(SimilarRequest { key: seed.key.clone(), kind: seed.kind, origin: self.tab });
+        self.search.request_list(seed.key.clone(), ListKind::Similar(seed.kind), self.tab);
         let _ = self.plex.tx.send(PlexCmd::LoadSimilar {
             key: seed.key,
             kind: seed.kind,
@@ -151,13 +140,6 @@ impl App {
         self.transient(format!("finding similar {}…", seed.kind.plural()));
     }
 
-    /// One request at a time may open the Search tab's list.
-    pub(super) fn clear_list_requests(&mut self) {
-        self.search.detail_request = None;
-        self.search.similar_request = None;
-        self.search.radio_request = None;
-    }
-
     /// Replaces or closes the Search tab's detail list, ending any selection in it.
     pub(super) fn set_search_detail(&mut self, d: Option<SearchDetail>) {
         self.search.detail = d;
@@ -165,9 +147,11 @@ impl App {
     }
 
     pub(super) fn similar_loaded(&mut self, key: String, label: String, outcome: SimilarOutcome) {
-        let Some(req) = self.search.similar_request.take_if(|r| r.key == key) else {
+        let Some(req) = self.search.take_list_request(&key, |k| matches!(k, ListKind::Similar(_)))
+        else {
             return;
         };
+        let ListKind::Similar(kind) = req.kind else { return };
         match outcome {
             SimilarOutcome::Tracks(rows) => {
                 self.push_back_for_detail(req.origin);
@@ -192,9 +176,8 @@ impl App {
                 self.push_back_for_results(req.origin);
                 self.search.state.select((!hits.is_empty()).then_some(0));
                 self.search.hits = hits;
-                self.search.similar = Some(SimilarHits { label, kind: req.kind, matches });
+                self.search.similar = Some(SimilarHits { label, kind, matches });
                 self.set_search_detail(None);
-                self.search.detail_request = None;
                 self.search.focused = false;
                 self.goto_tab(Tab::Search);
             }
@@ -203,7 +186,7 @@ impl App {
                 self.transient("Plex hasn't analysed this track yet".into());
             }
             SimilarOutcome::NoneFound => {
-                self.transient(format!("Plex found no similar {}", req.kind.plural()));
+                self.transient(format!("Plex found no similar {}", kind.plural()));
             }
         }
     }
