@@ -31,12 +31,6 @@ The sleep timer pauses playback when it expires. The header shows the remaining 
 
 The header shows the playing track's rating: five stars, one star or none, set by `ui.rating_style`. The compact layout shows it after the title on the now-playing line, and under the cover when `ui.art_metadata` is on. Track lists show a rated track's rating after its title, `4★` or, with one star, `★`. With `plex.allow_writes = true`, `r` rates the highlighted track and `R` the playing one: `1` to `5`, or `0` to clear; with one star, they toggle the star. Ratings live in Plex, so other Plex apps see them.
 
-`m` on a track, album or artist lists the ones that sound like it, from Plex's sonic analysis, which needs Plex Pass. The list opens in the Search tab, closest first, with a Match column, and the usual keys work on it. Similar albums include the artist's own. `Esc` goes back a step at a time, ending at the tab where `m` was pressed.
-
-`s` on a track or artist starts its Plex radio, which needs Plex Pass and `plex.allow_writes`. The tracks open in the Search tab like similar tracks, and `s` again starts a fresh station. `Enter` on a row plays the list from there as a radio, which keeps going: shmc reads more tracks as the queue nears its end. While it plays, the Queue tab shows the station name and shuffle is off. Replacing or clearing the queue ends it.
-
-`w` on a track adds it as a stop (a waypoint) of a Sonic Adventure, up to 10, and the bottom row lists the stops. `W` builds a path of sonically close tracks through them, which needs Plex Pass, and opens it in the Search tab like similar tracks. `Esc` clears the stops first, then goes back as usual.
-
 On macOS, the media keys and the Control Center buttons work like shmc's own keys: play/pause like `Space`, next and previous like `>` and `<`, fast-forward and rewind seek 5 seconds, and stop like `:stop`. To leave the media keys alone, add `--input-media-keys=no` to `mpv.extra_args`.
 
 ## Lists
@@ -77,9 +71,24 @@ Set `ui.auto_follow = false` to disable pinning. In that case, `o` jumps to the 
 
 Tracks that fail to play are skipped. After three consecutive failures, playback stops and displays the failed track. Press `>` to continue.
 
+## Similar tracks and radio
+
+These work in the Queue, Discover, Browser, Playlists and Search tabs and need Plex Pass; `s` also needs `plex.allow_writes`.
+
+| Key | Action |
+|---|---|
+| `m` | Similar tracks, albums or artists |
+| `s` | Track or artist radio |
+| `w` | Add a Sonic Adventure stop (up to 10) |
+| `W` | Build a Sonic Adventure: a path of similar tracks through the stops |
+
+Results open in the Search tab, where the usual keys work. `Esc` goes back a step at a time, ending at the tab you started from; with stops picked, it clears them first. Similar albums include the artist's own.
+
+`Enter` on a radio track plays the list from there and keeps going: shmc fetches more as the queue nears its end. While it plays, the Queue tab shows the station name and shuffle is off. Replacing or clearing the queue ends it.
+
 ## Discover
 
-The Discover tab lists the library's radio stations, which need Plex Pass. The highlighted station's first 30 tracks show on the right, and `Enter` plays them as a radio, like `s`. Each look creates a play queue on the server, so it needs `plex.allow_writes`. A station is asked for once, and again only after it has played.
+The Discover tab lists the library's radio stations (Plex Pass and `plex.allow_writes`). The highlighted station's first 30 tracks show on the right, and `Enter` plays them as a radio.
 
 | Key | Action |
 |---|---|
@@ -191,6 +200,8 @@ If `[keys]` contains an invalid section, action, key name or duplicate binding w
 | `toggle_single` | `c` | global |
 | `toggle_consume` | `C` | global |
 | `sleep_timer` | `t` | global |
+| `rate` | `r` | global |
+| `rate_playing` | `R` | global |
 | `move_up`, `move_down` | `k`, `Up`; `j`, `Down` | queue, discover, browser, playlists, search, help |
 | `page_up`, `page_down` | `PgUp`; `PgDn` | queue, discover, browser, playlists, search, help |
 | `top`, `bottom` | `gg`, `Home`; `G`, `End` | queue, discover, browser, playlists, search, help |
@@ -209,4 +220,6 @@ If `[keys]` contains an invalid section, action, key name or duplicate binding w
 | `show_in_browser` | `b` | queue, discover, playlists, search |
 | `search` | `/` | search |
 | `back` | `Esc`, `BSpace` (browser); `Esc` (queue, discover, playlists, search); `Esc`, `q` (help) | queue, discover, browser, playlists, search, help |
+| `similar` | `m` | queue, discover, browser, playlists, search |
+| `radio` | `s` | queue, discover, browser, playlists, search |
 | `adventure_add`, `adventure_build` | `w`, `W` | queue, discover, browser, playlists, search |

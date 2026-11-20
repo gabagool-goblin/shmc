@@ -4,6 +4,7 @@ A terminal music player for Plex, written in Rust and built with [Ratatui](https
 
 - Browse, search and play your Plex music library through mpv.
 - Album art, a cava visualizer and themes.
+- Radio, stations and sonically similar music with Plex Pass.
 
 See [Features](#features) for details.
 
@@ -33,9 +34,12 @@ Compact layout with the `gruvbox-dark` theme and track details below the cover:
 ### Plex
 - View track ratings and optionally update them on Plex.
 - Optionally report playback to Plex, including play counts and last played dates.
-- List sonically similar tracks, albums or artists (Plex Pass).
-- Start track or artist radio (Plex Pass).
-- Pick tracks with `w` and build a path of similar tracks through them with `W` (Plex Pass).
+
+### Radio and sonic analysis (Plex Pass)
+- Track and artist radio that keeps going as you listen.
+- The library's radio stations in a Discover tab.
+- Sonically similar tracks, albums and artists.
+- Sonic Adventure: a path of similar-sounding tracks through stops you pick.
 
 ### Appearance
 - Album art via Kitty, iTerm2, Sixel or half-blocks.
@@ -113,7 +117,7 @@ See [Configuration](docs/configuration.md) for help finding your token.
 
 | Key | Action |
 |---|---|
-| `2` / `3` | Discover (radio stations) / Browser |
+| `1`–`6`, `Tab` | Switch tabs |
 | `h` `j` `k` `l` / arrows | Navigate |
 | `Enter` | Play selection |
 | `a` / `i` | Add to queue / play next |

@@ -125,6 +125,8 @@ Invalid or out-of-range values are reported by `shmc config --check` and replace
 
 With `report_playback = true`, shmc reports what it plays to Plex, so play counts, last played and smart playlists include it. A track counts once it has played for 30 seconds, or 90% of a shorter track.
 
+With `allow_writes = true`, shmc can rate tracks and start radio, which creates play queues on the server. `:save` works either way.
+
 ### mpv
 
 shmc starts mpv with `--no-config`, so your `mpv.conf` and scripts aren't loaded. Pass options through `mpv.extra_args` instead.
