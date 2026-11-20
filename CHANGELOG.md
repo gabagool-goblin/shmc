@@ -31,6 +31,7 @@ All notable changes to shmc are documented here. The format follows
 
 - Log lines written at the same moment no longer run together in `shmc.log`.
 - On a narrow window, track tables no longer cut Title to a letter while Album stays wide.
+- Crafted XML from a server can no longer stall shmc or exhaust its memory, and distrusted certificate authorities are no longer trusted.
 
 ## 0.2.1 — 2026-11-16
 
