@@ -85,8 +85,17 @@ pub(super) fn track_cols(num_w: Option<u16>, len_w: u16, tc: &TrackCols) -> Vec<
     v
 }
 
+/// Album's floor at the default weights; a higher one squeezes Title instead.
+const ALBUM_COL_MIN: u16 = 6;
+
 pub(super) const TRACK_LEGACY: [Constraint; 3] =
-    [Constraint::Percentage(30), Constraint::Percentage(24), Constraint::Min(12)];
+    [Constraint::Percentage(30), Constraint::Percentage(24), Constraint::Min(ALBUM_COL_MIN)];
+
+pub(super) const SEARCH_HIT_COLS: [Constraint; 3] =
+    [Constraint::Percentage(24), Constraint::Percentage(36), Constraint::Min(ALBUM_COL_MIN)];
+
+pub(super) const SEARCH_TRACK_COLS: [Constraint; 3] =
+    [Constraint::Percentage(34), Constraint::Percentage(24), Constraint::Min(ALBUM_COL_MIN)];
 
 /// Width of the Len column: the longest track's time, at least `LEN_COL_MIN`.
 pub(super) fn len_col_width(longest_ms: Option<u64>) -> u16 {
@@ -495,6 +504,21 @@ mod tests {
         // too narrow for the minimum
         let w = weighted_widths(&cols([1, 1, 98]), 14);
         assert_eq!(w.iter().sum::<u16>() + 3, 14, "{w:?}");
+    }
+
+    /// Narrow default tables squeeze Album before Title and Artist.
+    #[test]
+    fn narrow_default_tables_keep_title_before_album() {
+        for (defaults, title) in [(TRACK_LEGACY, 0), (SEARCH_HIT_COLS, 1), (SEARCH_TRACK_COLS, 0)] {
+            let mut cols = defaults.to_vec();
+            cols.push(Constraint::Length(theme::LEN_COL_MIN));
+            for width in 20u16..=120 {
+                let w = layout_widths(&cols, width);
+                let squeezed = (0..2).any(|c| w[c] < ALBUM_COL_MIN);
+                assert!(!squeezed || w[2] <= ALBUM_COL_MIN, "{width}: {w:?}");
+                assert!(w[title] > 1, "{width}: {w:?}");
+            }
+        }
     }
 
     /// `m:ss` and `mm:ss` share a width; an hour-long track widens it just enough.

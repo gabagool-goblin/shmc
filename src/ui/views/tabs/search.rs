@@ -5,7 +5,9 @@ use crate::ui::scroll::ScrollId;
 use crate::ui::scrollbar::render_scrollbar;
 use crate::ui::theme;
 use crate::ui::views::draw_block;
-use crate::ui::views::tables::{len_col_width, table_frame, HeaderSpec, TrackCols};
+use crate::ui::views::tables::{
+    len_col_width, table_frame, HeaderSpec, TrackCols, SEARCH_HIT_COLS, SEARCH_TRACK_COLS,
+};
 use crate::ui::views::widgets::{clean, placeholder, title_spans};
 use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::Modifier;
@@ -41,11 +43,7 @@ fn draw_search_results(f: &mut Frame, app: &mut App, inner: Rect) {
         draw_similar_hits(f, app, parts[1]);
         return;
     }
-    let tc = TrackCols::new(
-        app.column_weights,
-        [1, 0, 2],
-        [Constraint::Percentage(24), Constraint::Percentage(36), Constraint::Min(12)],
-    );
+    let tc = TrackCols::new(app.column_weights, [1, 0, 2], SEARCH_HIT_COLS);
     let mut cols = tc.constraints();
     cols.push(Constraint::Length(len_col_width(
         app.search.hits.iter().filter_map(|h| h.duration_ms).max(),
@@ -210,10 +208,7 @@ fn draw_search_detail(f: &mut Frame, app: &mut App, inner: Rect) {
     };
     draw_list_label(f, parts[0], &label, &format!(" ({})", SimilarKind::Tracks.count(total)));
 
-    let tc = TrackCols::plain(
-        app.column_weights,
-        [Constraint::Percentage(34), Constraint::Percentage(24), Constraint::Min(12)],
-    );
+    let tc = TrackCols::plain(app.column_weights, SEARCH_TRACK_COLS);
     // Match gives way first on a narrow pane, so Len and the text keep their room.
     let show_match = inner.width >= MATCH_MIN_WIDTH
         && app.search.detail.as_ref().is_some_and(|d| d.matches.is_some());

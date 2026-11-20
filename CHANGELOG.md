@@ -25,6 +25,7 @@ All notable changes to shmc are documented here. The format follows
 ### Fixed
 
 - Log lines written at the same moment no longer run together in `shmc.log`.
+- On a narrow window, track tables no longer cut Title to a letter while Album stays wide.
 
 ## 0.2.1 — 2026-11-16
 
