@@ -76,3 +76,20 @@ jobs:
 
       - name: Clippy
         run: cargo clippy --release --locked --all-targets -- -D warnings
+
+  msrv:
+    name: rust-version
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Install the Cargo.toml rust-version
+        run: |
+          msrv=$(sed -n 's/^rust-version = "\(.*\)"/\1/p' Cargo.toml)
+          rustup toolchain install "$msrv" --profile minimal --no-self-update
+          rustup default "$msrv"
+          rustc --version
+
+      - name: Check
+        run: cargo check --locked --all-targets

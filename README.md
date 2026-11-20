@@ -58,7 +58,7 @@ Compact layout with the `gruvbox-dark` theme and track details below the cover:
 - [cava](https://github.com/karlstav/cava) (optional, for the visualizer).
 - A terminal supporting at least 256 colours.
 - A [Nerd Font](https://www.nerdfonts.com) for the default icons. Set `ui.icons = "ascii"` to use ASCII icons instead.
-- [Rust](https://rustup.rs), git and a C compiler (for building from source).
+- [Rust](https://rustup.rs) 1.88 or newer, git and a C compiler (for building from source).
 
 ## Install
 
@@ -83,7 +83,7 @@ curl -fsSL https://raw.githubusercontent.com/gabagool-goblin/shmc/main/scripts/i
 
 The installer downloads a prebuilt binary for macOS on Apple Silicon or Linux on x86_64 and arm64. Downloads are verified against the release's `SHA256SUMS` file. To check that a downloaded tarball was built by this repository's release workflow, run `gh attestation verify shmc-*.tar.gz --repo gabagool-goblin/shmc`.
 
-On other platforms, or when using `--source`, the installer builds from source. This requires Rust, git and a C compiler. On macOS, install the compiler tools with `xcode-select --install`. On Debian or Ubuntu, install `build-essential`; on Fedora, install `gcc`.
+On other platforms, or when using `--source`, the installer builds from source. This requires Rust 1.88 or newer, git and a C compiler. On macOS, install the compiler tools with `xcode-select --install`. On Debian or Ubuntu, install `build-essential`; on Fedora, install `gcc`.
 
 The default install location is `~/.local/bin`. Set a different location with `install.sh DIR` or `PREFIX=DIR`. Use `--version x.x.x` to install a specific release. Pass options through the pipe with `sh -s --`:
 

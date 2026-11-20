@@ -25,6 +25,7 @@ All notable changes to shmc are documented here. The format follows
 - `b` works on a playlist's tracks, and `o` in Discover and Search.
 - `plex.allow_writes` replaces `plex.set_ratings`; `shmc config --check` names the old key.
 - `r` rates the highlighted track instead of the playing one; on an artist or album it does nothing.
+- Building from source needs Rust 1.88 or newer.
 
 ### Fixed
 
