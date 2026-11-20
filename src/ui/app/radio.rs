@@ -53,7 +53,7 @@ impl RadioOutcome {
     pub(super) fn problem(&self) -> &'static str {
         match self {
             RadioOutcome::NoRadio => "radio needs Plex Pass",
-            RadioOutcome::NoStation => "Plex lists no radio for this artist",
+            RadioOutcome::NoStation => "no radio for this artist",
             RadioOutcome::NoClientId => "radio is off: cannot store the client id",
             RadioOutcome::Tracks(..) | RadioOutcome::Empty => "the station returned no tracks",
         }
@@ -321,7 +321,7 @@ impl App {
             }
             ReadOn::Gone => {
                 self.radio = None;
-                self.transient_err("radio ended: Plex dropped the station".into());
+                self.transient_err("radio ended: the station no longer exists".into());
             }
             ReadOn::Failed(e) => {
                 tracing::warn!("radio: reading more tracks: {e}");

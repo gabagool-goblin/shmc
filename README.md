@@ -35,6 +35,7 @@ Compact layout with the `gruvbox-dark` theme and track details below the cover:
 - Optionally report playback to Plex, including play counts and last played dates.
 - List sonically similar tracks, albums or artists (Plex Pass).
 - Start track or artist radio (Plex Pass).
+- Pick tracks with `p` and build a path of similar tracks through them with `P` (Plex Pass).
 
 ### Appearance
 - Album art via Kitty, iTerm2, Sixel or half-blocks.

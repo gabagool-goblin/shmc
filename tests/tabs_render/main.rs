@@ -14,6 +14,7 @@ use shmc::ui::views;
 use std::sync::Arc;
 use tokio::sync::mpsc::unbounded_channel;
 
+mod adventure;
 mod art;
 mod browse;
 mod discover;

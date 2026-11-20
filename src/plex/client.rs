@@ -221,6 +221,18 @@ pub struct PlexClient {
     token: String,
 }
 
+/// A 404 from a read, so a caller can tell a missing item from a failure.
+#[derive(Debug)]
+pub(crate) struct NotFound(String);
+
+impl std::fmt::Display for NotFound {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Plex returned HTTP 404 Not Found for {}", self.0)
+    }
+}
+
+impl std::error::Error for NotFound {}
+
 impl PlexClient {
     pub fn new(base: &str, token: &str) -> Self {
         Self {
@@ -300,11 +312,11 @@ impl PlexClient {
                         if let Some(msg) = redirect_error(&resp) {
                             bail!(msg);
                         }
-                        bail!(
-                            "Plex returned HTTP {} for {}",
-                            status,
-                            crate::redact::escape_field(url)
-                        );
+                        let url = crate::redact::escape_field(url);
+                        if status == reqwest::StatusCode::NOT_FOUND {
+                            return Err(NotFound(url.to_string()).into());
+                        }
+                        bail!("Plex returned HTTP {status} for {url}");
                     }
                     return read_capped(resp, max_bytes, url).await;
                 }

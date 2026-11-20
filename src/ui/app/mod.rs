@@ -16,6 +16,7 @@ use std::time::{Duration, Instant};
 use tokio::sync::mpsc::UnboundedSender;
 
 mod activate;
+mod adventure;
 mod discover;
 mod events;
 mod input;
@@ -31,6 +32,7 @@ mod search_back;
 mod shuffle;
 mod similar;
 
+pub use adventure::{Adventure, AdventureOutcome, Stop};
 pub use discover::{DiscoverCol, DiscoverView, Preview, StationsLoad, StationsOutcome};
 pub use list::FilteredList;
 pub use list_request::{ListKind, ListRequest};
@@ -170,6 +172,15 @@ pub enum Msg {
         key: String,
         label: String,
         outcome: RadioOutcome,
+    },
+    AdventureProgress {
+        key: String,
+        leg: usize,
+        legs: usize,
+    },
+    AdventureBuilt {
+        key: String,
+        outcome: AdventureOutcome,
     },
     StationsLoaded(StationsOutcome),
     StationPreview {
@@ -492,6 +503,7 @@ pub struct App {
     playlist_load: Option<PlaylistLoad>,
     queue_seq: QueueSeq,
     pub radio: Option<ActiveRadio>,
+    pub adventure: Adventure,
     /// 0 = previews off.
     pub preview_tracks: usize,
     pub preview_debounce_ms: u64,
@@ -643,6 +655,7 @@ impl App {
             err_streak: 0,
             discover: DiscoverView::default(),
             radio: None,
+            adventure: Adventure::default(),
             browser: Browser::default(),
             playlists: PlaylistsView::default(),
             search: SearchState::default(),

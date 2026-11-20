@@ -2,6 +2,7 @@ use super::draw_block_as;
 use super::widgets::clean;
 use crate::ui::app::{App, Tab};
 use crate::ui::icons;
+use crate::ui::keymap::Act;
 use crate::ui::theme;
 use ratatui::layout::{Alignment, Constraint, Layout, Rect};
 use ratatui::style::{Modifier, Style};
@@ -140,7 +141,44 @@ pub(super) fn draw_bottom(f: &mut Frame, app: &mut App, area: Rect, titled: bool
         return;
     }
 
+    if let Some(line) = adventure_line(app, inner.width) {
+        f.render_widget(
+            Paragraph::new(line).style(theme::secondary()).alignment(Alignment::Center),
+            inner,
+        );
+        return;
+    }
+
     draw_progress(f, app, inner);
+}
+
+/// The stops line, at most `width` cells wide; the titles shrink before the hint does.
+fn adventure_line(app: &App, width: u16) -> Option<String> {
+    let stops = &app.adventure.stops;
+    if stops.is_empty() {
+        return None;
+    }
+    let ctx = app.key_ctx();
+    let mut tail = String::new();
+    for (act, what) in [(Act::BuildAdventure, "builds"), (Act::Back, "clears")] {
+        if let Some(key) = app.keymap.first_key(ctx, &act) {
+            tail.push_str(&format!(" · {key} {what}"));
+        }
+    }
+    let head = "Sonic Adventure: ";
+    let room = (width as usize).saturating_sub(theme::str_width(head) + theme::str_width(&tail));
+    let titles: Vec<String> = stops.iter().map(|s| clean(&s.title)).collect();
+    let joined = |cap: u16| {
+        let shown: Vec<String> = titles.iter().map(|t| theme::ellipsize(t, cap)).collect();
+        shown.join(" → ")
+    };
+    let widest = titles.iter().map(|t| theme::str_width(t)).max().unwrap_or(0) as u16;
+    let list = (1..=widest)
+        .rev()
+        .map(joined)
+        .find(|l| theme::str_width(l) <= room)
+        .unwrap_or_else(|| theme::ellipsize(&joined(widest), room as u16));
+    Some(theme::ellipsize(&format!("{head}{list}{tail}"), width))
 }
 
 /// The end of `text` that fits `width` cells less `reserved` (prompt and caret),

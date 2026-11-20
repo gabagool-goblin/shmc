@@ -569,7 +569,7 @@ impl App {
         }
     }
 
-    pub(super) fn key_ctx(&self) -> KeyCtx {
+    pub fn key_ctx(&self) -> KeyCtx {
         match self.tab {
             Tab::Queue => KeyCtx::Queue,
             Tab::Discover => KeyCtx::Discover,
@@ -760,6 +760,8 @@ impl App {
             Act::RatePlaying => self.rate_playing(),
             Act::Similar => self.find_similar(),
             Act::Radio => self.start_radio(),
+            Act::AddStop => self.add_stop(),
+            Act::BuildAdventure => self.build_adventure(),
         }
     }
 }
