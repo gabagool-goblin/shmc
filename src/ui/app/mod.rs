@@ -34,7 +34,7 @@ pub use discover::{DiscoverCol, DiscoverView, Preview, StationsLoad, StationsOut
 pub use list::FilteredList;
 pub use plex_worker::{spawn_plex_worker, PlexCmd, PlexHandle};
 use queue::PosGuard;
-pub use radio::{RadioEnv, RadioOutcome, RadioRequest, RadioSeed};
+pub use radio::{ActiveRadio, RadioEnv, RadioOutcome, RadioRequest, RadioSeed};
 pub use search_back::{SavedResults, SearchBack};
 pub use similar::{SimilarHits, SimilarKind, SimilarOutcome, SimilarRequest};
 
@@ -312,6 +312,8 @@ pub struct SearchDetail {
     pub state: TableState,
     /// Set on a similar-tracks list: the match percentage of each track.
     pub matches: Option<Vec<Option<u8>>>,
+    /// Set on a radio list: Enter plays it as a radio.
+    pub radio: Option<crate::plex::radio::RadioQueue>,
 }
 
 #[derive(Default)]
@@ -490,6 +492,7 @@ pub struct App {
     /// The playlist still arriving after its first page.
     playlist_load: Option<PlaylistLoad>,
     queue_seq: QueueSeq,
+    pub radio: Option<ActiveRadio>,
     /// 0 = previews off.
     pub preview_tracks: usize,
     pub preview_debounce_ms: u64,
@@ -640,6 +643,7 @@ impl App {
             failed_at: None,
             err_streak: 0,
             discover: DiscoverView::default(),
+            radio: None,
             browser: Browser::default(),
             playlists: PlaylistsView::default(),
             search: SearchState::default(),

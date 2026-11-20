@@ -110,6 +110,7 @@ impl App {
                         tracks,
                         state,
                         matches: None,
+                        radio: None,
                     }));
                     self.search.focused = false;
                 }
@@ -348,6 +349,7 @@ impl App {
         }
         self.preview_playlist();
         self.follow_station();
+        self.follow_radio();
     }
 
     /// Whether `pos` is a stale position to ignore. The guard ends on its

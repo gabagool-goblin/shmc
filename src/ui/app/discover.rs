@@ -3,7 +3,7 @@
 use super::plex_worker::cached_features;
 use super::radio::{self, RadioEnv, RadioOutcome, RadioSeed};
 use super::{App, Confirm, ListRef, Msg, PlexCmd, QueueAction, Tab};
-use crate::plex::radio::Station;
+use crate::plex::radio::{RadioQueue, Station};
 use crate::plex::sonic::Features;
 use crate::plex::{PlexClient, Track};
 use ratatui::widgets::{ListState, TableState};
@@ -38,7 +38,7 @@ pub enum StationsOutcome {
 #[derive(Debug, Clone)]
 pub enum Preview {
     Loading,
-    Ready(Vec<Track>),
+    Ready(Vec<Track>, RadioQueue),
     Failed(String),
 }
 
@@ -51,6 +51,8 @@ pub struct DiscoverView {
     /// The highlighted station's title, once its tracks are in.
     pub label: Option<String>,
     pub tracks: Vec<Track>,
+    /// The play queue behind `tracks`.
+    radio: Option<RadioQueue>,
     pub tracks_state: TableState,
     /// Each station's tracks, fetched once; every fetch makes a play queue.
     previews: HashMap<String, Preview>,
@@ -98,7 +100,7 @@ pub(super) async fn preview_station(
 ) {
     let seed = RadioSeed::Station(key.clone());
     let preview = match radio::start(client, features, env, seed, title).await.1 {
-        RadioOutcome::Tracks(tracks) => Preview::Ready(tracks),
+        RadioOutcome::Tracks(tracks, queue) => Preview::Ready(tracks, queue),
         RadioOutcome::NoStation => Preview::Failed(RadioOutcome::Empty.problem().into()),
         other => Preview::Failed(other.problem().into()),
     };
@@ -177,13 +179,15 @@ impl App {
             self.discover.stations.iter().find(|s| &s.key == key).map(|s| s.title.clone())
         });
         match self.discover.shown_preview().cloned() {
-            Some(Preview::Ready(tracks)) => {
+            Some(Preview::Ready(tracks, queue)) => {
                 self.discover.tracks_state.select((!tracks.is_empty()).then_some(0));
                 self.discover.tracks = tracks;
+                self.discover.radio = Some(queue);
                 self.discover.label = title;
             }
             _ => {
                 self.discover.tracks.clear();
+                self.discover.radio = None;
                 self.discover.tracks_state.select(None);
                 self.discover.label = None;
                 self.discover.focus = DiscoverCol::Stations;
@@ -210,10 +214,10 @@ impl App {
             return;
         }
         match self.discover.previews.get(&station.key) {
-            Some(Preview::Ready(tracks)) if !tracks.is_empty() => {
-                let tracks = tracks.clone();
+            Some(Preview::Ready(tracks, queue)) if !tracks.is_empty() => {
+                let (tracks, queue) = (tracks.clone(), queue.clone());
                 self.discover.played.insert(station.key);
-                self.play_station_tracks(tracks, station.title);
+                self.play_radio(tracks, station.title, queue);
             }
             Some(Preview::Failed(msg)) => self.transient(msg.clone()),
             _ => self.transient(format!("still loading {}…", station.title)),
@@ -223,17 +227,12 @@ impl App {
     pub(super) fn play_discover_from(&mut self) {
         let Some(real) = self.real_at(ListRef::DTracks) else { return };
         let Some(name) = self.discover.label.clone() else { return };
+        let Some(queue) = self.discover.radio.clone() else { return };
         let tracks = self.discover.tracks[real..].to_vec();
         if let Some(key) = self.discover.shown.clone() {
             self.discover.played.insert(key);
         }
-        self.play_station_tracks(tracks, name);
-    }
-
-    /// Radio plays in its own order, so shuffle goes off.
-    fn play_station_tracks(&mut self, tracks: Vec<Track>, name: String) {
-        self.random = false;
-        self.queue_local(tracks, Confirm::FromList { name }, QueueAction::Replace);
+        self.play_radio(tracks, name, queue);
     }
 
     pub(super) fn add_discover_track(&mut self, action: QueueAction) {
@@ -335,7 +334,8 @@ mod tests {
     #[tokio::test]
     async fn a_preview_reads_the_station_key_as_is_and_replies_once() {
         let (msgs, seen) = previewed(Some("cid1"), 30).await;
-        let [Msg::StationPreview { key, preview: Preview::Ready(tracks) }] = msgs.as_slice() else {
+        let [Msg::StationPreview { key, preview: Preview::Ready(tracks, _) }] = msgs.as_slice()
+        else {
             panic!("expected one ready preview");
         };
         assert_eq!((key.as_str(), tracks.len()), ("/library/sections/1/stations/8", 30));

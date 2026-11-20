@@ -1,15 +1,33 @@
-//! `s`: Plex's radio for a track or an artist, opened in the Search tab's list.
+//! Plex radio: `s` on a track or an artist, and the station the queue plays from.
 
 use super::plex_worker::cached_features;
-use super::{App, ListRef, Msg, PlexCmd, SearchDetail, Tab};
+use super::{App, Confirm, ListRef, Msg, PlexCmd, SearchDetail, Tab};
+use crate::plex::radio::{RadioQueue, ReadOn};
 use crate::plex::sonic::Features;
 use crate::plex::{HitKind, PlexClient, Track};
+use crate::ui::queue_seq::{QueueOutcome, QueueReplyGuard};
 use ratatui::widgets::TableState;
 use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc::UnboundedSender;
 
-/// How many tracks to read from a station.
+/// How many tracks to read when a station starts.
 const WANT: usize = 30;
+
+/// How many tracks to read each time the queue nears its end.
+const MORE: usize = 20;
+
+/// Read more once this many tracks or fewer follow the playing one.
+const NEAR_END: usize = 10;
+
+/// The station the queue plays from.
+pub struct ActiveRadio {
+    pub name: String,
+    queue: RadioQueue,
+    /// Seq of the last read for more tracks.
+    asked: Option<u64>,
+    /// The playing track when a read failed; no new read until it changes.
+    failed_at: Option<(usize, String)>,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RadioSeed {
@@ -29,7 +47,7 @@ pub struct RadioRequest {
 
 #[derive(Debug)]
 pub enum RadioOutcome {
-    Tracks(Vec<Track>),
+    Tracks(Vec<Track>, RadioQueue),
     /// The server has no Plex Pass radio.
     NoRadio,
     /// The artist lists no station.
@@ -45,7 +63,7 @@ impl RadioOutcome {
             RadioOutcome::NoRadio => "radio needs Plex Pass",
             RadioOutcome::NoStation => "Plex lists no radio for this artist",
             RadioOutcome::NoClientId => "radio is off: cannot store the client id",
-            RadioOutcome::Tracks(_) | RadioOutcome::Empty => "the station returned no tracks",
+            RadioOutcome::Tracks(..) | RadioOutcome::Empty => "the station returned no tracks",
         }
     }
 }
@@ -124,7 +142,7 @@ pub(super) async fn start(
         return (label, RadioOutcome::Empty);
     };
     let outcome = match client.radio_tracks(client_id, &machine_id, &station_key, WANT).await {
-        Ok(t) if !t.is_empty() => RadioOutcome::Tracks(t),
+        Ok((t, queue)) if !t.is_empty() => RadioOutcome::Tracks(t, queue),
         Ok(_) => RadioOutcome::Empty,
         Err(e) => {
             tracing::warn!("radio: {e:#}");
@@ -132,6 +150,22 @@ pub(super) async fn start(
         }
     };
     (label, outcome)
+}
+
+/// Worker side: replies once with `QueueOutcome::RadioMore`.
+pub(super) async fn more(
+    client: &PlexClient,
+    env: &RadioEnv,
+    tx: UnboundedSender<Msg>,
+    seq: u64,
+    queue: RadioQueue,
+) {
+    let reply = QueueReplyGuard::new(tx, seq);
+    let result = match env.client_id.as_deref() {
+        Some(client_id) => client.radio_read_on(client_id, &queue, MORE).await,
+        None => ReadOn::Failed("no client id".into()),
+    };
+    reply.send(QueueOutcome::RadioMore { id: queue.id, result });
 }
 
 struct Seed {
@@ -213,7 +247,7 @@ impl App {
             return;
         };
         match outcome {
-            RadioOutcome::Tracks(tracks) => {
+            RadioOutcome::Tracks(tracks, queue) => {
                 self.push_back_for_detail(req.origin);
                 let mut state = TableState::default();
                 state.select(Some(0));
@@ -223,11 +257,85 @@ impl App {
                     tracks,
                     state,
                     matches: None,
+                    radio: Some(queue),
                 }));
                 self.search.focused = false;
                 self.goto_tab(Tab::Search);
             }
             other => self.transient(other.problem().into()),
+        }
+    }
+
+    /// Replaces the queue with `tracks`, shuffle off, and makes `queue` the
+    /// active radio once the replace applies.
+    pub(super) fn play_radio(&mut self, tracks: Vec<Track>, name: String, queue: RadioQueue) {
+        self.random = false;
+        let confirm = Confirm::FromList { name: name.clone() };
+        self.queue_outcome_local(true, QueueOutcome::Radio { tracks, confirm, name, queue });
+    }
+
+    pub(super) fn begin_radio(&mut self, name: String, queue: RadioQueue) {
+        self.radio = Some(ActiveRadio { name, queue, asked: None, failed_at: None });
+    }
+
+    /// Radio plays in its own order.
+    pub(super) fn refuse_shuffle_in_radio(&mut self) -> bool {
+        if self.radio.is_none() {
+            return false;
+        }
+        self.transient("shuffle is off while radio plays".into());
+        true
+    }
+
+    fn playing_track(&self) -> Option<(usize, String)> {
+        let c = self.current?;
+        Some((c, self.queue.items.get(c)?.rating_key.clone()))
+    }
+
+    /// Runs after every message; reads more tracks when the queue nears its end.
+    pub(super) fn follow_radio(&mut self) {
+        let Some(radio) = self.radio.as_ref() else { return };
+        let Some(playing) = self.playing_track() else { return };
+        let ahead = self.queue.items.len().saturating_sub(playing.0 + 1);
+        let in_flight = radio.asked.is_some_and(|s| !self.queue_seq.settled(s));
+        if self.stopped
+            || self.expect_pos.is_some()
+            || ahead > NEAR_END
+            || in_flight
+            || radio.failed_at.as_ref() == Some(&playing)
+        {
+            return;
+        }
+        let queue = radio.queue.clone();
+        let seq = self.issue_seq(false);
+        if let Some(radio) = self.radio.as_mut() {
+            radio.asked = Some(seq);
+        }
+        let _ = self.plex.tx.send(PlexCmd::RadioMore { seq, queue });
+    }
+
+    pub(super) fn apply_radio_more(&mut self, id: &str, result: ReadOn) {
+        let playing = self.playing_track();
+        let Some(radio) = self.radio.as_mut().filter(|r| r.queue.id == id) else { return };
+        radio.asked = None;
+        match result {
+            ReadOn::Tracks(tracks, last) => {
+                radio.queue.last = last;
+                self.append_playable(tracks);
+            }
+            ReadOn::Exhausted => {
+                let name = std::mem::take(&mut radio.name);
+                self.radio = None;
+                self.transient(format!("{name} has no more tracks"));
+            }
+            ReadOn::Gone => {
+                self.radio = None;
+                self.transient_err("radio ended: Plex dropped the station".into());
+            }
+            ReadOn::Failed(e) => {
+                tracing::warn!("radio: reading more tracks: {e}");
+                radio.failed_at = playing;
+            }
         }
     }
 }

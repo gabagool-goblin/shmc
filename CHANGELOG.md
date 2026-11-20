@@ -8,6 +8,7 @@ All notable changes to shmc are documented here. The format follows
 
 ### Added
 
+- Radio keeps going as the queue nears its end, and the Queue tab shows the station's name.
 - A Discover tab lists the library's radio stations and shows the highlighted one's tracks; Enter plays them (needs Plex Pass radio and plex.allow_writes).
 - `s` starts track or artist radio from Plex (needs Plex Pass and `plex.allow_writes`).
 - `m` lists tracks, albums or artists that sound like the selected one, from Plex's sonic analysis (needs Plex Pass).

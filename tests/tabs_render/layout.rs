@@ -169,6 +169,7 @@ async fn all_tabs_render_at_several_sizes() {
         tracks: (0..12).map(track).collect(),
         state: ds,
         matches: None,
+        radio: None,
     });
     let sd = render(&mut app, 120, 40);
     assert!(
@@ -920,6 +921,7 @@ fn render_table(app: &mut App, table: Table, w: u16, h: u16) -> String {
             tracks: (0..12).map(track).collect(),
             state,
             matches: None,
+            radio: None,
         });
     }
     render(app, w, h)

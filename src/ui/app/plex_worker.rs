@@ -77,6 +77,11 @@ pub enum PlexCmd {
         /// Shown when Plex names no station.
         label: String,
     },
+    /// Replies once with a `QueueReply`.
+    RadioMore {
+        seq: u64,
+        queue: crate::plex::radio::RadioQueue,
+    },
     /// Replies once with `Msg::StationsLoaded`, never `Msg::Error`.
     LoadStations,
     /// Replies once with `Msg::StationPreview`, never `Msg::Error`.
@@ -284,6 +289,9 @@ pub fn spawn_plex_worker(
                     }
                     PlexCmd::StartRadio { key, seed, label } => {
                         radio::run(&client, &features, &radio_env, &tx, key, seed, label).await;
+                    }
+                    PlexCmd::RadioMore { seq, queue } => {
+                        radio::more(&client, &radio_env, tx, seq, queue).await;
                     }
                     PlexCmd::LoadStations => {
                         discover::load_stations(&client, &section, &features, &tx).await;

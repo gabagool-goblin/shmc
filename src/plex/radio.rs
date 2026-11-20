@@ -10,6 +10,34 @@ use std::io::Read;
 /// The most reads of a play queue after the one that creates it.
 const MAX_READS: usize = 8;
 
+/// A play queue and the `playQueueItemID` of the last track shmc kept from it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RadioQueue {
+    pub id: String,
+    pub last: String,
+}
+
+#[derive(Debug)]
+pub enum ReadOn {
+    /// New tracks, and the id of the last one.
+    Tracks(Vec<Track>, String),
+    /// Nothing follows the last kept track.
+    Exhausted,
+    Gone,
+    Failed(String),
+}
+
+#[derive(Debug)]
+struct PlayQueueGone;
+
+impl std::fmt::Display for PlayQueueGone {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("Plex returned HTTP 404")
+    }
+}
+
+impl std::error::Error for PlayQueueGone {}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Station {
     pub key: String,
@@ -74,16 +102,15 @@ impl PlexClient {
         Ok(stations_from(c))
     }
 
-    /// Creates a play queue from the station and reads it until it holds `want`
-    /// tracks, stops growing or has been read `MAX_READS` times. The create is
-    /// never retried; a failed read keeps what was read before it.
+    /// Creates a play queue from the station and keeps its first `want` tracks, reading
+    /// up to `MAX_READS` times. The create is never retried; a failed read keeps the rest.
     pub async fn radio_tracks(
         &self,
         client_id: &str,
         machine_id: &str,
         station_key: &str,
         want: usize,
-    ) -> Result<Vec<Track>> {
+    ) -> Result<(Vec<Track>, RadioQueue)> {
         let mut url = self.url_for("/playQueues")?;
         url.query_pairs_mut().append_pair("type", "audio").append_pair("own", "1").append_pair(
             "uri",
@@ -116,7 +143,59 @@ impl PlexClient {
                 break;
             }
         }
-        Ok(items.into_iter().map(|(t, _)| t).collect())
+        items.truncate(want);
+        let last = items.last().map(|(_, i)| i.clone()).context("the play queue is empty")?;
+        Ok((items.into_iter().map(|(t, _)| t).collect(), RadioQueue { id, last }))
+    }
+
+    /// Reads on from `queue.last` until it has `want` tracks, a read adds nothing or
+    /// `MAX_READS` is reached; a later failure keeps what was read.
+    pub async fn radio_read_on(&self, client_id: &str, queue: &RadioQueue, want: usize) -> ReadOn {
+        let mut last = queue.last.clone();
+        let mut found: Vec<(Track, String)> = Vec::new();
+        for _ in 0..MAX_READS {
+            match self.items_after(client_id, &queue.id, &last).await {
+                Ok(next) if next.is_empty() => break,
+                Ok(next) => found.extend(next),
+                Err(e) if found.is_empty() => {
+                    return if e.is::<PlayQueueGone>() {
+                        ReadOn::Gone
+                    } else {
+                        ReadOn::Failed(format!("{e:#}"))
+                    };
+                }
+                Err(e) => {
+                    tracing::warn!("reading the play queue: {e:#}");
+                    break;
+                }
+            }
+            if found.len() >= want {
+                break;
+            }
+            if let Some((_, i)) = found.last() {
+                last = i.clone();
+            }
+        }
+        found.truncate(want);
+        match found.last().map(|(_, i)| i.clone()) {
+            Some(last) => ReadOn::Tracks(found.into_iter().map(|(t, _)| t).collect(), last),
+            None => ReadOn::Exhausted,
+        }
+    }
+
+    async fn items_after(
+        &self,
+        client_id: &str,
+        id: &str,
+        last: &str,
+    ) -> Result<Vec<(Track, String)>> {
+        let mut url = self.url_for(&format!("/playQueues/{id}"))?;
+        url.query_pairs_mut().append_pair("center", last).append_pair("window", "200");
+        let c = self.play_queue_xml(reqwest::Method::GET, &url, client_id).await?;
+        let items = play_queue_from(c).1;
+        let at = items.iter().position(|(_, i)| i == last);
+        let at = at.context("the last track is not in the play queue")?;
+        Ok(items.into_iter().skip(at + 1).collect())
     }
 
     /// Play queues belong to the client that makes them, so each request names it.
@@ -137,6 +216,9 @@ impl PlexClient {
         if !status.is_success() {
             if let Some(msg) = redirect_error(&resp) {
                 bail!(msg);
+            }
+            if status == reqwest::StatusCode::NOT_FOUND {
+                return Err(PlayQueueGone.into());
             }
             bail!("Plex returned HTTP {status}");
         }
@@ -184,7 +266,8 @@ mod tests {
         let (base, seen, full) = server(100).await;
         let client = PlexClient::new(&base, "faketoken-radio");
         let key = "/library/metadata/7/station/u-1?type=10";
-        let tracks = client.radio_tracks("cid1", "mid1", key, 30).await.unwrap();
+        let (tracks, queue) = client.radio_tracks("cid1", "mid1", key, 30).await.unwrap();
+        assert_eq!(queue, RadioQueue { id: "9".into(), last: "30".into() });
         let keys: Vec<_> = tracks.iter().map(|t| t.rating_key.clone()).collect();
         let expected: Vec<_> = (1..=30).map(|i| i.to_string()).collect();
         assert_eq!(keys, expected);
@@ -204,9 +287,59 @@ mod tests {
     async fn a_read_that_adds_nothing_ends_the_loop() {
         let (base, seen, _) = server(10).await;
         let client = PlexClient::new(&base, "faketoken-radio");
-        let tracks = client.radio_tracks("cid1", "mid1", "/s?type=10", 30).await.unwrap();
+        let (tracks, queue) = client.radio_tracks("cid1", "mid1", "/s?type=10", 30).await.unwrap();
+        assert_eq!(queue.last, "10");
         assert_eq!(tracks.len(), 10);
         assert_eq!(seen.lock().unwrap().len(), 3);
+    }
+
+    #[tokio::test]
+    async fn a_station_with_more_than_wanted_keeps_only_wanted_and_its_last_item() {
+        let (base, _, _) = server(100).await;
+        let client = PlexClient::new(&base, "faketoken-radio");
+        let (tracks, queue) = client.radio_tracks("cid1", "mid1", "/s?type=10", 12).await.unwrap();
+        assert_eq!(tracks.len(), 12);
+        assert_eq!(queue.last, "12");
+    }
+
+    #[tokio::test]
+    async fn reading_on_returns_only_items_after_the_last_and_stops_at_want() {
+        let (base, seen, full) = server(100).await;
+        let client = PlexClient::new(&base, "faketoken-radio");
+        let queue = RadioQueue { id: "9".into(), last: "30".into() };
+        let ReadOn::Tracks(tracks, last) = client.radio_read_on("cid1", &queue, 8).await else {
+            panic!("expected tracks");
+        };
+        let keys: Vec<_> = tracks.iter().map(|t| t.rating_key.clone()).collect();
+        let expected: Vec<_> = (31..=38).map(|i| i.to_string()).collect();
+        assert_eq!(keys, expected);
+        assert_eq!(last, "38");
+        let lines = seen.lock().unwrap().clone();
+        assert!(lines[0].starts_with("GET /playQueues/9?"), "{}", lines[0]);
+        assert_eq!(query(&lines[0], "center"), "30");
+        for req in full.lock().unwrap().iter() {
+            assert!(req.to_lowercase().contains("x-plex-client-identifier: cid1"), "{req}");
+        }
+    }
+
+    #[tokio::test]
+    async fn reading_on_from_the_end_of_the_station_is_exhausted() {
+        let (base, _, _) = server(10).await;
+        let client = PlexClient::new(&base, "faketoken-radio");
+        let queue = RadioQueue { id: "9".into(), last: "10".into() };
+        assert!(matches!(client.radio_read_on("cid1", &queue, 20).await, ReadOn::Exhausted));
+    }
+
+    #[tokio::test]
+    async fn reading_on_a_dropped_play_queue_is_gone_and_a_lost_item_is_a_failure() {
+        let (base, _, _) = serve_full(|_| (404, String::new())).await;
+        let client = PlexClient::new(&base, "faketoken-radio");
+        let queue = RadioQueue { id: "9".into(), last: "10".into() };
+        assert!(matches!(client.radio_read_on("cid1", &queue, 20).await, ReadOn::Gone));
+        let (base, _, _) = server(10).await;
+        let client = PlexClient::new(&base, "faketoken-radio");
+        let queue = RadioQueue { id: "9".into(), last: "99".into() };
+        assert!(matches!(client.radio_read_on("cid1", &queue, 20).await, ReadOn::Failed(_)));
     }
 
     #[test]

@@ -33,7 +33,7 @@ The header shows the playing track's rating: five stars, one star or none, set b
 
 `m` on a track, album or artist lists the ones that sound like it, from Plex's sonic analysis, which needs Plex Pass. The list opens in the Search tab, closest first, with a Match column, and the usual keys work on it. Similar albums include the artist's own. `Esc` goes back a step at a time, ending at the tab where `m` was pressed.
 
-`s` on a track or artist starts its Plex radio, which needs Plex Pass and `plex.allow_writes`. The tracks open in the Search tab like similar tracks, and `s` again starts a fresh station.
+`s` on a track or artist starts its Plex radio, which needs Plex Pass and `plex.allow_writes`. The tracks open in the Search tab like similar tracks, and `s` again starts a fresh station. `Enter` on a row plays the list from there as a radio, which keeps going: shmc reads more tracks as the queue nears its end. While it plays, the Queue tab shows the station name and shuffle is off. Replacing or clearing the queue ends it.
 
 On macOS, the media keys and the Control Center buttons work like shmc's own keys: play/pause like `Space`, next and previous like `>` and `<`, fast-forward and rewind seek 5 seconds, and stop like `:stop`. To leave the media keys alone, add `--input-media-keys=no` to `mpv.extra_args`.
 
@@ -77,7 +77,7 @@ Tracks that fail to play are skipped. After three consecutive failures, playback
 
 ## Discover
 
-The Discover tab lists the library's radio stations, which need Plex Pass. The highlighted station's next 30 or so tracks show on the right, and `Enter` replaces the queue with them and turns shuffle off. Each look creates a play queue on the server, so it needs `plex.allow_writes`. A station is asked for once, and again only after it has played.
+The Discover tab lists the library's radio stations, which need Plex Pass. The highlighted station's first 30 tracks show on the right, and `Enter` plays them as a radio, like `s`. Each look creates a play queue on the server, so it needs `plex.allow_writes`. A station is asked for once, and again only after it has played.
 
 | Key | Action |
 |---|---|

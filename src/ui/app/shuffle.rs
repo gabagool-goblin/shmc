@@ -129,6 +129,9 @@ impl Fenwick {
 
 impl App {
     pub(super) fn toggle_shuffle(&mut self) {
+        if self.refuse_shuffle_in_radio() {
+            return;
+        }
         if self.random {
             self.disable_shuffle();
         } else {
@@ -193,6 +196,9 @@ impl App {
     }
 
     pub(super) fn reshuffle_queue(&mut self) {
+        if self.refuse_shuffle_in_radio() {
+            return;
+        }
         if self.queue.items.len() < 2 {
             self.transient("queue too short to shuffle".into());
             return;

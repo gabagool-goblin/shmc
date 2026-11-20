@@ -3,6 +3,7 @@
 
 use super::app::{Confirm, Msg, QueueAction};
 use crate::plex::models::Track;
+use crate::plex::radio::{RadioQueue, ReadOn};
 use std::collections::BTreeMap;
 use tokio::sync::mpsc::UnboundedSender;
 
@@ -21,6 +22,18 @@ pub enum QueueOutcome {
         confirm: Confirm,
         load_id: u64,
         total: usize,
+    },
+    /// A radio replace; the station becomes the active radio.
+    Radio {
+        tracks: Vec<Track>,
+        confirm: Confirm,
+        name: String,
+        queue: RadioQueue,
+    },
+    /// More tracks for the radio on play queue `id`.
+    RadioMore {
+        id: String,
+        result: ReadOn,
     },
     Failed(String),
     /// The playlist changed on the server and the picked start track is gone.
@@ -51,6 +64,11 @@ impl QueueSeq {
     pub fn supersede(&mut self) {
         self.apply_from = self.next;
         self.ready.clear();
+    }
+
+    /// Request `id` has been applied or superseded.
+    pub fn settled(&self, id: u64) -> bool {
+        id < self.apply_from
     }
 
     /// A request was asked for and not yet applied or dropped.
