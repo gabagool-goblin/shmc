@@ -27,8 +27,7 @@ impl KeyCtx {
     }
 }
 
-/// Sections in the order the Help tab lists them, with their `[keys.<section>]`
-/// names.
+/// Sections in Help's order, with their `[keys.<section>]` names.
 pub const SECTIONS: &[(KeyCtx, &str, &str)] = &[
     (KeyCtx::Global, "Global", "global"),
     (KeyCtx::Queue, "Queue", "queue"),
@@ -39,8 +38,7 @@ pub const SECTIONS: &[(KeyCtx, &str, &str)] = &[
     (KeyCtx::Help, "Help", "help"),
 ];
 
-/// What a key does. The default keys and each action's Help text are in
-/// [`BINDINGS`].
+/// What a key does; the default keys and Help text are in [`BINDINGS`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Act {
     Quit,
@@ -363,8 +361,7 @@ impl Default for Keymap {
 }
 
 impl Keymap {
-    /// The default keymap with `[keys]` applied. Any problem rejects the whole
-    /// table: a half-applied keymap would be a mystery to explain.
+    /// The default keymap with `[keys]` applied; any problem rejects the whole table.
     pub fn from_table(table: &KeyTable) -> (Self, Vec<String>) {
         let mut problems = Vec::new();
         let mut overrides: SectionOverrides = Vec::new();
@@ -448,8 +445,7 @@ impl Keymap {
         }
     }
 
-    /// Duplicate keys within one context. Global and a context may share a
-    /// key: the context wins by design.
+    /// Duplicate keys within one context; a context may share a key with Global.
     fn conflicts(&self) -> Vec<String> {
         let mut problems = Vec::new();
         for (ctx, _, _) in SECTIONS {
@@ -493,8 +489,7 @@ impl Keymap {
         self.entries.iter().any(|b| b.ctx == ctx && b.keys.iter().any(|key| key == key_id))
     }
 
-    /// The first key that runs `act` in `ctx`, for a hint. A Global key the
-    /// context has taken over does not count.
+    /// For a hint; a Global key the context has taken over does not count.
     pub fn first_key(&self, ctx: KeyCtx, act: &Act) -> Option<String> {
         self.entries
             .iter()
@@ -513,8 +508,7 @@ impl Keymap {
             .unwrap_or_default()
     }
 
-    /// Context keys that also answer a different Global action, leaving out
-    /// the ones the defaults already have (`q` in Help).
+    /// Context keys that shadow a different Global action, except the defaults' (`q` in Help).
     pub fn shadows(&self) -> Vec<Shadow> {
         let default = Self::default();
         let mut out = Vec::new();
@@ -599,8 +593,7 @@ fn is_single_key(text: &str, allow_space: bool) -> bool {
         && chars.next().is_none()
 }
 
-/// The key names a `[keys]` entry may use, exactly what [`key_id`] produces
-/// (plus the `gg` sequence).
+/// Exactly what [`key_id`] produces, plus `gg`.
 pub fn is_key_name(name: &str) -> bool {
     if name == "gg" || NAMED_KEYS.contains(&name) {
         return true;

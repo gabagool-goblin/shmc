@@ -39,8 +39,7 @@ pub enum SaveOutcome {
     },
 }
 
-/// Paging progress. Servers differ, so a listing ends at the first short page,
-/// a page longer than asked (`whole`), `totalSize` or a repeated page.
+/// Servers differ, so a listing ends at a short page, an overlong one, `totalSize` or a repeat.
 #[derive(Debug, Default)]
 pub(crate) struct PageWalk {
     /// Items accepted so far, i.e. the next `Container-Start`.
@@ -91,8 +90,7 @@ pub(crate) fn entry_key(t: &Track) -> String {
     t.playlist_item_id.clone().unwrap_or_else(|| t.rating_key.clone())
 }
 
-/// A playlist load starts playing after this many tracks; the rest follows in
-/// `PLAYLIST_PAGE_SIZE` pages.
+/// A playlist load starts playing after this many tracks.
 pub const PLAYLIST_FIRST_PAGE: usize = 200;
 
 /// Later playlist pages, ~4 MB of XML each.
@@ -104,8 +102,7 @@ pub(crate) const MAX_PAGES: usize = 2000;
 /// reqwest's default limit lives in `Policy::limited`; a custom policy keeps it.
 const MAX_REDIRECTS: usize = 10;
 
-/// reqwest keeps `X-Plex-Token` on a redirect to another host, so only
-/// redirects on this host are followed (same port, or an upgrade to https).
+/// reqwest keeps `X-Plex-Token` on a redirect to another host, so only same-origin ones follow.
 fn may_follow(previous: &Url, next: &Url) -> bool {
     if previous.host_str() != next.host_str() {
         return false;
@@ -246,8 +243,7 @@ impl PlexClient {
         }
     }
 
-    /// A URL on this server. Server paths are untrusted: absolute ones, and ones
-    /// like `@evil.example/x` that turn the base into userinfo, are refused.
+    /// Server paths are untrusted: absolute ones and `@evil.example/x` are refused.
     pub(super) fn url_for(&self, path: &str) -> Result<Url> {
         let base = Url::parse(&self.base).context("parsing server URL")?;
         // A "://" in the query is not an origin change.
@@ -287,8 +283,7 @@ impl PlexClient {
             .header("Accept", accept)
     }
 
-    /// GET with auth headers, retried on transport errors. A body over
-    /// `max_bytes` is an error, so a hostile server cannot fill memory.
+    /// GET with auth headers, retried on transport errors.
     async fn send(&self, url: &str, accept: &str, max_bytes: u64) -> Result<Vec<u8>> {
         let mut attempt = 0u32;
         loop {
@@ -368,8 +363,7 @@ impl PlexClient {
         quick_xml::de::from_reader::<_, MediaContainer>(&bytes[..]).context("parsing Plex's reply")
     }
 
-    /// Sets a track's rating (Plex's 0 to 10), or clears it with `None`. The
-    /// reply carries nothing worth reading.
+    /// Plex's 0 to 10, or `None` to clear.
     pub async fn rate(&self, rating_key: &str, rating: Option<u8>) -> Result<()> {
         let mut url = self.url_for("/:/rate")?;
         url.query_pairs_mut()
@@ -390,8 +384,7 @@ impl PlexClient {
         Ok(())
     }
 
-    /// Reports playback state for the session `client_id` names. One attempt:
-    /// a late report is worth less than the next one.
+    /// One attempt: a late report is worth less than the next one.
     pub async fn timeline(&self, client_id: &str, r: &Report) -> Result<()> {
         let mut url = self.url_for("/:/timeline")?;
         url.query_pairs_mut()
@@ -606,8 +599,7 @@ impl PlexClient {
         Ok(c.into_tracks())
     }
 
-    /// All tracks by an artist, paged: a compilation "artist" can have tens of
-    /// thousands.
+    /// Paged: a compilation "artist" can have tens of thousands of tracks.
     pub async fn artist_tracks(&self, section: &str, artist_key: &str) -> Result<Vec<Track>> {
         self.get_all_paged(
             &format!("/library/sections/{section}/all?type=10&artist.id={artist_key}"),
@@ -663,8 +655,7 @@ impl PlexClient {
         Ok(self.playlist_page(rating_key, start, size).await?.tracks)
     }
 
-    /// A page of playlist items and the `totalSize` (`leafCount` can be stale).
-    /// Plex ignores `limit`/`offset` here but honours the container params.
+    /// A page and the `totalSize` (`leafCount` can be stale); Plex ignores `limit` here.
     pub async fn playlist_page(
         &self,
         rating_key: &str,

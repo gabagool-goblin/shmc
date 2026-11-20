@@ -1,5 +1,4 @@
-//! Glyph sets for the transport and status icons, per `ui.icons`. ASCII is
-//! forced on a non-UTF-8 locale (a terminal cannot report the font's glyphs).
+//! Glyph sets for the transport and status icons, per `ui.icons`.
 
 /// Nerd glyphs are one cell wide; the ASCII `||` is two.
 pub struct Transport {

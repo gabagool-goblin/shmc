@@ -15,8 +15,7 @@ pub enum QueueOutcome {
         confirm: Confirm,
         action: QueueAction,
     },
-    /// First page of a streamed replace; the rest follows as
-    /// `Msg::PlaylistPage` tagged `load_id`. `total` is for the progress.
+    /// First page of a streamed replace; the rest come as `Msg::PlaylistPage`.
     Streaming {
         tracks: Vec<Track>,
         confirm: Confirm,
@@ -76,8 +75,7 @@ impl QueueSeq {
         self.apply_from < self.next
     }
 
-    /// The outcomes now due, in request order; empty when the reply is stale or
-    /// an earlier request is still pending.
+    /// Empty when the reply is stale or an earlier request is still pending.
     pub fn deliver(&mut self, id: u64, outcome: QueueOutcome) -> Vec<QueueOutcome> {
         if id < self.apply_from {
             tracing::debug!(id, apply_from = self.apply_from, "dropping a superseded queue reply");
@@ -93,8 +91,7 @@ impl QueueSeq {
     }
 }
 
-/// Every request must answer exactly once or later ones wait forever, so a
-/// task that returns early or panics still sends a failure from `Drop`.
+/// Every request must answer once or later ones wait forever, so `Drop` sends a failure.
 pub struct QueueReplyGuard {
     tx: UnboundedSender<Msg>,
     seq: u64,

@@ -71,8 +71,7 @@ impl ListFilter {
     }
 }
 
-/// NFKC-normalized, lowercased `s`, with each char's original range. Combining
-/// marks are normalized with their base char, as they are in the needle.
+/// Each char keeps its original range; combining marks go with their base, as in the needle.
 fn normalize_mapped(s: &str) -> (Vec<char>, Vec<(usize, usize)>) {
     let chars: Vec<char> = s.chars().collect();
     let mut norm = Vec::new();
@@ -135,9 +134,8 @@ pub fn match_ranges(text: &str, needle: &str) -> Vec<(usize, usize)> {
             let start = from + pos;
             let end = start + ndl.len(); // exclusive in normalized space
             let o_start = orig[start].0;
-            let o_end = orig[end - 1].1; // exclusive in original chars
-                                         // One original char can normalize to several matches ("Ⅲ" is
-                                         // "iii"): merge them, or `highlight` draws that char again.
+            let o_end = orig[end - 1].1;
+            // "Ⅲ" normalizes to "iii": merge, or `highlight` draws that char again
             match ranges.last_mut() {
                 Some((_, last_end)) if o_start < *last_end => *last_end = o_end.max(*last_end),
                 _ => ranges.push((o_start, o_end)),
@@ -225,7 +223,6 @@ mod tests {
         assert_eq!(r, vec![(4, 8)]);
         let r = match_ranges("デスロウ", "デス");
         assert_eq!(r, vec![(0, 2)], "wide chars map by char index");
-        // two matches
         let r = match_ranges("abc abc", "ab");
         assert_eq!(r, vec![(0, 2), (4, 6)]);
     }
@@ -248,7 +245,6 @@ mod tests {
         assert_eq!(spans.len(), 4);
         assert_eq!(spans[0].content, "C");
         assert_eq!(spans[2].content, "C");
-        // multi-word needle
         let spans = highlight("aaa bbb ccc", "bbb", base, hit);
         let joined: String = spans.iter().map(|s| s.content.as_ref()).collect();
         assert_eq!(joined, "aaa bbb ccc");

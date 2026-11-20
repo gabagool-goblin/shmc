@@ -2,8 +2,7 @@ use super::*;
 use shmc::plex::models::{Album, Artist, HitKind, SearchHit};
 use shmc::ui::app::BrowserCol;
 
-/// Under a filter the cursor is a position in the filtered view, not a list
-/// index: Enter must open the matching artist, not the one at row 0.
+/// Under a filter Enter opens the matching artist, not the one at row 0.
 #[tokio::test]
 async fn enter_on_filtered_artist_opens_it() {
     let (mut app, mut plex_rx) = new_app_with_plex().await;
@@ -51,8 +50,7 @@ async fn enter_on_filtered_artist_opens_it() {
     assert_eq!(app.browser.albums_for.as_deref(), Some("a3"));
 }
 
-/// Right on an artist opens its albums, without refetching ones already on
-/// screen, and opens the new artist's after moving.
+/// Right opens the artist's albums, refetching only after a move.
 #[tokio::test]
 async fn right_on_an_artist_opens_its_albums() {
     let (mut app, mut plex_rx) = new_app_with_plex().await;
@@ -208,8 +206,7 @@ fn artist_ar1() -> Artist {
     Artist { rating_key: "ar1".into(), title: "Northwind Sounds".into(), thumb: None }
 }
 
-/// Leaving the tab before Plex answers drops the jump; a late reply must not
-/// pull the user back.
+/// Leaving the tab drops the jump, so a late reply does not pull the view back.
 #[tokio::test]
 async fn late_reply_ignored_after_cancelled_jump() {
     let (mut app, mut plex) = new_app_with_plex().await;
@@ -486,8 +483,7 @@ async fn add_on_artist_queues_its_tracks() {
     assert_eq!(request, Some(("ar1".to_string(), QueueAction::Append)));
 }
 
-/// A capped preview is announced in the status, fresh or from the cache (a
-/// revisit fires no arrival); a complete one stays quiet.
+/// A capped preview is announced, fresh or from the cache; a complete one stays quiet.
 #[tokio::test]
 async fn capped_preview_is_announced() {
     let mut app = new_app().await;
@@ -591,8 +587,7 @@ async fn playlist_track_enter_replaces_from_that_track() {
     assert_eq!(request, Some(("p0".to_string(), QueueAction::Replace, Some("t1".to_string()))));
 }
 
-/// A track row asks before replacing or appending a huge playlist, counting
-/// the remainder from that track, and keeps the start track once confirmed.
+/// A track row asks before a huge playlist, counting from that track, and starts there.
 #[tokio::test]
 async fn large_playlist_track_asks_remainder_or_start() {
     let cases: [(fn() -> Msg, QueueAction); 2] =
@@ -796,8 +791,7 @@ fn row_with(screen: &str, needle: &str) -> String {
         .to_string()
 }
 
-/// A row is `Title (year)`; the artist follows only when it differs from the
-/// browsed one; no year, no parentheses.
+/// `Title (year)`, the artist only when it is not the browsed one; no year, no parentheses.
 #[tokio::test]
 async fn album_rows_show_year_and_differing_artist() {
     let mut app = browser_with_albums(vec![

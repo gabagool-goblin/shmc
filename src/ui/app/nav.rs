@@ -256,8 +256,7 @@ impl App {
         }
     }
 
-    /// The cursor as an index into the underlying list; None when nothing is
-    /// visible, so actions no-op under a filter with no matches.
+    /// None when nothing is visible, so actions no-op under a filter with no matches.
     pub(super) fn real_at(&self, l: ListRef) -> Option<usize> {
         if self.vis_len(l) == 0 {
             return None;
@@ -369,8 +368,7 @@ impl App {
         match self.tab {
             Tab::Browser => match self.browser.focus {
                 BrowserCol::Artists => {
-                    // like Enter, but no refetch when the albums shown are this
-                    // artist's
+                    // like Enter, but no refetch when the albums shown are this artist's
                     let Some(real) = self.real_at(ListRef::BArtists) else { return };
                     let Some(a) = self.browser.artists.items.get(real) else { return };
                     if self.browser.albums_for.as_deref() == Some(a.rating_key.as_str()) {
@@ -398,8 +396,7 @@ impl App {
         }
     }
 
-    /// Not while filtered: the playing row may be hidden, and filtering is
-    /// browsing.
+    /// Not while filtered: the playing row may be hidden.
     pub(super) fn follow_queue(&mut self) {
         if !self.auto_follow
             || !self.queue_follow
@@ -420,8 +417,7 @@ impl App {
         if self.active_list() != ListRef::Queue {
             return;
         }
-        // also cancels a pending one-shot pin, or `o` then a move would pin
-        // the new cursor (messages are coalesced, so that window is real)
+        // also cancels a pending one-shot pin, or `o` then a move would pin the new cursor
         self.scroll.release_top(ScrollId::Queue);
         if self.queue_follow {
             self.queue_follow = false;
@@ -489,8 +485,7 @@ impl App {
         }
     }
 
-    /// `o`. In the Queue this also resumes auto-follow; other lists center as
-    /// configured.
+    /// `o`; in the Queue it also resumes auto-follow.
     pub(super) fn jump_to_playing(&mut self) {
         let Some(cur) = self.current else {
             self.transient("nothing playing".into());
@@ -619,8 +614,7 @@ impl App {
         });
     }
 
-    /// Also called whenever the underlying list changes, so a refresh keeps
-    /// the filter applied.
+    /// Also called when the underlying list changes, so a refresh keeps the filter.
     pub(super) fn refilter(&mut self, l: ListRef) {
         let Some(text) = self.filter(l).map(|f| f.text.clone()) else {
             return;

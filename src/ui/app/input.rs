@@ -3,8 +3,7 @@ use crate::playback::{MediaKey, MpvCmd};
 use crate::ui::keymap::{self, Act, KeyCtx};
 use std::time::Duration;
 
-/// One parsed `:` command. A leading colon is accepted but the buffer never
-/// holds one.
+/// One parsed `:` command; the buffer never holds the colon.
 #[derive(Debug, PartialEq, Eq)]
 enum Command<'a> {
     Empty,
@@ -145,8 +144,7 @@ impl App {
             let clear_key = self.keymap.is_context_key(KeyCtx::Queue, &id)
                 && self.keymap.lookup(KeyCtx::Queue, &id) == Some(&Act::ClearQueue);
             match key.code {
-                // `y` matches the playlist question; the clear key itself is
-                // already under the finger
+                // `y` as for the playlist question, or the clear key again
                 crossterm::event::KeyCode::Char('y' | 'Y') => {
                     self.supersede_queue();
                     self.clear_queue();
@@ -259,8 +257,7 @@ impl App {
                 }
                 return;
             }
-            // letters always jump, even when bound (`g a` must not append);
-            // everything else keeps its binding (`g 2` still picks a tab)
+            // letters jump even when bound; anything else keeps its binding (`g 2` picks a tab)
             if let Some(c) = id.chars().next().filter(|_| id.chars().count() == 1) {
                 if c.is_alphabetic() {
                     self.jump_to_letter(c);
@@ -702,8 +699,7 @@ impl App {
                     self.play_from_stopped();
                 } else {
                     let _ = self.mpv.tx.send(MpvCmd::Next);
-                    // Consume: advance first (removing the playing entry would
-                    // stop mpv), then remove, unless `>` went nowhere.
+                    // Consume: advance first (removing the playing entry stops mpv), then remove
                     if self.consume {
                         if let Some(i) = self.current {
                             let moves = self.queue.items.len() > 1

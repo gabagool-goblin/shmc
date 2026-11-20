@@ -40,8 +40,6 @@ impl Screen {
         let active = Tab::ALL.iter().position(|t| *t == self.tab).unwrap_or(0);
         crate::ui::views::draw_tabs(f, chunks[0], &names, active);
 
-        // The sample under the header shows only when the colour list keeps
-        // its thirteen rows.
         let panes = if self.tab == Tab::Theme {
             // Blocks like the player's, so the gap is `theme.block_gap`.
             let gap = theme::spacing().block_gap;
@@ -145,8 +143,7 @@ impl Screen {
 
         // The last column is the scrollbar's.
         let list_area = ratatui::layout::Rect { width: inner.width.saturating_sub(1), ..inner };
-        // Sized by the longest label on the tab, not the ones in view, so a
-        // filter does not move it; a longer label is ellipsized.
+        // By the tab's longest label, not the filtered ones, so a filter does not move it.
         let longest = self.visible().iter().map(|s| theme::str_width(s.label)).max().unwrap_or(0);
         let avail = list_area.width as usize;
         let label_w = longest
@@ -185,7 +182,6 @@ impl Screen {
                             ),
                             body,
                         )];
-                        // A colour is shown as itself, not only as hex.
                         match (setting.kind, theme::parse_hex(&current)) {
                             (Kind::Color, Some(colour)) => {
                                 spans.push(Span::styled("███ ", Style::default().fg(colour)));
@@ -529,7 +525,6 @@ impl Screen {
                 ("q", "quit"),
             ]
         };
-        // On a narrow screen the least important hints go first.
         let mut keys: Vec<(&str, &str)> = keys.to_vec();
         let width = |keys: &[(&str, &str)]| {
             keys.iter()
@@ -621,8 +616,7 @@ const LABEL_MIN: usize = 6;
 const LIST_LEAD: usize = 1;
 pub(super) const LIST_GAP: usize = 2;
 
-/// The footer's hints, least important first, dropped in this order when they
-/// do not fit.
+/// Footer hints, dropped in this order when they do not fit.
 const KEYS_DROP_ORDER: [&str; 12] =
     ["←→", "[ ]", "j/k", "J/K", "t", "d", "x", "R", "/", "r", "⇥", "⏎"];
 
@@ -655,8 +649,7 @@ fn preview_rows(ui: &crate::config::UiConfig) -> PreviewRows {
     }
 }
 
-/// The player's header with placeholder text, drawn by the same code and in
-/// the borders and header mode in force.
+/// The player's header with placeholder text, drawn by the same code.
 fn draw_theme_preview(f: &mut Frame, area: Rect, ui: &crate::config::UiConfig) {
     use crate::ui::views;
     let style = theme::spacing().borders;
@@ -716,8 +709,7 @@ fn entry_lines(lines: &mut Vec<Line<'static>>, entry: &doctor::Entry, check: boo
     }
 }
 
-/// Queue rows (focused and unfocused cursor, a filter match, a plain row) and a
-/// visualizer strip, for the colours the header does not use.
+/// Queue rows and a visualizer strip, for the colours the header does not use.
 fn draw_theme_sample(f: &mut Frame, area: Rect) {
     let inner = crate::ui::views::draw_block(f, area);
     if inner.width < 24 || inner.height == 0 {

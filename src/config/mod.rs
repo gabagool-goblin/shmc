@@ -96,61 +96,45 @@ pub enum RatingStyle {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct UiConfig {
-    /// Rows kept clear above/below the cursor before a list scrolls
-    /// (vim's scrolloff). Clamped to (pane_height - 1) / 2 for short panes.
+    /// vim's scrolloff, clamped to (pane_height - 1) / 2.
     pub scrolloff: usize,
-    /// Vertically center the cursor on 'o' in Browser/Playlists; the Queue
-    /// pins the playing row to the top instead.
+    /// Centre the cursor on `o` in Browser and Playlists.
     pub center_cursor: bool,
-    /// Keep the Queue pinned to the currently playing row as playback moves.
-    /// `o` still jumps once when disabled, but it does not stay armed.
+    /// Keep the Queue pinned to the playing row as playback moves.
     pub auto_follow: bool,
-    /// Status/transport glyph set: "nerd" (Nerd Font) or "ascii".
-    /// Forced to ASCII automatically when the locale is not UTF-8.
+    /// "nerd" or "ascii"; ASCII when the locale is not UTF-8.
     pub icons: String,
-    /// The header's volume: "meter" (the meter and the percentage) or
-    /// "percent" (the percentage only).
+    /// "meter" or "percent".
     pub volume_display: String,
-    /// The header's repeat/shuffle/single/consume flags: "icons" or "words"
-    /// (Repeat Shuffle Single Consume, bright when on, dim when off).
+    /// "icons" or "words".
     pub mode_flags: String,
-    /// The header's rating for the playing track: "five" (five stars), "one"
-    /// (a single star) or "off".
+    /// "five", "one" or "off".
     pub rating_style: String,
-    /// "full" (the now-playing header) or "compact" (the tab row carries the
-    /// sleep timer, volume and flags).
+    /// "full" or "compact".
     pub header: String,
-    /// Queue tab: maximum art width percentage in square mode; the width
-    /// split when `art_square` is false. The rest is the queue/visualizer.
+    /// Art width in percent: the cap when square, the split otherwise.
     pub art_pct: u16,
-    /// Keep the queue art pane pixel-square, using any spare vertical space
-    /// for title/artist/album. When false, `art_pct` controls the width split.
+    /// Keep the art pane pixel-square.
     pub art_square: bool,
     /// Show title/artist/album below a width-capped square cover.
     pub art_metadata: bool,
-    /// Padding on the limiting axis of the album art, in pixels (left/right
-    /// for width-limited covers, top/bottom for height-limited covers).
+    /// Padding on the art's limiting axis, in pixels.
     pub art_pad_px: u16,
-    /// Visualizer pane height as a percentage of the queue column, at least 8
-    /// rows (0 hides it). The queue always keeps at least 6 rows.
+    /// Visualizer height in percent of the queue column (0 = hidden).
     pub visualizer_pct: u16,
-    /// "adaptive" (as many bars as fit, then wider ones) or "spread" (up to
-    /// `visualizer_bars`, then wider bars or gaps per `visualizer_anchor`).
+    /// "adaptive" (as many bars as fit) or "spread" (up to `visualizer_bars`).
     pub visualizer_mode: String,
     /// Most bars spread mode shows.
     pub visualizer_bars: u16,
-    /// Spread mode: which keeps its set size, "bar" (width) or "gap"; the other
-    /// widens.
+    /// Spread mode: "bar" or "gap", whichever keeps its set size.
     pub visualizer_anchor: String,
-    /// Visualizer bar width in cells; a minimum (see `visualizer_mode`).
+    /// Minimum bar width in cells.
     pub visualizer_bar_width: u16,
-    /// Gap between visualizer bars in cells; a minimum, as the bar width.
+    /// Minimum gap between bars in cells.
     pub visualizer_bar_gap: u16,
-    /// Browser album order: "year" (oldest first), "year_desc" (newest first)
-    /// or "title" (A-Z). Albums without a year go last in both year orders.
+    /// "year", "year_desc" or "title".
     pub album_sort: String,
-    /// `<` restarts the current track once it has played for more than this
-    /// many seconds, instead of going back (0 = always go back).
+    /// After this many seconds `<` restarts the track (0 = always go back).
     pub prev_restart_secs: u64,
     /// Playlist numbering: "position" (1..N) or "none".
     pub playlist_numbering: String,
@@ -160,11 +144,8 @@ pub struct UiConfig {
     pub preview_debounce_ms: u64,
     /// Ask before queueing a playlist with more tracks than this (0 = never).
     pub confirm_playlist_over: usize,
-    /// Title, Artist and Album widths in the track tables; 0 hides a column, but
-    /// not all three. A bad value is reported by `--check` and the default used.
+    /// Title, Artist and Album widths; 0 hides a column, but not all three.
     pub column_weights: Vec<i64>,
-    /// Queue columns in display order: title, artist, album, len, track, year,
-    /// codec.
     pub queue_columns: Vec<String>,
 }
 
@@ -252,8 +233,6 @@ pub fn column_weights_problem(weights: &[i64]) -> Option<String> {
 }
 
 impl UiConfig {
-    /// ASCII icons are used when asked for or when the locale is not UTF-8
-    /// (Nerd Font glyphs would be mojibake). Font presence cannot be probed.
     pub fn ascii_icons(&self) -> bool {
         self.icons.eq_ignore_ascii_case("ascii") || !locale_is_utf8()
     }
@@ -324,8 +303,7 @@ impl UiConfig {
         !self.effective_queue_columns().iter().any(|c| c.text_index().is_some_and(|i| w[i] > 0))
     }
 
-    /// The Queue's columns: a zero-weight text column is hidden, and the
-    /// default list stands in when that leaves no text column.
+    /// Zero-weight text columns hidden; the default list if none would be left.
     pub fn resolved_queue_columns(&self) -> Vec<QueueColumn> {
         let w = self.effective_column_weights();
         let mut cols = self.effective_queue_columns();
@@ -403,8 +381,7 @@ pub struct AlbumArtConfig {
     pub backend: String,
     /// Maximum art size in pixels [width, height]; [0, 0] = no limit
     pub max_size_px: [u32; 2],
-    /// Maximum on-disk art cache in MiB; least-recently-used art is evicted
-    /// beyond it. `0` disables disk caching (art is re-downloaded every time).
+    /// Art cache size in MiB, least recently used evicted first (0 = no cache).
     pub cache_mb: u64,
 }
 
@@ -420,14 +397,12 @@ impl Default for AlbumArtConfig {
     }
 }
 
-/// A theme plus colour overrides. Unset is the theme's own colour, and so is
-/// a bad override (reported by `--check`).
+/// A theme plus overrides; an unset or bad override is the theme's value.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct ThemeConfig {
     pub name: String,
-    /// The `themes/` directory beside the config file; `None` means presets
-    /// only. Not a setting: it comes from the path the config was read from.
+    /// `themes/` beside the config file, `None` for presets only; not a setting.
     #[serde(skip)]
     pub dir: Option<PathBuf>,
     /// Interaction: the cursor, the active tab, the filled progress bar, icons.
@@ -460,26 +435,22 @@ pub struct ThemeConfig {
     pub viz_mid: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub viz_top: Option<String>,
-    /// Painted behind everything: `#rrggbb`, or `none` for the terminal's own
-    /// background even when the theme has one. Unset is the theme's.
+    /// `#rrggbb`, or `none` for the terminal's own background.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub background: Option<String>,
-    /// Empty rows between the header, the tab bar, the content and the
-    /// progress row: 0 to 3. Unset is the theme's.
+    /// Empty rows between the header, tabs, content and progress row: 0 to 3.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub block_gap: Option<i64>,
     /// Columns inside a box's border on each side: 0 to 3.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub inset: Option<i64>,
-    /// How blocks are drawn: box, rounded, double, lines or none. Unset is the theme's.
+    /// box, rounded, double, lines or none.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub borders: Option<String>,
-    /// A preset name (solid, line, dot, plain, angled, rounded) that sets the
-    /// five glyphs below; any of them set too replaces its part.
+    /// A preset for the five glyphs below; any of them set too replaces its part.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub progress_bar: Option<String>,
-    /// The progress bar's filled and empty cells and its head, one character
-    /// each. Unset is the theme's; a theme that sets none draws them as colour.
+    /// The progress bar's filled and empty cells and its head, one character each.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub progress_filled: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -566,8 +537,7 @@ impl ThemeConfig {
     /// Spacing keys that are words, not numbers.
     pub const SPACING_TEXT: [&'static str; 1] = ["borders"];
 
-    /// `progress_bar` is first: a preset is applied before the glyphs that
-    /// replace parts of it.
+    /// `progress_bar` first: a preset applies before the glyphs that replace it.
     pub const SYMBOLS: [&'static str; 12] = [
         "progress_bar",
         "progress_filled",
@@ -701,32 +671,23 @@ pub struct CavaConfig {
     /// Enable the visualizer (requires the `cava` binary)
     pub enabled: bool,
     pub path: String,
-    /// Visualizer frames per second. Higher rates cost CPU and power for
-    /// little visible gain.
+    /// Visualizer frames per second.
     pub framerate: u32,
-    /// Audio source to visualize. Empty = the platform default; a loopback
-    /// device name when that cannot capture.
+    /// Audio source; empty = the platform default.
     pub source: String,
-    /// Seconds cava keeps capturing after a pause or with the visualizer
-    /// hidden. `0` stops it immediately.
+    /// Seconds cava keeps capturing when paused or hidden (0 = stop at once).
     pub pause_grace_secs: u64,
-    /// "balanced", "smooth", "snappy" or "custom"; only "custom" reads the five
-    /// settings below.
+    /// "balanced", "smooth", "snappy" or "custom", which reads the five below.
     pub style: String,
-    /// cava `smoothing:noise_reduction`, 0-100: higher is smoother and
-    /// slower. Only used with the custom style.
+    /// cava `smoothing:noise_reduction`.
     pub noise_reduction: i64,
-    /// cava `general:autosens`: adjust the gain to the loudness. Only used
-    /// with the custom style.
+    /// cava `general:autosens`.
     pub autosens: bool,
-    /// cava `general:sensitivity`, 1-300 (a percentage). Only used with the
-    /// custom style.
+    /// cava `general:sensitivity`.
     pub sensitivity: i64,
-    /// cava `general:lower_cutoff_freq`, 10-1000 Hz. Only used with the custom
-    /// style.
+    /// cava `general:lower_cutoff_freq`.
     pub lower_cutoff_hz: i64,
-    /// cava `general:higher_cutoff_freq`, 1000-20000 Hz, above the lower one.
-    /// Only used with the custom style.
+    /// cava `general:higher_cutoff_freq`, above the lower one.
     pub higher_cutoff_hz: i64,
 }
 
@@ -751,8 +712,7 @@ impl CavaConfig {
         self.framerate.clamp(CAVA_FRAMERATE.0, CAVA_FRAMERATE.1)
     }
 
-    /// The numbers cava starts with: a preset sets the smoothing, `custom` the
-    /// raw keys. Out-of-range values become the default.
+    /// A preset sets the smoothing, `custom` the raw keys; out-of-range is the default.
     pub fn settings(&self) -> CavaSettings {
         let d = CavaConfig::default();
         let in_range = |v: i64, (lo, hi): (i64, i64), default: i64| {
@@ -798,8 +758,7 @@ impl CavaConfig {
         s
     }
 
-    /// Problems for `shmc config --check`: keys only, never values. The raw
-    /// numbers are checked only under the custom style.
+    /// Problems for `shmc config --check`: keys only, never values.
     pub fn problems(&self) -> Vec<String> {
         let mut out = Vec::new();
         if self.framerate() != self.framerate {
@@ -857,14 +816,11 @@ impl Default for CavaConfig {
     }
 }
 
-/// Anything but `https://` counts as not encrypted: the token rides in the
-/// query string.
 pub fn server_is_https(server: &str) -> bool {
     server.trim().to_ascii_lowercase().starts_with("https://")
 }
 
-/// A warning, never an error: plain HTTP on a LAN is legitimate. `None` for
-/// https or no server yet.
+/// Only a warning: plain HTTP on a LAN is legitimate.
 pub fn plain_http_warning(server: &str) -> Option<String> {
     let server = server.trim();
     if server.is_empty() || server_is_https(server) {
@@ -941,17 +897,14 @@ mod tests {
         assert!(plain_http_warning("https://plex.example:32400").is_none());
         assert!(!server_is_https("http://192.168.1.100:32400"));
         assert!(plain_http_warning("http://192.168.1.100:32400").is_some());
-        // no scheme at all is not https
         assert!(!server_is_https("192.168.1.100:32400"));
         assert!(!server_is_https(""));
-        // nothing configured yet: nothing to warn about
         assert!(plain_http_warning("").is_none());
     }
 
     #[test]
     fn missing_fields_fall_back_to_current_defaults() {
-        // A config without `album_art.cache_mb` and `cava.source` gets their
-        // defaults (not zero / not "off").
+        // Missing keys get their defaults, not zero or off.
         let cfg: Config = toml::from_str(
             "[plex]\nserver = \"http://host:32400\"\ntoken = \"t\"\n\
              [album_art]\nbackend = \"iterm2\"\n",

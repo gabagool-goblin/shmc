@@ -56,16 +56,14 @@ pub struct PlaylistRequest {
     pub action: QueueAction,
     /// An `entry_key`: start from that entry.
     pub start: Option<String>,
-    /// Only a plain replace streams: an append or insert would interleave with
-    /// other queue changes, and a shuffled replace needs the whole list.
+    /// Only a plain replace: appends interleave, and a shuffle needs the whole list.
     pub stream: bool,
     /// The total to show when the server reports no `totalSize`.
     pub expected: usize,
     pub cancel: Arc<AtomicBool>,
 }
 
-/// Tells the app a streamed load ended without a final page, so its state
-/// never outlives the task.
+/// Sent when a streamed load ends without a final page, so its state never outlives the task.
 struct LoadEnd {
     tx: UnboundedSender<Msg>,
     id: u64,
@@ -97,8 +95,7 @@ async fn next_page(
     Ok(walk.accept(page.tracks, page.total, size, entry_key))
 }
 
-/// The tracks from the entry `start` onward, or `None` when it is gone.
-/// An entry, not a song: a playlist can hold the same song twice.
+/// From the entry `start`, not the song: a playlist can hold the same song twice.
 fn from_start(mut tracks: Vec<Track>, start: &str) -> Option<Vec<Track>> {
     let pos = tracks.iter().position(|t| entry_key(t) == start)?;
     Some(tracks.split_off(pos))

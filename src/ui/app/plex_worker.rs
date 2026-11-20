@@ -345,8 +345,7 @@ pub fn spawn_plex_worker(
     ctx
 }
 
-/// The server's features, read once per session. `None` when the read failed:
-/// unknown, not "no Plex Pass", so the feature's own request decides.
+/// Read once per session; `None` is unknown, not "no Plex Pass": the feature's request decides.
 pub(super) async fn cached_features(
     client: &PlexClient,
     features: &Mutex<Option<Features>>,
@@ -422,9 +421,7 @@ async fn load_thumb(
     Ok((img, cached.then_some(cache_file)))
 }
 
-/// Decoded before it is cached, so a bad response never lands there; a cached
-/// file that fails to decode is fetched again. `cache_mb == 0` disables it.
-/// The flag says whether the image is in `cache_file`.
+/// Decoded before it is cached; the flag says whether the image is in `cache_file`.
 async fn load_cached_art<F, Fut>(
     cache_file: &std::path::Path,
     cache_mb: u64,
@@ -478,12 +475,10 @@ where
     Ok((Arc::new(img), cached))
 }
 
-/// The decoder's allocation ceiling, applied before it allocates: a hostile
-/// server must not make shmc reserve gigabytes before `max_size_px` applies.
+/// Applied before decoding, so a hostile server cannot make shmc reserve gigabytes.
 const MAX_IMAGE_ALLOC: u64 = 64 * 1024 * 1024;
 
-/// The budget follows `album_art.max_size_px` (RGBA at that size), with a floor
-/// for the "unlimited" default.
+/// RGBA at `album_art.max_size_px`, with a floor for the unlimited default.
 fn decode_limits(max_size_px: [u32; 2]) -> image::Limits {
     let pixels = u64::from(max_size_px[0]) * u64::from(max_size_px[1]);
     let mut limits = image::Limits::default();
@@ -506,8 +501,7 @@ use anyhow::Context;
 mod tests {
     use super::*;
 
-    /// An IHDR claiming `w` x `h` RGBA and no pixels (the empty IDAT is there
-    /// because the decoder will not start without one).
+    /// A PNG claiming `w` x `h` RGBA with no pixels; the decoder needs an IDAT to start.
     fn png_claiming(w: u32, h: u32) -> Vec<u8> {
         fn crc32(bytes: &[u8]) -> u32 {
             let mut crc = !0u32;

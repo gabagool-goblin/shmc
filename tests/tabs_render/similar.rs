@@ -354,8 +354,7 @@ async fn album_view_has_no_match_column() {
     assert!(frame.contains("Len") && !frame.contains("Match"), "{frame}");
 }
 
-/// A similar albums list has Artist, Album and Year columns and Match; a narrow
-/// pane keeps only the names.
+/// A similar albums list has Artist, Album, Year and Match; a narrow pane keeps the names.
 #[tokio::test]
 async fn similar_albums_show_label_and_match() {
     let (mut app, _plex) = on_browser().await;

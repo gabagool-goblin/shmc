@@ -1,4 +1,4 @@
-//! The settings as a flat list: what `shmc config --list` prints and what the config screen shows and restores.
+//! The settings as a flat list, for `shmc config --list` and the config screen.
 
 use super::{themes_dir_for, token_label, Config, ThemeConfig};
 use std::collections::BTreeMap;
@@ -50,8 +50,7 @@ fn flatten_settings(table: &toml::Table, prefix: &str, out: &mut BTreeMap<String
     }
 }
 
-/// A value as printed in the list: bare, not TOML-quoted. An empty string
-/// needs a word, or it reads as a missing column.
+/// Bare, not TOML-quoted; an empty string needs a word or it reads as a missing column.
 fn setting_text(value: &toml::Value) -> String {
     match value {
         toml::Value::String(s) if s.is_empty() => "(empty)".to_string(),
@@ -66,8 +65,7 @@ fn setting_text(value: &toml::Value) -> String {
 const SETTING_VALUE_COLUMN_MAX: usize = 44;
 
 impl Config {
-    /// The tunables at their defaults, keeping `plex.server`, `plex.token`
-    /// and `plex.music_section` ([`NO_DEFAULT`]).
+    /// The tunables at their defaults, keeping [`NO_DEFAULT`].
     pub fn restored(&self) -> Config {
         let mut next =
             Config { plex: self.plex.clone(), keys: self.keys.clone(), ..Config::default() };
@@ -92,8 +90,7 @@ impl Config {
                 let default = if NO_DEFAULT.contains(&key.as_str()) {
                     None
                 } else if let Some(role) = role {
-                    // Judged against the chosen theme, not what shmc ships:
-                    // choosing a preset is not a change.
+                    // Against the chosen theme: choosing a preset is not a change.
                     crate::ui::theme::role_text(&base.theme, role)
                         .or_else(|| crate::ui::theme::look_text(&base.look, role))
                 } else {
@@ -101,8 +98,7 @@ impl Config {
                 };
                 let matches_default = default.as_deref().is_some_and(|d| {
                     if let Some(role) = role {
-                        // An override equal to the theme's value would stay
-                        // when the theme changes, so it counts as a change.
+                        // An equal override would stay when the theme changes.
                         !self.theme.overridden(role)
                     } else {
                         d == current
@@ -113,8 +109,7 @@ impl Config {
             .collect()
     }
 
-    /// The plain-text list for `shmc config --list` and the editor's `l` key,
-    /// shaped for pasting into a bug report.
+    /// For `shmc config --list` and the editor's `l` key, shaped for a bug report.
     pub fn settings_list(&self) -> String {
         let mut rows = self.setting_rows();
         // Only here, not in the rows: the config screen edits those.
@@ -180,8 +175,7 @@ impl Config {
             .collect()
     }
 
-    /// `None` when nothing changed: unknown key, no default, or already the
-    /// default. Writes nothing.
+    /// `None` for an unknown key, no default, or already the default. Writes nothing.
     pub fn restore_one(&mut self, key: &str) -> Option<SettingChange> {
         let row = self.setting_rows().into_iter().find(|r| r.key == key)?;
         let dropped = key.strip_prefix("theme.").and_then(|role| {
@@ -192,8 +186,7 @@ impl Config {
             }
         });
         if let Some(dropped) = dropped {
-            // Dropped, not set to the theme's value, so it does not stay
-            // pinned when the theme changes.
+            // Dropped, not set to the theme's value, so it does not stay pinned.
             dropped?;
             let to = self.setting_rows().into_iter().find(|r| r.key == key)?.current;
             return Some(SettingChange { key: row.key, from: row.current, to });
@@ -265,7 +258,6 @@ mod tests {
         cfg.ui.art_pct = 55;
         let list = cfg.settings_list();
 
-        // A changed tunable shows both values and no `= default` marker.
         let changed = list
             .lines()
             .find(|l| l.trim_start().starts_with("ui.art_pct"))
@@ -274,14 +266,12 @@ mod tests {
         assert!(changed.contains("40"), "{changed}");
         assert!(!changed.contains("= default"), "{changed}");
 
-        // An untouched one is marked instead.
         let unchanged = list
             .lines()
             .find(|l| l.trim_start().starts_with("ui.scrolloff"))
             .expect("ui.scrolloff is listed");
         assert!(unchanged.contains("= default"), "{unchanged}");
 
-        // Nested sections are flattened into dotted keys.
         assert!(list.contains("album_art.cache_mb"));
     }
 
@@ -307,7 +297,6 @@ mod tests {
         let quit = line("keys.global.quit");
         assert!(quit.contains("= default"), "{quit}");
 
-        // not settings: the config screen does not edit them
         assert!(cfg.setting_rows().iter().all(|row| !row.key.starts_with("keys.")));
     }
 
@@ -332,8 +321,7 @@ mod tests {
         assert!(scrolloff.is_default());
     }
 
-    /// An override equal to the theme's colour still counts as a change: it
-    /// would stay pinned when the theme changes.
+    /// An override equal to the theme's colour still counts as a change.
     #[test]
     fn equal_override_is_still_a_change() {
         let row = |accent: Option<&str>| {
@@ -432,13 +420,10 @@ mod tests {
         assert!(!keys.contains(&"plex.server"), "{keys:?}");
         assert!(!keys.contains(&"plex.token"), "{keys:?}");
         assert!(!keys.contains(&"plex.music_section"), "{keys:?}");
-        // Nothing differs from the default any more, so a second restore is a
-        // no-op (and the editor says so instead of listing changes).
         assert!(cfg.restore_defaults().is_empty());
     }
 
-    /// `background` is judged against the chosen theme like the colours, with
-    /// `none` for a theme that has no background.
+    /// `background` is judged against the chosen theme, `none` when it has none.
     #[test]
     fn background_listed_and_restored_against_theme() {
         let row = |cfg: &Config| {

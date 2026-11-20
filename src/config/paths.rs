@@ -2,8 +2,7 @@
 
 use std::path::{Path, PathBuf};
 
-/// The variable when set and absolute, otherwise `<home>/<default>`. There is
-/// no relative fallback: a path under the working directory could be planted.
+/// No relative fallback: a path under the working directory could be planted.
 fn xdg_dir(var: &str, default: &str) -> Option<PathBuf> {
     resolve_dir(std::env::var(var).ok(), dirs::home_dir(), default)
 }

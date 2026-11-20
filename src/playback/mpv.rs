@@ -1,5 +1,4 @@
-//! mpv driven over its Unix-socket JSON IPC. mpv's playlist is the play queue;
-//! it only sees URLs, all metadata lives in the UI's queue model.
+//! Drives mpv over JSON IPC; mpv's playlist mirrors the queue, URLs only.
 
 use crate::config::MpvConfig;
 use crate::redact::redact_secrets;
@@ -17,8 +16,7 @@ use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 use tokio::sync::oneshot;
 use tracing::{debug, error, info, warn};
 
-/// A queue entry for `loadfile`. `title` becomes mpv's `media-title`; without
-/// it an untagged file shows its name, the URL with the token.
+/// `title` becomes `media-title`; without it an untagged file shows the token URL.
 #[derive(Debug, Clone)]
 pub struct LoadItem {
     pub url: String,
@@ -27,14 +25,12 @@ pub struct LoadItem {
 
 #[derive(Debug, Clone)]
 pub enum MpvCmd {
-    /// Replace the playlist and start the first URL (`playlist-clear` would
-    /// leave the playing entry behind, so the first is `loadfile replace`).
+    /// `loadfile replace`: `playlist-clear` would leave the playing entry behind.
     Play(Vec<LoadItem>),
     Append(Vec<LoadItem>),
     /// An image added to the playing file as a video track, for Now Playing.
     AddCover(PathBuf),
-    /// mpv 0.36 has no `playlist-insert`: append, then move into place
-    /// (`append_at` is the playlist length before the append).
+    /// Append, then move into place: mpv 0.36 has no `playlist-insert`.
     Insert {
         index: usize,
         append_at: usize,
@@ -46,8 +42,7 @@ pub enum MpvCmd {
     /// Stop but keep the playlist (`stop` would wipe it).
     Stop,
     TogglePause,
-    /// Sets `pause` explicitly: `cycle` depends on mpv's state, which can be
-    /// stale (e.g. the sleep timer firing while paused).
+    /// Not `cycle`: it depends on mpv's state, which can be stale.
     SetPause {
         paused: bool,
     },
@@ -61,8 +56,7 @@ pub enum MpvCmd {
         property: &'static str,
         on: bool,
     },
-    /// Move an entry so it ends at index `to`. mpv's target is an entry, one
-    /// less than the final index when moving forward; `cmd_to_lines` compensates.
+    /// Move an entry so it ends at index `to`.
     Move {
         from: usize,
         to: usize,
@@ -103,8 +97,6 @@ const MEDIA_KEYS: [(&str, &str, MediaKey); 10] = [
 
 #[derive(Debug, Clone)]
 pub enum MpvEvent {
-    /// An observed property: time-pos, pause, playlist-pos, volume,
-    /// playlist-count, loop-playlist, loop-file, shuffle, audio-bitrate.
     Property {
         name: String,
         value: Option<Value>,
@@ -115,13 +107,11 @@ pub enum MpvEvent {
     Ready,
     /// A media key pressed, reported through a `script-message`.
     MediaKey(MediaKey),
-    /// A file finished loading.
     FileLoaded,
     Shutdown,
 }
 
-/// Unlinks the socket when the last handle clone is dropped, so a path that
-/// never reaches `shutdown` leaves nothing behind.
+/// Unlinks the socket when the last clone drops, even without `shutdown`.
 struct SocketCleanup(PathBuf);
 
 impl Drop for SocketCleanup {
@@ -155,8 +145,7 @@ impl MpvHandle {
         &self.sock
     }
 
-    /// Ask mpv for a property's current value: an authoritative answer, where a
-    /// late `property-change` event looks like a stalled player.
+    /// Authoritative, where a late `property-change` looks like a stalled player.
     pub async fn get_property(&self, name: &str) -> Result<Value> {
         let id = self.next_request.fetch_add(1, Ordering::Relaxed);
         let (tx, rx) = oneshot::channel();
@@ -183,13 +172,11 @@ impl MpvHandle {
 /// mpv answers local properties at once; slower means a dead socket.
 const GET_PROPERTY_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
 
-/// mpv's arguments, and the `extra_args` entry dropped, if any. A user
-/// `--log-file` would get the token-bearing URLs unredacted; shmc's goes last.
+/// mpv's arguments and the dropped `extra_args` entry; shmc's `--log-file` goes last.
 fn build_args(cfg: &MpvConfig, sock: &Path, fifo: Option<&Path>) -> (Vec<String>, Option<String>) {
     let mut args: Vec<String> = vec![
         "--no-terminal".into(),
-        // A user's mpv.conf (`save-position-on-quit` writes the URL to
-        // watch_later) or scripts could put the token-bearing URL on disk.
+        // mpv.conf or scripts could write the token URL to disk (watch_later).
         "--no-config".into(),
         "--load-scripts=no".into(),
         "--no-video".into(),
@@ -208,8 +195,7 @@ fn build_args(cfg: &MpvConfig, sock: &Path, fifo: Option<&Path>) -> (Vec<String>
     let mut ignored: Option<String> = None;
     for arg in &cfg.extra_args {
         if skip_value {
-            // The value of a bare `--log-file`; left alone it would become a
-            // file mpv tries to open.
+            // The value of a dropped bare `--log-file`.
             skip_value = false;
             continue;
         }
@@ -338,8 +324,7 @@ pub async fn spawn(cfg: &MpvConfig) -> Result<(MpvHandle, UnboundedReceiver<MpvE
         }
         let _ = etx.send(MpvEvent::Ready);
 
-        // Reads run on their own task: mpv answers every command, and a long
-        // `loadfile` burst would otherwise deadlock the writer.
+        // Own task: mpv answers every command, so a long `loadfile` burst would deadlock.
         let reader = tokio::spawn(async move {
             read_events(read_half, &reader_pending, &etx).await;
             // Nobody will answer the questions still open.
@@ -385,8 +370,7 @@ pub async fn spawn(cfg: &MpvConfig) -> Result<(MpvHandle, UnboundedReceiver<MpvE
 
 type Pending = tokio::sync::Mutex<HashMap<u64, oneshot::Sender<Result<Value>>>>;
 
-/// Route mpv's IPC lines to their callers and the UI until mpv is gone. Lines
-/// are read as bytes: a bad one is skipped, only EOF or an I/O error ends this.
+/// Route mpv's lines to callers and the UI; only EOF or an I/O error ends this.
 async fn read_events<R: tokio::io::AsyncRead + Unpin>(
     read: R,
     pending: &Pending,
@@ -427,8 +411,7 @@ async fn read_events<R: tokio::io::AsyncRead + Unpin>(
     }
 }
 
-/// mpv logs every `loadfile` URL with the token, so its log goes through a FIFO
-/// that redacts each line. Without the FIFO mpv gets no log at all.
+/// mpv logs `loadfile` URLs with the token, so its log goes through a redacting FIFO.
 struct MpvLogPipe {
     fifo: PathBuf,
     log: PathBuf,
@@ -482,8 +465,7 @@ fn mpv_log_pipe() -> Option<MpvLogPipe> {
     Some(MpvLogPipe { fifo, log, reader })
 }
 
-/// Drain the FIFO into `mpv.log`, redacted, until EOF. The flag tells
-/// [`abandon_log_pipe`] whether the reader is done.
+/// Drain the FIFO into `mpv.log`, redacted; the flag says the reader is done.
 fn spawn_log_reader(pipe: MpvLogPipe) -> std::sync::Arc<std::sync::atomic::AtomicBool> {
     struct DoneOnDrop(std::sync::Arc<std::sync::atomic::AtomicBool>);
     impl Drop for DoneOnDrop {
@@ -549,8 +531,7 @@ fn copy_redacted(mut reader: impl BufRead, out: &mut impl Write) {
     }
 }
 
-/// mpv never opened its log, so the reader is stuck in `open`: open the FIFO
-/// for writing and close it until the thread is done.
+/// mpv never opened its log: a write-open frees the reader stuck in `open`.
 async fn abandon_log_pipe(fifo: &Path, done: &std::sync::atomic::AtomicBool) {
     use std::os::unix::fs::OpenOptionsExt;
     for _ in 0..50 {
@@ -574,8 +555,7 @@ fn nonce() -> u128 {
     (now << 8) | (seq & 0xFF)
 }
 
-/// A socket path in the 0700 run dir, never the system temp dir: mpv's IPC
-/// can read the token-bearing queue. Fails rather than fall back.
+/// In the 0700 run dir, never the temp dir: mpv's IPC can read the token URLs.
 fn socket_path_from(run_dir: std::io::Result<PathBuf>) -> Result<PathBuf> {
     let dir = run_dir.map_err(|e| {
         anyhow::anyhow!("cannot create a private directory for the mpv socket: {e}")
@@ -588,8 +568,7 @@ fn socket_path_from(run_dir: std::io::Result<PathBuf>) -> Result<PathBuf> {
 /// sweeping inside that window must not unlink it.
 const STALE_SOCKET_MAX_AGE: std::time::Duration = std::time::Duration::from_secs(60);
 
-/// Remove sockets a crashed shmc left: no one answers and they are older than
-/// `max_age` (a young one may not be listening yet).
+/// Remove sockets a crashed shmc left: old and unanswered.
 fn remove_stale_sockets(dir: &Path, max_age: std::time::Duration) {
     let Ok(entries) = std::fs::read_dir(dir) else {
         return;
@@ -612,8 +591,7 @@ fn remove_stale_sockets(dir: &Path, max_age: std::time::Duration) {
     }
 }
 
-/// Remove log FIFOs a killed shmc left behind; a live one exists only until
-/// the reader attaches.
+/// Remove log FIFOs a killed shmc left behind.
 fn remove_stale_pipes(dir: &Path, max_age: std::time::Duration) {
     let Ok(entries) = std::fs::read_dir(dir) else {
         return;
@@ -631,8 +609,7 @@ fn remove_stale_pipes(dir: &Path, max_age: std::time::Duration) {
     }
 }
 
-/// Whether the mtime is more than `max_age` behind `now`. One that cannot be
-/// read, or lies in the future, counts as fresh.
+/// An unreadable or future mtime counts as fresh.
 fn touched_longer_ago_than(
     path: &Path,
     now: std::time::SystemTime,
@@ -647,8 +624,7 @@ fn touched_longer_ago_than(
     }
 }
 
-/// Connect to mpv's socket; fails at once if mpv has already exited (a bad
-/// path or option) instead of waiting out the timeout.
+/// Fails at once if mpv has already exited instead of waiting out the timeout.
 async fn connect_with_retry(
     sock: &PathBuf,
     timeout: std::time::Duration,
@@ -685,8 +661,7 @@ fn command_name(line: &str) -> String {
         .unwrap_or_else(|| "unknown".into())
 }
 
-/// Named arguments, as mpv 0.38 put `index` before `options`. A blank title
-/// would fall back to the URL, so it is sent as "Untitled".
+/// Named arguments, as mpv 0.38 put `index` before `options`; a blank title is "Untitled".
 fn loadfile_line(item: &LoadItem, flags: &str) -> String {
     let title = item.title.trim();
     let title = if title.is_empty() { "Untitled" } else { title };
@@ -753,8 +728,7 @@ fn cmd_to_lines(cmd: MpvCmd) -> Vec<String> {
     vec![v.to_string()]
 }
 
-/// A reply to a command that carried a `request_id`; `None` for everything
-/// else (events, replies to commands sent without an id).
+/// A reply to a command sent with a `request_id`, else `None`.
 fn parse_reply(line: &str) -> Option<(u64, Result<Value>)> {
     let v: Value = serde_json::from_str(line).ok()?;
     let request_id = v.get("request_id")?.as_u64()?;

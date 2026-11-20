@@ -61,8 +61,7 @@ impl Screen {
                 self.set(setting, if on { "true" } else { "false" });
             }
             Kind::Secret => {
-                // Start empty: the list holds a `(set)` placeholder that must
-                // never replace the secret. Empty means keep it.
+                // Empty: the list's `(set)` placeholder must never replace the secret.
                 self.editor = Some(Editor::Field {
                     text: TextInput::default(),
                     initial: String::new(),
@@ -142,8 +141,7 @@ impl Screen {
         }
     }
 
-    /// `←`/`→`: step the selected setting without opening it, through `set`
-    /// like a commit. Kinds with no sensible step do nothing.
+    /// `←`/`→`: step the setting without opening it, through `set` like a commit.
     pub(super) fn step(&mut self, dir: i32) {
         let Some(setting) = self.selected() else {
             return;
@@ -219,8 +217,7 @@ impl Screen {
         self.status_error = false;
     }
 
-    /// Every key belongs to the editor while it is open. The status is not
-    /// cleared here: it belongs to the value being edited.
+    /// The status is left alone: it is about the value being edited.
     pub(super) fn handle_editor(&mut self, key: KeyEvent) -> Result<bool> {
         let Some(editor) = self.editor.take() else {
             return Ok(true);
@@ -388,8 +385,7 @@ impl Screen {
         self.status.clear();
     }
 
-    /// A paste arrives as one event. Control characters are dropped so a
-    /// trailing newline is not stored.
+    /// Control characters are dropped, so a trailing newline is not stored.
     pub(super) fn handle_paste(&mut self, pasted: String) {
         if self.review.is_some()
             || self.conflict_ask.is_some()
@@ -435,11 +431,9 @@ impl Screen {
         theme::set_theme(theme::from_config(&preview.theme).0);
     }
 
-    /// A value that does not fit becomes a status line, not an error.
-    /// False when the value was rejected.
+    /// A bad value becomes a status line, not an error; false when it was rejected.
     pub(super) fn set(&mut self, setting: &Setting, text: &str) -> bool {
-        // An untouched secret field commits empty, which must keep the token
-        // rather than write `plex.token = ""`.
+        // An untouched secret commits empty: keep the token, never write it empty.
         if setting.kind == Kind::Secret && text.trim().is_empty() {
             self.status = format!("{} unchanged", setting.key);
             self.status_error = false;
@@ -523,8 +517,7 @@ impl ListEdit {
     }
 }
 
-/// A value the list does not offer (hand-typed, or no longer offered) is
-/// added, so the highlight is the value in effect, not silently the first.
+/// A value the list does not offer is added, so the highlight is the value in effect.
 fn pick_index(options: &mut Vec<String>, current: &str) -> usize {
     if let Some(index) = options.iter().position(|option| option == current) {
         return index;
@@ -613,8 +606,7 @@ pub(super) fn value_for(kind: Kind, text: &str) -> Result<toml::Value> {
     })
 }
 
-/// Uses the rule shared with theme files and `shmc config --check`. Not
-/// trimmed: a space is a glyph.
+/// The rule theme files and `--check` use; not trimmed, as a space is a glyph.
 pub(super) fn symbol_value(key: &str, text: &str) -> Result<toml::Value> {
     let name = key.strip_prefix("theme.").unwrap_or(key);
     let mut probe = theme::Look::DEFAULT;

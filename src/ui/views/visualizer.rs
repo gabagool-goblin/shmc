@@ -18,16 +18,14 @@ enum VisualizerMode {
     Spread,
 }
 
-/// Spread mode: which of bar width and gap keeps its set size while the other
-/// takes up the width.
+/// Spread mode: which of bar width and gap keeps its set size.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum SpreadAnchor {
     Bar,
     Gap,
 }
 
-/// The visualizer's cells: a width per bar, a width per gap (`bars.len() - 1`)
-/// and the left padding. All bars share a width, as do all gaps.
+/// A width per bar and per gap, and the left padding.
 #[derive(Debug, PartialEq, Eq)]
 struct VizLayout {
     bars: Vec<usize>,
@@ -41,8 +39,7 @@ impl VizLayout {
     }
 }
 
-/// Adaptive adds bars as the pane widens, then widens them. Spread stops at
-/// the set count and widens what the anchor does not name. Leftover is margin.
+/// Adaptive adds bars, then widens them; spread widens what the anchor does not name.
 fn visualizer_layout(
     width: usize,
     mode: VisualizerMode,

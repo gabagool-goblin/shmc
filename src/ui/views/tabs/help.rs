@@ -28,8 +28,7 @@ pub(in crate::ui::views) fn draw_help_tab(f: &mut Frame, app: &mut App, area: Re
     let (offset, visible) = window(app, ScrollId::Help, cursor, total, content);
     let end = (offset + visible).min(total);
 
-    // One key column, capped to leave the descriptions room, so they all start
-    // in the same place.
+    // One key column, capped so the descriptions keep room.
     let widest = lines
         .iter()
         .filter_map(|l| match l {

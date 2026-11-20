@@ -225,8 +225,7 @@ fn rejected_value_keeps_field_open() {
     assert_eq!(screen.cfg.ui.art_pct, Config::default().ui.art_pct);
 }
 
-/// The preview is a copy of the header, so it follows the two header
-/// options: the number alone, and the flags as words where they fit.
+/// The preview follows `ui.volume_display` and `ui.mode_flags`.
 #[test]
 fn preview_follows_header_options() {
     let mut screen = ctx();
@@ -259,8 +258,7 @@ fn preview_follows_icon_set() {
     assert!(!text.contains('\u{f0456}'), "{text}");
 }
 
-/// The preview draws through the player's header code, so it follows the
-/// unsaved header mode and border style.
+/// The preview follows the unsaved header mode and border style.
 #[test]
 fn preview_follows_header_mode_and_borders() {
     let _palette = theme::palette_test_lock();
@@ -461,7 +459,7 @@ fn diagnostics_end_shows_last_screen() {
     let mut screen = ctx();
     screen.tab = Tab::Diagnostics;
     screen.report = Some(Report::default());
-    frame(&mut screen, 100, 30); // the pane records its height
+    frame(&mut screen, 100, 30);
     assert!(screen.diag_visible > 1, "the pane recorded its height: {}", screen.diag_visible);
 
     screen.handle(key(KeyCode::PageDown)).expect("page");
@@ -626,8 +624,7 @@ fn capital_r_asks_then_restores_tab() {
     assert_eq!(snap(&screen.cfg), snap(&cfg), "defaults back; server, token, section kept");
 }
 
-/// `*`, `r` and `R` judge a colour against the chosen theme, not against
-/// what shmc ships.
+/// `*`, `r` and `R` judge a colour against the chosen theme.
 #[test]
 fn colours_marked_and_restored_against_chosen_theme() {
     let _palette = theme::palette_test_lock();
@@ -658,8 +655,7 @@ fn colours_marked_and_restored_against_chosen_theme() {
     assert_eq!(theme::theme(), theme::DEFAULT);
 }
 
-/// `none` is a real value of the background: it beats a theme's, shows as
-/// text with no swatch, and `r` drops it back to the theme's.
+/// `none` beats a theme's background, shows with no swatch, and `r` drops it.
 #[test]
 fn background_row_shows_swatch() {
     let _palette = theme::palette_test_lock();
@@ -702,8 +698,7 @@ fn background_row_shows_swatch() {
     assert!(screen.status_error);
 }
 
-/// A background paints the whole screen, preview included, and follows the
-/// picker; without one nothing is painted.
+/// A background paints the whole screen and follows the picker.
 #[test]
 fn background_paints_screen_and_follows_preview() {
     let _palette = theme::palette_test_lock();
@@ -713,8 +708,7 @@ fn background_paints_screen_and_follows_preview() {
         let mut terminal = Terminal::new(TestBackend::new(w, h)).expect("terminal");
         terminal.draw(|f| screen.draw(f)).expect("draw");
         let buf = terminal.backend().buffer().clone();
-        // Text in the terminal's own colour would vanish on a light
-        // background: every visible cell is coloured by the theme.
+        // Text in the terminal's own colour would vanish on a light background.
         let plain: Vec<&str> = buf
             .content()
             .iter()
@@ -768,8 +762,7 @@ fn theme_sample_yields_on_small_screens() {
     }
 }
 
-/// A queue cursor fills its row; the sample's must too, or the colours it
-/// previews do not look like the player's.
+/// The sample's cursors fill their rows, as the queue's do.
 #[test]
 fn sample_cursors_fill_rows() {
     let _palette = theme::palette_test_lock();
@@ -860,8 +853,7 @@ fn esc_restores_palette_after_preview() {
     screen.apply_theme();
 }
 
-/// Styles preview while the chooser moves: Esc restores, choosing keeps,
-/// and a theme without styles removes them.
+/// Styles preview in the chooser: Esc restores, choosing keeps, none removes them.
 #[test]
 fn esc_restores_previewed_styles() {
     let _palette = theme::palette_test_lock();
@@ -933,8 +925,7 @@ fn x_exports_active_palette() {
     screen.apply_theme();
 }
 
-/// A colour pinned to what the theme already has is invisible; `*`, `r`
-/// and `R` must still see it, or it stays when the theme changes.
+/// `*`, `r` and `R` see an override equal to the theme's colour.
 #[test]
 fn override_equal_to_theme_colour_is_dropped() {
     let _palette = theme::palette_test_lock();
@@ -962,8 +953,7 @@ fn override_equal_to_theme_colour_is_dropped() {
     assert_eq!(screen.cfg.theme.accent, None);
 }
 
-/// The settings pane's rows, trimmed: the left 52% of the frame without
-/// its border and scrollbar column, exactly what the list is drawn into.
+/// The settings pane's rows: the left 52% without its border and scrollbar column.
 fn list_lines(text: &str, w: u16) -> Vec<String> {
     let pane = Layout::horizontal([Constraint::Percentage(52), Constraint::Min(20)])
         .split(Rect::new(0, 0, w, 1))[0]
@@ -977,8 +967,7 @@ fn list_lines(text: &str, w: u16) -> Vec<String> {
         .collect()
 }
 
-/// Where the value starts on a settings row: after the label and the first
-/// run of two spaces. None for a heading or an empty row.
+/// Where a row's value starts, after the first two spaces; None for a heading.
 fn value_col(line: &str) -> Option<usize> {
     let cols: Vec<char> = line.chars().collect();
     let gap = (1..cols.len()).find(|&i| cols[i] == ' ' && cols[i - 1] == ' ' && i > 2)?;
@@ -1023,8 +1012,7 @@ fn long_label_is_cut_not_pushed() {
     }
 }
 
-/// Select by key and step through the whole list, checking the cursor is
-/// always on a setting and that its heading shows when it opens a group.
+/// The cursor stays on settings, and a group's heading shows when it opens one.
 #[test]
 fn cursor_skips_group_headings() {
     let mut screen = ctx();
@@ -1249,8 +1237,7 @@ fn keys_bar_drops_hints_before_clipping() {
             .lines()
             .find(|l| l.contains("move"))
             .unwrap_or_else(|| panic!("no keys bar at {w}:\n{text}"));
-        // `q quit` is the last hint to go, so a bar that still ends in it
-        // lost whole hints rather than the end of the line.
+        // `q quit` goes last, so whole hints were dropped, not the end of the line.
         assert!(bar.trim_end_matches(['│', ' ']).ends_with("q quit"), "{w}: {bar}");
     }
     let narrow = frame(&mut screen, 44, 24);
@@ -1475,8 +1462,7 @@ fn unused_setting_dimmed_with_reason() {
     assert_eq!(label_fg(&mut screen, "Spread anchor"), dim);
     assert_eq!(label_fg(&mut screen, "Bar width"), text, "that one always applies");
 
-    // On the cursor the row keeps the cursor's colours, and the details
-    // pane gives the reason; its value is still shown and Enter opens it.
+    // On the cursor the row keeps the cursor's colours; the details pane says why.
     select(&mut screen, "ui.visualizer_bars");
     assert_eq!(label_fg(&mut screen, "Bar count"), theme::current().fg.unwrap());
     let shown = frame(&mut screen, 100, 70);
@@ -1513,8 +1499,7 @@ fn unused_setting_dimmed_with_reason() {
 type Gate = std::sync::mpsc::Sender<Result<Vec<Section>, String>>;
 type Asked = std::sync::Arc<std::sync::Mutex<Vec<(String, String)>>>;
 
-/// A screen whose library lookup waits for the test to answer, and notes
-/// the server and token it was asked with.
+/// A lookup that waits for the test to answer and notes the server and token.
 fn screen_with_a_lookup() -> (Screen, Gate, Asked) {
     let (tx, rx) = std::sync::mpsc::channel();
     let rx = std::sync::Mutex::new(rx);
@@ -1911,8 +1896,7 @@ fn dimmed_setting_says_why_unused() {
     assert_eq!(screen.cfg.cava.noise_reduction, 65);
     assert!(screen.status.contains("custom style"), "{}", screen.status);
 
-    // A setting that applies gets no note, and neither does this one once
-    // the style that uses it is chosen.
+    // No note for a setting that applies, nor for this one once its style is chosen.
     select(&mut screen, "ui.art_pct");
     screen.handle(key(KeyCode::Right)).unwrap();
     assert_eq!(screen.status.matches(';').count(), 0, "{}", screen.status);
@@ -2023,8 +2007,7 @@ fn stepping_the_theme_clears_the_overrides_too() {
     reset_palette(&mut screen);
 }
 
-/// Choosing another theme drops the spacing and symbol overrides with the
-/// colours, and the status counts all of them.
+/// Choosing another theme drops spacing and symbol overrides too, and counts them.
 #[test]
 fn other_theme_clears_spacing_symbol_overrides() {
     let _palette = theme::palette_test_lock();
@@ -2040,8 +2023,7 @@ fn other_theme_clears_spacing_symbol_overrides() {
     reset_palette(&mut screen);
 }
 
-/// A bad symbol is refused with its key named; `r` drops an override, or
-/// says the row already matches.
+/// A bad symbol is refused by key; `r` drops an override or says it matches.
 #[test]
 fn bad_symbol_is_refused() {
     let _palette = theme::palette_test_lock();
@@ -2073,8 +2055,7 @@ fn bad_symbol_is_refused() {
     reset_palette(&mut screen);
 }
 
-/// The preview copies the player's header and visualizer strip, so it
-/// draws the symbols in force and sits its blocks apart by the gap.
+/// The preview draws the symbols in force and spaces its blocks by the gap.
 #[test]
 fn preview_follows_spacing_and_symbols() {
     let mut screen = ctx();
@@ -2104,8 +2085,7 @@ fn preview_follows_spacing_and_symbols() {
     }
 }
 
-/// `solid` is accepted on the progress glyph rows (the screen's rule is the
-/// loader's) and stored as typed; `r` removes it like any override.
+/// `solid` is accepted on the progress glyph rows; `r` removes it like any override.
 #[test]
 fn progress_rows_accept_solid() {
     let _palette = theme::palette_test_lock();
@@ -2123,8 +2103,7 @@ fn progress_rows_accept_solid() {
     assert_eq!(screen.cfg.theme.progress_head, None);
 }
 
-/// The progress bar row is a picker of the preset names; the choice is
-/// stored as the name, and a name is all it takes.
+/// The progress bar row picks a preset and stores its name.
 #[test]
 fn progress_bar_row_stores_preset_name() {
     let _palette = theme::palette_test_lock();
@@ -2146,8 +2125,7 @@ fn progress_bar_row_stores_preset_name() {
     assert!(symbol_value("theme.progress_bar", "=").is_err(), "a name only");
 }
 
-/// The meter and the visualizer rows pick a preset (then `custom…` for
-/// glyphs) and store the name, not the glyphs; `r` removes it.
+/// The meter and visualizer rows store a preset's name, not its glyphs.
 #[test]
 fn meter_visualizer_rows_store_preset_name() {
     let _palette = theme::palette_test_lock();
@@ -2185,8 +2163,7 @@ fn meter_visualizer_rows_store_preset_name() {
     press(&mut screen, 'r');
     assert_eq!(screen.cfg.theme.volume_meter, None);
 
-    // Glyphs typed show as themselves and are left alone by ←/→; the
-    // picker opens on `custom…`, which leads to the text field.
+    // Typed glyphs are left alone by ←/→, and the picker opens on `custom…`.
     screen.set(meter, "<>");
     assert_eq!(screen.value(meter), "<>");
     screen.handle(key(KeyCode::Right)).unwrap();

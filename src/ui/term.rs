@@ -18,8 +18,7 @@ pub type Term = Terminal<CrosstermBackend<std::io::Stdout>>;
 pub fn setup() -> Result<Term> {
     crossterm::terminal::enable_raw_mode().context("enabling raw mode; is this a terminal?")?;
     let mut out = stdout();
-    // Bracketed paste: a paste arrives as one `Event::Paste`, not key presses
-    // that would trigger bindings like `/`.
+    // Bracketed paste, so a paste cannot trigger bindings like `/`.
     if let Err(e) = execute!(out, crossterm::terminal::EnterAlternateScreen, EnableBracketedPaste) {
         restore_raw();
         return Err(e.into());
@@ -41,8 +40,7 @@ pub fn restore_if_active() {
     }
 }
 
-/// Restore the terminal without the `Term` handle, which neither the panic
-/// hook nor the signal handler can borrow.
+/// Without the `Term` handle, which neither the panic hook nor a signal handler can borrow.
 fn restore_raw() {
     let _ = crossterm::terminal::disable_raw_mode();
     let mut out = stdout();
@@ -57,14 +55,12 @@ fn restore_raw() {
 /// A panic on the keyboard thread takes the UI down too.
 pub const KEYBOARD_THREAD: &str = "shmc-keys";
 
-/// Other threads (tokio workers) can panic while the app carries on, and
-/// restoring the terminal then would leave a live UI on a broken screen.
+/// A tokio worker can panic while the app carries on; restoring then breaks a live UI.
 fn panic_ends_the_ui(thread_name: Option<&str>) -> bool {
     matches!(thread_name, Some("main" | KEYBOARD_THREAD))
 }
 
-/// Restore the terminal before the panic message prints, but only while the UI
-/// is up: after `restore` stdout may be a pipe.
+/// Only while the UI is up: after `restore` stdout may be a pipe.
 pub fn install_panic_hook() {
     let previous = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |info| {

@@ -59,8 +59,7 @@ pub(in crate::ui::views) fn draw_browser_tab(f: &mut Frame, app: &mut App, area:
         render_bar(f, bar, total, offset, visible);
     }
 
-    // "Title (2019)", with " - Artist" only when it is not the browsed artist.
-    // Too narrow: the title shortens first, then the artist goes, never the year.
+    // "Title (2019) - Artist": the title shortens, then the artist goes, never the year.
     {
         let pane = albums_pane;
         let raw = app.browser.albums.items.len();

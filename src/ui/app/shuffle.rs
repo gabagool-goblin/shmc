@@ -36,13 +36,11 @@ struct QueuePlan {
     position: Vec<usize>,
     /// Where the playing entry ends up.
     play: Option<usize>,
-    /// A move shifted the playing entry on the way, so mpv will report
-    /// intermediate positions and a guard is needed.
+    /// The playing entry shifted on the way, so mpv reports intermediate positions.
     play_moved: bool,
 }
 
-/// Moves each track into place, slot 0 first. Tracks not yet placed keep their
-/// order, so a track sits at `t` plus how many of them are below it.
+/// Slot 0 first; a track sits at `t` plus the unplaced tracks below it.
 fn queue_move_plan(order: &[usize], play: Option<usize>) -> Option<QueuePlan> {
     let n = order.len();
     let mut seen = vec![false; n];
@@ -87,8 +85,7 @@ fn low_bit(i: usize) -> usize {
     1 << i.trailing_zeros()
 }
 
-/// Fenwick tree over "still to be placed": `below(i)` counts the live items
-/// with a smaller original index.
+/// Fenwick tree over the unplaced items; `below(i)` counts those with a smaller index.
 struct Fenwick {
     tree: Vec<usize>,
     len: usize,
@@ -162,8 +159,7 @@ impl App {
         }
         let snapshot = self.shuffle_snapshot.take();
         if let Some(snapshot) = snapshot {
-            // Match snapshot entries to queue slots by rating key: first unused
-            // match, with slots bucketed per key to stay O(n).
+            // Match snapshot entries to slots by rating key, bucketed per key for O(n).
             let order = {
                 let mut remaining: HashMap<&str, VecDeque<usize>> = HashMap::new();
                 for (i, t) in self.queue.items.iter().enumerate() {
@@ -243,8 +239,7 @@ impl App {
         order
     }
 
-    /// Reorders the app queue and mpv's playlist in lockstep (`order[new] =
-    /// old`), one track at a time from slot 0.
+    /// Reorders the app queue and mpv's playlist in lockstep (`order[new] = old`).
     fn apply_queue_order(&mut self, order: Vec<usize>) {
         if order.len() != self.queue.items.len() {
             return;
@@ -282,8 +277,7 @@ impl App {
             self.follow_queue();
             return;
         }
-        // highlighted row -> new real slot -> filtered cursor; falls back to
-        // the playing track, then the old cursor
+        // the cursor's track, else the playing track, else the old cursor
         let selected = old_selected_real
             .and_then(|s| plan.position.get(s).copied())
             .and_then(|real| self.queue.filter.cursor_of(real))
@@ -294,8 +288,7 @@ impl App {
         self.follow_queue();
     }
 
-    /// `>` while stopped: after a failure the track following the broken one,
-    /// otherwise the cursor's row.
+    /// `>` while stopped: the track after a failure, otherwise the cursor's row.
     pub(super) fn play_from_stopped(&mut self) {
         if self.queue.items.is_empty() {
             self.transient("queue is empty".into());
@@ -356,8 +349,7 @@ mod tests {
         (moves, working)
     }
 
-    /// `moved`: some position the entry passed through differed from its final
-    /// one, i.e. mpv reports intermediate events.
+    /// `moved`: mpv reports intermediate positions for the playing entry.
     fn reference_play(order: &[usize], play: usize) -> (usize, bool) {
         let mut working: Vec<usize> = (0..order.len()).collect();
         let final_pos = order.iter().position(|&i| i == play).expect("permutation");
@@ -424,8 +416,7 @@ mod tests {
         assert!(queue_move_plan(&[], None).is_some());
     }
 
-    /// A quadratic restore takes seconds at 50k. The ceiling is coarse to
-    /// stay unflaky under load; the scaling ratio is the real guard.
+    /// The ceiling is coarse to stay unflaky; the scaling ratio is the real guard.
     #[test]
     fn queue_move_plan_scales_linearly() {
         let mut seed = 42_u64;

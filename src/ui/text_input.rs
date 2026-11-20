@@ -1,5 +1,4 @@
-//! A line of text with a cursor, for the config screen. The cursor is a char
-//! index, never a byte offset, so CJK text is not cut mid-char.
+//! The config screen's line editor. The cursor is a char index, never a byte offset.
 
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
@@ -66,8 +65,7 @@ impl TextInput {
         self.cursor = from;
     }
 
-    /// Where a word motion back from `from` lands: letters/digits and
-    /// punctuation are separate words, so `http://x` is not one.
+    /// Letters and digits are one word, punctuation another, so `http://x` is not one.
     fn word_start(&self, from: usize) -> usize {
         let chars: Vec<char> = self.text.chars().collect();
         let mut i = from.min(chars.len());

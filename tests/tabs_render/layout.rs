@@ -27,7 +27,7 @@ async fn all_tabs_render_at_several_sizes() {
     app.queue.items = (0..50).map(track).collect();
     app.queue.state.select(Some(7));
     app.current = Some(7);
-    app.stopped = false; // App::new starts stopped; simulate an active player
+    app.stopped = false;
     app.duration = 257.0;
     app.position = 42.0;
     app.volume = 63.0;
@@ -98,27 +98,27 @@ async fn all_tabs_render_at_several_sizes() {
     app.tab = Tab::Queue;
     let q = render(&mut app, 120, 40);
     for want in [
-        "[Playing]",   // state badge (secondary)
-        "Volume: ",    // volume zone
-        " 63%",        // right-aligned percent
-        "0:42 / 4:17", // elapsed / total
-        "(320 kbps)",  // cheaply-known bitrate
-        "rep",         // repeat icon on (ascii set)
-        "shf",         // shuffle icon on
-        "one",         // single icon
-        "con",         // consume icon
-        "│",           // thin header-zone divider
-        "Queue",       // tab bar
+        "[Playing]",
+        "Volume: ",
+        " 63%",
+        "0:42 / 4:17",
+        "(320 kbps)",
+        "rep",
+        "shf",
+        "one",
+        "con",
+        "│",
+        "Queue",
         "Browser",
         "Playlists",
-        "Len",   // header spelled out
-        "Title", // queue table is # | Title | Artist | Album | Length
+        "Len",
+        "Title",
         "Artist",
-        "Starfall! 7",       // rows incl. the current one
-        "Evening Satellite", // album column
-        "4:17",              // right-aligned Length
-        "No cover",          // art placeholder (no picker in tests)
-        "▼",                 // scrollbar (50 rows > visible)
+        "Starfall! 7",
+        "Evening Satellite",
+        "4:17",
+        "No cover", // no picker in tests
+        "▼",
     ] {
         assert!(q.contains(want), "Queue frame must contain {want:?}\nframe:\n{q}");
     }
@@ -154,10 +154,10 @@ async fn all_tabs_render_at_several_sizes() {
         "[Album]",
         "Type / Artist",
         "Len",
-        "Featured Acts",     // track credit from originalTitle
-        "Northwind Sounds",  // album artist on the album row
-        "Evening Satellite", // album column of the track row
-        "4:17",              // right-aligned Len (257293 ms)
+        "Featured Acts",    // track credit from originalTitle
+        "Northwind Sounds", // album artist on the album row
+        "Evening Satellite",
+        "4:17",
     ] {
         assert!(s.contains(want), "Search frame must contain {want:?}\nframe:\n{s}");
     }
@@ -437,8 +437,7 @@ fn char_x(line: &str, needle: &str) -> Option<usize> {
     hay.windows(want.len()).position(|w| w == want.as_slice())
 }
 
-/// With no `#` column, rows still line up under the header and the art box gets
-/// the full pane width (46 cells at 120x40).
+/// With no `#` column, rows line up under the header and the art box takes the full width.
 #[tokio::test]
 async fn queue_drops_row_numbers_for_art() {
     let mut app = new_app().await;
@@ -626,8 +625,7 @@ async fn thousand_track_album_prints_numbers() {
     );
 }
 
-/// Help descriptions start in one column at every width; one that does not fit
-/// ends in an ellipsis rather than being clipped.
+/// Help descriptions start in one column at every width, and ellipsize rather than clip.
 #[tokio::test]
 async fn help_descriptions_share_column_and_ellipsize() {
     let mut app = new_app().await;
@@ -694,8 +692,7 @@ async fn queue_text_gutter_matches_both_sides() {
     }
 }
 
-/// Bars are centred between the pane's edges; an odd leftover cell is always
-/// on the right, in both modes, art on or off.
+/// Bars are centred, an odd leftover cell on the right, in both modes, art on or off.
 #[tokio::test]
 async fn visualizer_is_centred_in_its_pane() {
     let mut app = new_app().await;
@@ -722,8 +719,7 @@ async fn visualizer_is_centred_in_its_pane() {
     }
 }
 
-/// Spread mode draws the set number of bars once they fit (fewer before), with
-/// even bars and gaps; the anchor keeps its size and the other grows.
+/// Spread mode: the set number of bars once they fit, even bars and gaps, the anchor fixed.
 #[tokio::test]
 async fn spread_visualizer_even_bars_and_gaps() {
     let mut app = new_app().await;
@@ -950,8 +946,7 @@ async fn default_column_weights_unchanged() {
     }
 }
 
-/// One setting drives all four tables: a heavy Title widens it in each, and a
-/// weight of 0 hides that column with the rest still under their headers.
+/// One weight drives all four tables; 0 hides that column with the rest under their headers.
 #[tokio::test]
 async fn column_weights_apply_to_every_track_table() {
     let mut app = app_with_every_table().await;
@@ -999,7 +994,7 @@ async fn column_weights_apply_to_every_track_table() {
                 };
                 for (i, text) in cells.iter().enumerate() {
                     let found = cell_col(&frame, labels[3], text);
-                    // the Results artist cell leads with "♪ "; album names there can start like an artist's
+                    // the Results artist cell leads with "♪ "
                     let lead = if matches!(table, Table::Results) && i == 0 { 2 } else { 0 };
                     if i != gone {
                         assert_eq!(
@@ -1024,7 +1019,7 @@ async fn column_weights_apply_to_every_track_table() {
     }
 }
 
-/// A header at `w` columns for the two header options. The app is dropped on return (it holds the lock).
+/// A header at `w` columns; the app is dropped on return, as it holds the lock.
 async fn header_with(volume_display: &str, mode_flags: &str, w: u16) -> Terminal<TestBackend> {
     let ui = UiConfig {
         volume_display: volume_display.into(),
@@ -1047,8 +1042,7 @@ fn dividers(terminal: &Terminal<TestBackend>) -> Vec<u16> {
         .collect()
 }
 
-/// Mode words shorten with the width, from full words to R Z S C, never icons,
-/// and the title stays centred.
+/// Mode words shorten with the width down to R Z S C, never icons; the title stays centred.
 #[tokio::test]
 async fn mode_words_step_down_by_width() {
     let s = shmc::ui::icons::status(true);
@@ -1104,7 +1098,7 @@ async fn sleep_label_steps_words_not_icons() {
     );
 }
 
-/// Each `ui.volume_display` value draws what it names (unknown is both) without moving the columns.
+/// Each `ui.volume_display` draws what it names (unknown is both), the columns fixed.
 #[tokio::test]
 async fn volume_display_meter_number_or_both() {
     for w in [80u16, 120] {
@@ -1125,8 +1119,7 @@ async fn volume_display_meter_number_or_both() {
     }
 }
 
-/// Narrow compact rows give up the right side, then the sleep timer, before a
-/// tab is cut. The playback state is not repeated there.
+/// Narrow compact rows drop the right side, then the sleep timer, before a tab is cut.
 #[tokio::test]
 async fn compact_row_steps_down_before_tab_clips() {
     let mut app = new_app().await;

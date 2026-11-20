@@ -6,13 +6,11 @@ use crate::ui::queue_seq::QueueOutcome;
 use crate::ui::scroll::ScrollId;
 use std::time::{Duration, Instant};
 
-/// The `playlist-pos` mpv should report after a change shmc made. A consume
-/// or a reorder makes mpv report stale positions first; those must be ignored.
+/// The `playlist-pos` to expect after a consume or reorder; stale reports before it are ignored.
 pub(super) struct PosGuard {
     pub(super) expected: usize,
     pub(super) ignores: u32,
-    /// Consume leaves at most two stale events; a reorder can leave thousands,
-    /// so it is bounded by `until`.
+    /// Consume leaves at most two stale events; a reorder is bounded only by `until`.
     pub(super) max_ignores: Option<u32>,
     /// No guard may outlive its burst or it would swallow unrelated events.
     pub(super) until: Instant,
@@ -32,15 +30,13 @@ impl PosGuard {
 }
 
 impl App {
-    /// Failures are shown here, not sent as `Msg::Error`, so they stay in
-    /// request order.
+    /// Failures show here, not as `Msg::Error`, so they stay in request order.
     pub(super) fn apply_queue_outcome(&mut self, outcome: QueueOutcome) {
         match outcome {
             QueueOutcome::Tracks { tracks, confirm, action } => match action {
                 QueueAction::Append => self.add_tracks(tracks, confirm),
                 QueueAction::Replace => {
-                    // a playlist that fits in its first page gets plain `Tracks`
-                    // and no pages, so its load ends here
+                    // a playlist that fits in one page gets plain `Tracks`
                     self.playlist_load = None;
                     self.replace_queue_and_play(tracks, confirm);
                 }
@@ -81,8 +77,7 @@ impl App {
         }
     }
 
-    /// Tracks already in hand still take a request number, so they land after
-    /// earlier requests that are loading.
+    /// Takes a request number, so the tracks land after earlier requests still loading.
     pub(super) fn queue_local(
         &mut self,
         tracks: Vec<Track>,
@@ -114,8 +109,7 @@ impl App {
         }
     }
 
-    /// The tracks that can stream, with their URLs. Built together so the
-    /// queue and mpv's playlist cannot drift apart by one.
+    /// Built together so the queue and mpv's playlist cannot drift apart.
     fn playable(&self, tracks: Vec<Track>) -> (Vec<Track>, Vec<LoadItem>) {
         tracks
             .into_iter()
@@ -130,8 +124,7 @@ impl App {
         Some(LoadItem { url: t.stream_url(&self.server, &self.token)?, title: t.title.clone() })
     }
 
-    /// New tracks join the end of the pre-shuffle order, so turning shuffle
-    /// off keeps them.
+    /// New tracks join the pre-shuffle order, so turning shuffle off keeps them.
     fn extend_shuffle_snapshot(&mut self, tracks: &[Track]) {
         if !self.random {
             return;
@@ -142,8 +135,7 @@ impl App {
         }
     }
 
-    /// Put the playable `tracks` at the end of the app queue and of mpv's
-    /// playlist, in step. Returns how many there were.
+    /// Appends to the app queue and mpv's playlist in step; returns how many.
     pub(super) fn append_playable(&mut self, tracks: Vec<Track>) -> usize {
         let (playable, items) = self.playable(tracks);
         let n = playable.len();
@@ -199,8 +191,7 @@ impl App {
         self.queue_seq.supersede();
     }
 
-    /// Anything that adds, reorders or reshuffles would land among tracks that
-    /// have not arrived yet. Says so and returns true.
+    /// Adds and reorders would land among tracks not yet arrived; says so and returns true.
     pub(super) fn refuse_while_loading(&mut self) -> bool {
         let Some(l) = &self.playlist_load else { return false };
         let msg = if l.landed {
@@ -270,8 +261,7 @@ impl App {
         self.transient(format!("queued next: {n} track{}", if n == 1 { "" } else { "s" }));
     }
 
-    /// Put the queue cursor on real index `real`. The cursor counts filtered
-    /// rows, so a row the filter hides keeps the old cursor, clamped.
+    /// The cursor counts filtered rows, so a hidden row keeps the old cursor, clamped.
     fn select_queue_row(&mut self, real: usize) {
         let vis = self.vis_len(ListRef::Queue);
         if vis == 0 {
@@ -315,8 +305,7 @@ impl App {
         }
     }
 
-    /// J/K. Refused while filtered: the visible row would silently name a
-    /// different slot.
+    /// J/K, refused while filtered: the visible row would name a different slot.
     pub(super) fn move_queue(&mut self, dir: i32) {
         if self.random {
             self.transient("turn shuffle off to reorder".into());
@@ -391,8 +380,7 @@ impl App {
         }
     }
 
-    /// The selection as inclusive visible-row positions; None while the anchor
-    /// is filtered out or the cursor is in another list.
+    /// Inclusive visible rows; None while the anchor is filtered out or in another list.
     pub fn visual_range(&self) -> Option<(usize, usize)> {
         let v = self.visual?;
         if v.list != self.active_list() {
@@ -416,8 +404,7 @@ impl App {
         self.remove_indices(&indices);
     }
 
-    /// Queues a track-list selection and leaves visual mode; a refused add
-    /// keeps it.
+    /// Leaves visual mode unless the add is refused.
     pub(super) fn queue_visual_range(&mut self, action: QueueAction) {
         if action != QueueAction::Replace && self.refuse_while_loading() {
             return;
@@ -480,8 +467,7 @@ impl App {
         if let Some(c) = self.current {
             let below = indices.iter().filter(|&&i| i < c).count();
             if indices.binary_search(&c).is_ok() {
-                // mpv stops when its playing entry is removed; hand over to the
-                // track that slid into the slot
+                // mpv stops when its playing entry goes; hand over to the one now in the slot
                 self.current = None;
                 resume = Some(c - below);
             } else {
@@ -570,8 +556,7 @@ impl App {
         }
     }
 
-    /// The track at `idx` finished and mpv has already advanced. Never send
-    /// `playlist-play-index` here: it would restart the next track at 0:00.
+    /// mpv has already advanced: `playlist-play-index` here would restart the next track.
     pub(super) fn consume_finished(&mut self, idx: usize) {
         if idx >= self.queue.items.len() {
             return;

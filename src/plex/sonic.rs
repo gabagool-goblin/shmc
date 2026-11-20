@@ -1,5 +1,4 @@
-//! Plex Pass sonic analysis: the nearest tracks, albums or artists to a seed,
-//! and which Plex Pass features the server has.
+//! Plex Pass sonic analysis and the server's Plex Pass features.
 
 use super::client::{NotFound, PlexClient};
 use super::models::{MediaContainer, SearchHit, Track};

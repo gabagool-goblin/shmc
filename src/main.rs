@@ -41,8 +41,7 @@ fn config_arg(args: &[String]) -> Option<PathBuf> {
     args.get(i + 1).map(PathBuf::from)
 }
 
-/// `args` without `--config FILE` / `--config=FILE`, so a file named `setup`
-/// or `log` is not read as the command of that name. Mirrors `cli::validate`.
+/// `args` without `--config FILE`, so a config file named `setup` is not the command.
 fn command_args(args: &[String]) -> Vec<String> {
     let mut rest = Vec::new();
     let mut it = args.iter();
@@ -90,7 +89,6 @@ fn run() -> Result<()> {
         return Ok(());
     }
 
-    // Refuse stray words and typos like `shmc confg` before any side effect.
     if let Err(msg) = cli::validate(&args) {
         eprintln!("{msg}");
         std::process::exit(2);
@@ -129,7 +127,6 @@ fn run() -> Result<()> {
                 std::process::exit(code);
             }
             ConfigMode::List => {
-                // For bug reports and scripts: no TTY needed, never writes.
                 return to_stdout(|out| out.write_all(cfg.settings_list().as_bytes()));
             }
             ConfigMode::Edit => {
@@ -170,8 +167,7 @@ fn run() -> Result<()> {
         return Ok(());
     }
 
-    // A signal during startup abandons it; dropping kills an mpv already
-    // spawned (`kill_on_drop`).
+    // A signal during startup abandons it; dropping kills a spawned mpv.
     lifecycle::begin_orderly();
     let mut client_id_failed = false;
     let client_id = if cfg.plex.report_playback || cfg.plex.allow_writes {
@@ -265,7 +261,7 @@ fn read_config_or_default(path: &PathBuf) -> Result<config::Config> {
     }
 }
 
-/// Runs interactive setup when the config is missing, incomplete or `shmc setup` was asked for.
+/// Runs setup when the config is missing or incomplete, or for `shmc setup`.
 fn load_or_setup(
     rt: &tokio::runtime::Runtime,
     config_path: &PathBuf,
@@ -384,7 +380,7 @@ fn log_tail(path: &std::path::Path, lines: usize) -> std::io::Result<Vec<String>
     Ok(all[start..].iter().map(|l| (*l).to_string()).collect())
 }
 
-/// Rotate the log so it cannot grow without bound (keeps one previous file).
+/// Rotated past this size, keeping one previous file.
 const MAX_LOG_BYTES: u64 = 2 * 1024 * 1024;
 
 /// Redacts every write: `shmc.log` is pasted into bug reports.
@@ -561,8 +557,7 @@ async fn start(cfg: config::Config, client_id: Option<String>) -> Result<Started
     })
 }
 
-/// Only keys, pastes and resizes are input; anything else would be
-/// misclassified as a key.
+/// Only keys, pastes and resizes; anything else would be taken for a key.
 fn ui_msg(ev: crossterm::event::Event) -> Option<Msg> {
     use crossterm::event::Event;
 
@@ -695,8 +690,7 @@ fn cava_wanted(app: &App) -> CavaWanted {
     }
 }
 
-/// The UI loop runs on the bare main thread (no tokio context) so that
-/// `blocking_recv` is legal.
+/// Runs on the bare main thread (no tokio context), so `blocking_recv` is legal.
 fn ui_loop(terminal: &mut ui::term::Term, started: &mut Started) -> Result<UiEnd> {
     let cfg = &started.cfg;
     let mut app = App::new(

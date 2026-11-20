@@ -1,5 +1,4 @@
-//! Interactive setup: ask for the Plex server URL and token, verify them
-//! against the server, and write the config file.
+//! Setup: ask for the server URL and token, check them with the server, save.
 
 use anyhow::{bail, Context, Result};
 use std::io::{self, IsTerminal, Write};
@@ -72,11 +71,9 @@ pub async fn interactive(path: &PathBuf, existing: Option<Config>) -> Result<Con
     Config::load(path)
 }
 
-/// Back up the config to `<config>.toml.bak`, 0600 through a temp file:
-/// `fs::copy` would keep a hand-edited config's 0644.
+/// 0600 through a temp file: `fs::copy` would keep a hand-edited config's 0644.
 pub(crate) fn backup_config(path: &Path) -> Result<PathBuf> {
-    // Next to the link, not its target: a symlinked config usually points
-    // into a dotfiles repository.
+    // Next to the link, not its target, which is often in a dotfiles repository.
     let backup = path.with_extension("toml.bak");
     let bytes = std::fs::read(path).with_context(|| format!("reading {}", path.display()))?;
     crate::cache::write_private_atomic(&backup, &bytes)
@@ -84,8 +81,7 @@ pub(crate) fn backup_config(path: &Path) -> Result<PathBuf> {
     Ok(backup)
 }
 
-/// Set one setting by dotted key through the TOML form, so the schema checks
-/// the type. A value that does not fit changes nothing.
+/// Through the TOML form, so the schema checks the type; a bad value changes nothing.
 pub(crate) fn set_by_key(cfg: &mut Config, key: &str, value: toml::Value) -> Result<()> {
     let mut table: toml::Table = toml::from_str(&toml::to_string(cfg)?)?;
     let mut parts: Vec<&str> = key.split('.').collect();
@@ -232,7 +228,6 @@ mod tests {
         .unwrap();
         assert_eq!(cfg.mpv.extra_args, vec!["--no-video".to_string()]);
 
-        // refused as an error; the caller decides how to say it
         let before = cfg.ui.art_pct;
         assert!(
             set_by_key(&mut cfg, "ui.art_pct", toml::Value::Integer(70_000)).is_err(),

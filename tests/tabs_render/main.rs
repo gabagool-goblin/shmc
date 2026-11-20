@@ -1,5 +1,4 @@
-//! Render and app tests: every tab draws at several sizes, and the key, queue
-//! and layout rules hold. mpv runs for real.
+//! Render and app tests on a real mpv: every tab at several sizes, keys, queue and layout.
 
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
 use image::{DynamicImage, RgbaImage};

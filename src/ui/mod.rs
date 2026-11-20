@@ -17,8 +17,7 @@ pub use app::{App, Msg};
 
 use ratatui_image::picker::{Picker, ProtocolType};
 
-/// The terminal's image protocol, with the cell size from the tty: `CSI 16 t`
-/// can answer in logical points, which halves the cover.
+/// The cell size comes from the tty: `CSI 16 t` can answer in logical points.
 pub fn image_picker() -> Option<Picker> {
     match (Picker::from_query_stdio().ok(), physical_cell_size()) {
         (Some(queried), Some(cell)) => {
@@ -45,8 +44,7 @@ fn picker_with(cell: (u16, u16), protocol: ProtocolType) -> Picker {
     picker
 }
 
-/// A picker for a cell size measured after startup (font zoom, another
-/// display), keeping the old protocol; `None` when nothing changed.
+/// For a cell size measured after startup; `None` when nothing changed.
 pub(crate) fn picker_for_cell(old: &Picker, measured: Option<(u16, u16)>) -> Option<Picker> {
     let cell = measured.filter(|&cell| cell != old.font_size())?;
     Some(picker_with(cell, old.protocol_type()))
@@ -94,7 +92,6 @@ mod tests {
         assert_eq!(cell_size(80, 0, 1760, 1150), None);
         assert_eq!(cell_size(80, 25, 0, 1150), None);
         assert_eq!(cell_size(80, 25, 1760, 0), None);
-        // fewer pixels than cells cannot yield a cell
         assert_eq!(cell_size(100, 25, 80, 1150), None);
     }
 }

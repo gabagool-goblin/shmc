@@ -6,8 +6,7 @@ use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use std::time::Duration;
 
 impl Screen {
-    /// Looks up with the server and token as the screen holds them (unsaved
-    /// edits count), on its own thread so a dead server cannot freeze it.
+    /// Uses the unsaved server and token, on a thread so a dead server cannot freeze it.
     pub(super) fn begin_library(&mut self, current: String) {
         let (tx, rx) = std::sync::mpsc::channel();
         let lookup = self.library_lookup.clone();
@@ -102,8 +101,7 @@ pub(super) enum Libraries {
     Failed(String),
 }
 
-/// The empty id (the first library found) is always the first choice and
-/// "type an id" the last, so an unreachable server never locks the setting.
+/// "type an id" is always last, so an unreachable server never locks the setting.
 pub(super) struct LibraryPick {
     pub(super) libraries: Libraries,
     /// What `plex.music_section` holds now.
@@ -150,15 +148,13 @@ pub(super) enum Choice {
     Type,
 }
 
-/// Looks the music libraries up for a server and token; `Err` is a short
-/// reason. A field so tests can stand in for the network.
+/// A field so tests can stand in for the network; `Err` is a short reason.
 pub(super) type LibraryLookup =
     std::sync::Arc<dyn Fn(String, String) -> Result<Vec<Section>, String> + Send + Sync>;
 
 pub(super) const LIBRARY_TIMEOUT: Duration = Duration::from_secs(5);
 
-/// The failure reason names only the kind: the error carries the request URL,
-/// which carries the token.
+/// A failure names only its kind: the error's request URL carries the token.
 pub(super) fn fetch_libraries(
     server: &str,
     token: &str,

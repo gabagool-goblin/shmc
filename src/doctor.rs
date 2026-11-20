@@ -1,5 +1,4 @@
-//! `shmc config --check`: the checks build a [`Report`] that both the text
-//! output and the config screen's Diagnostics tab render.
+//! `shmc config --check`: a [`Report`] the CLI and the Diagnostics tab both render.
 
 use crate::config::{plain_http_warning, token_label, Config};
 use crate::playback::cava;
@@ -259,8 +258,7 @@ pub async fn collect(cfg: &Config, config_path: &Path, with_terminal: bool) -> R
     b.finish()
 }
 
-/// Keeps the tallies in step with the entries, so a check cannot be added
-/// without its count moving.
+/// Keeps the tallies in step with the entries.
 #[derive(Default)]
 struct Builder {
     settings: Vec<Entry>,
@@ -311,9 +309,7 @@ impl Builder {
     }
 }
 
-/// The first 8 characters of the server's machine id. Not a byte slice: the
-/// id comes from the server and may not be ASCII.
-/// A missing Plex Pass feature is not a problem, so the line is never a warning.
+/// Never a warning: a missing Plex Pass feature is not a problem.
 fn features_line(f: Features) -> String {
     let yes = |on: bool| if on { "yes" } else { "no" };
     format!(
@@ -324,12 +320,12 @@ fn features_line(f: Features) -> String {
     )
 }
 
+/// Not a byte slice: the machine id comes from the server and may not be ASCII.
 pub fn short_id(machine: &str) -> String {
     machine.chars().take(8).collect()
 }
 
-/// Warnings are not failures, but "all good" above them would read as
-/// "nothing to look at".
+/// "all good" above warnings would read as "nothing to look at".
 fn summary(failures: u32, warnings: u32) -> String {
     if failures > 0 {
         format!("{failures} problem{} found", if failures == 1 { "" } else { "s" })
@@ -440,8 +436,7 @@ mod tests {
         report.settings.iter().filter(|e| e.severity == Severity::Warn).count()
     }
 
-    /// A theme file that does not load is a warning, not a failure: the player
-    /// starts on the default theme.
+    /// A theme file that does not load warns: the player starts on the default.
     #[test]
     fn bad_theme_file_warns() {
         let tmp = tempfile::tempdir().unwrap();

@@ -20,8 +20,7 @@ fn flatten_values(table: &toml::Table, prefix: &str, out: &mut BTreeMap<String, 
 /// Keys shmc no longer reads, each with what replaced it.
 const RETIRED_KEYS: &[(&str, &str)] = &[("plex.set_ratings", "plex.allow_writes")];
 
-/// The retired keys `text` still sets, with their replacements. Unknown keys are
-/// ignored on load, so only `shmc config --check` can point these out.
+/// The retired keys `text` still sets, with their replacements.
 pub fn retired_keys(text: &str) -> Vec<(&'static str, &'static str)> {
     let Ok(table) = text.parse::<toml::Table>() else { return Vec::new() };
     let mut flat = BTreeMap::new();
@@ -29,8 +28,7 @@ pub fn retired_keys(text: &str) -> Vec<(&'static str, &'static str)> {
     RETIRED_KEYS.iter().copied().filter(|(old, _)| flat.contains_key(*old)).collect()
 }
 
-/// An integer and a float are equal when numerically so (`volume = 50` in a
-/// file against `50.0` in the struct).
+/// `volume = 50` in the file equals `50.0` in the struct.
 fn same_value(a: &toml::Value, b: &toml::Value) -> bool {
     use toml::Value::{Float, Integer};
     match (a, b) {
@@ -39,8 +37,7 @@ fn same_value(a: &toml::Value, b: &toml::Value) -> bool {
     }
 }
 
-/// Keys whose value differs, in `mine`'s order, and keys to delete: a cleared
-/// override is absent from `mine`, not changed in it.
+/// Keys whose value differs, and keys to delete: a cleared override is absent from `mine`.
 fn changed_and_removed<'a>(
     mine: &'a BTreeMap<String, toml::Value>,
     theirs: &'a BTreeMap<String, toml::Value>,
@@ -54,8 +51,7 @@ fn changed_and_removed<'a>(
     (changed, removed)
 }
 
-/// A parse error safe to print. `toml` quotes the line and the value, either
-/// of which can be the token: only the line number and a clean message stay.
+/// Only the line number and the message: `toml` quotes text that can be the token.
 pub(crate) fn toml_error(e: &toml::de::Error, text: &str) -> anyhow::Error {
     let line = e.span().map(|s| text.get(..s.start).unwrap_or(text).matches('\n').count() + 1);
     let message = scrub_value(e.message());
@@ -82,8 +78,7 @@ pub(crate) fn scrub_value(message: &str) -> String {
     message.to_string()
 }
 
-/// Set a dotted key, creating tables on the way. A trailing comment on the
-/// value being replaced stays.
+/// Set a dotted key, creating tables; a trailing comment on the value stays.
 fn set_in_document(doc: &mut toml_edit::DocumentMut, key: &str, value: &toml::Value) -> Result<()> {
     use toml_edit::{Item, Table};
     let parts: Vec<&str> = key.split('.').collect();
@@ -129,8 +124,7 @@ fn remove_from_document(doc: &mut toml_edit::DocumentMut, key: &str) {
     table.remove(leaf);
 }
 
-/// Created 0700. An existing dir is tightened only at the default location:
-/// with `--config` it can be any directory.
+/// An existing dir is tightened only at the default path: `--config` can name any dir.
 fn ensure_config_dir(dir: &Path) -> std::io::Result<()> {
     #[cfg(unix)]
     {
@@ -150,8 +144,6 @@ fn ensure_config_dir(dir: &Path) -> std::io::Result<()> {
     std::fs::create_dir_all(dir)
 }
 
-/// Restrict `path` to 0600 and read the mode back: some filesystems accept a
-/// chmod and ignore it. That only warns; refusing to save would be worse.
 #[cfg(unix)]
 fn set_private(path: &Path) -> Result<()> {
     use std::os::unix::fs::PermissionsExt;
@@ -172,8 +164,7 @@ fn set_private(path: &Path) -> Result<()> {
     Ok(())
 }
 
-/// Replace `path` via a 0600 temp file: `fs::write` would leave the token
-/// readable until a chmod. A symlinked config stays a link.
+/// Via a 0600 temp file, so the token is never readable; a symlink stays a link.
 fn write_private(path: &Path, body: &str) -> Result<()> {
     use std::io::Write;
 
@@ -244,8 +235,7 @@ impl Config {
         toml::from_str(text).map_err(|e| toml_error(&e, text))
     }
 
-    /// An existing file is edited in place against its own current contents
-    /// (see [`Config::save_changes`]); a missing one is written in full.
+    /// Edits an existing file with [`Config::save_changes`]; writes a missing one in full.
     pub fn save(&self, path: &Path) -> Result<()> {
         if !path.exists() {
             return self.save_full(path);
@@ -473,8 +463,7 @@ mod tests {
 
     #[test]
     fn failed_save_removes_temp_file() {
-        // A directory at the target makes the final rename fail after the temp
-        // file was written: the old target stays and nothing is left behind.
+        // The rename fails: the old target stays and no temp file is left.
         let tmp = tempfile::tempdir().unwrap();
         let dir = tmp.path().join("shmc");
         std::fs::create_dir_all(&dir).unwrap();
@@ -588,7 +577,6 @@ mod tests {
         assert!(!text.contains("accent"), "{text}");
         assert!(text.contains("# mine") && text.contains("secondary"), "{text}");
         assert_eq!(Config::read(&path).unwrap().theme.name, "nord");
-        // What the screen compares to notices the removal.
         assert_eq!(cfg.changed_keys(&baseline), ["theme.accent"]);
     }
 
@@ -602,8 +590,7 @@ mod tests {
         assert_eq!(std::fs::read_to_string(&path).unwrap(), garbage);
     }
 
-    /// Spacing and symbols behave like the colours: unset shows the theme's
-    /// value, an equal override is still a change, and `r` drops it.
+    /// Unset shows the theme's value, an equal override is a change, `r` drops it.
     #[test]
     fn override_saved_as_its_own_key() {
         let (dir, path) = saved_file(

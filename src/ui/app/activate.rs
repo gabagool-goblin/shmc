@@ -9,8 +9,7 @@ use std::sync::Arc;
 use std::time::Instant;
 
 impl App {
-    /// Keeps the items pane on the highlighted playlist. Previews are bounded
-    /// and debounced so a huge playlist is not fetched whole.
+    /// Bounded and debounced, so a huge playlist is not fetched whole.
     pub(super) fn preview_playlist(&mut self) {
         if self.tab != Tab::Playlists
             || self.playlists.focus != PlaylistsCol::List
@@ -88,8 +87,7 @@ impl App {
         self.transient(msg);
     }
 
-    /// Asks first when it is very large. `count` is what would actually be
-    /// queued (the remainder when starting mid-list).
+    /// `count` is what would be queued: the remainder when starting mid-list.
     fn queue_playlist(
         &mut self,
         key: String,
@@ -216,7 +214,6 @@ impl App {
                 let row = self.playlists.list.items.iter().find(|p| p.rating_key == key);
                 let name = row.map(|p| p.title.clone()).unwrap_or_else(|| "playlist".into());
                 // the preview is the first page, so its index is the playlist's
-                // index, and the remainder is what the question must name
                 let remainder =
                     row.and_then(|p| p.item_count).map(|total| total.saturating_sub(real as u32));
                 let confirm = Confirm::FromList { name };

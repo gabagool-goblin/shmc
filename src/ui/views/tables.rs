@@ -13,12 +13,9 @@ fn digits(n: usize) -> u16 {
     theme::digits(n)
 }
 
-/// The `#` column is wide enough for every count under a thousand, so an
-/// ordinary album never moves the columns beside it.
 const TRACK_NUMBER_MIN_WIDTH: u16 = 3;
 
-/// Width of the `#` column: what the largest possible number needs, with a
-/// floor so a 9-track and a 100-track album start Title at the same offset.
+/// Wide enough for `bound`, with a floor so Title starts at the same offset on any album.
 pub(super) fn track_number_width(bound: usize) -> u16 {
     digits(bound).max(TRACK_NUMBER_MIN_WIDTH)
 }
@@ -26,12 +23,10 @@ pub(super) fn track_number_width(bound: usize) -> u16 {
 /// The narrowest a weighted column is drawn.
 const WEIGHTED_COL_MIN: u16 = 6;
 
-/// At the default weights each table keeps its own `defaults`, which plain
-/// weights cannot reproduce.
+/// At these weights each table uses its own `defaults`, which weights cannot express.
 const DEFAULT_WEIGHTS: [u32; 3] = [30, 24, 46];
 
-/// Which of a track table's text columns (Title, Artist, Album) exist and how
-/// wide; constraints, headers and cells all read it so they agree.
+/// A track table's shown text columns; constraints, headers and cells all read it.
 #[derive(Clone, Copy)]
 pub(super) struct TrackCols {
     /// `ui.column_weights`: Title, Artist, Album.
@@ -113,8 +108,7 @@ pub(super) fn track_headers(num_w: Option<u16>, tc: &TrackCols) -> Vec<HeaderSpe
     v
 }
 
-/// The Queue's columns in display order, with the widths of the fixed ones;
-/// constraints, headers and cells all read it so they agree.
+/// The Queue's columns in display order; constraints, headers and cells all read it.
 pub(super) struct QueueCols {
     cols: Vec<QueueColumn>,
     weights: [u32; 3],
@@ -128,8 +122,7 @@ pub(super) struct QueueCols {
 const CODEC_COL_MAX: u16 = 8;
 
 impl QueueCols {
-    /// `listed` is `App::queue_columns`; on a table narrower than the rest
-    /// can fit, codec, year and track go first.
+    /// On a narrow table codec, year and track go first.
     pub(super) fn new(
         listed: &[QueueColumn],
         weights: [u32; 3],
@@ -247,8 +240,7 @@ impl QueueCols {
     }
 }
 
-/// Rows of a track table; `cells` makes one row's cells from the track, its
-/// index in `tracks` and the row's base style.
+/// `cells` makes a row's cells from the track, its index and the row's base style.
 #[allow(clippy::too_many_arguments)]
 pub(super) fn build_track_rows(
     tracks: &[crate::plex::Track],
@@ -278,8 +270,7 @@ pub(super) fn build_track_rows(
     rows
 }
 
-/// The cells of a Playlists or Search track row: optional number, the shown
-/// text columns, Len.
+/// A Playlists or Search track row: optional number, the shown text columns, Len.
 #[allow(clippy::too_many_arguments)]
 pub(super) fn plain_track_cells(
     t: &crate::plex::Track,
@@ -334,8 +325,7 @@ impl HeaderSpec {
     }
 }
 
-/// A table's header, rule and rows area. Column widths are computed once here
-/// so header text and row ellipsizing match the Table's own layout.
+/// Header, rule and rows area; widths computed once so header and cells match the Table.
 pub(super) struct TableFrame {
     pub(super) rows: Rect,
     pub(super) col_w: Vec<u16>,
@@ -414,8 +404,7 @@ fn layout_widths(cols: &[Constraint], width: u16) -> Vec<u16> {
     Layout::horizontal(cols.to_vec()).spacing(1).split(probe).iter().map(|r| r.width).collect()
 }
 
-/// Widths for `Length`s and `Fill` weights: the fills share what is left, each
-/// keeping `WEIGHTED_COL_MIN` when there is room.
+/// The fills share what the `Length`s leave, each keeping `WEIGHTED_COL_MIN` if there is room.
 fn weighted_widths(cols: &[Constraint], width: u16) -> Vec<u16> {
     let fixed: u32 = cols
         .iter()

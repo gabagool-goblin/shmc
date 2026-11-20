@@ -1,5 +1,4 @@
-//! shmc's modules as a library, so the integration tests can reach them. Not a
-//! stable API.
+//! The modules as a library for the integration tests; not a stable API.
 
 pub mod cache;
 pub mod config;
