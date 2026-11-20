@@ -8,11 +8,11 @@ All notable changes to shmc are documented here. The format follows
 
 ### Added
 
-- `w` picks tracks as stops and `W` builds a Sonic Adventure, a path of sonically close tracks through them (needs Plex Pass).
-- Radio keeps going as the queue nears its end, and the Queue tab shows the station's name.
-- A Discover tab lists the library's radio stations and shows the highlighted one's tracks; Enter plays them (needs Plex Pass radio and plex.allow_writes).
+- A Discover tab lists the library's radio stations and shows the highlighted one's tracks; `Enter` plays them (needs Plex Pass and `plex.allow_writes`).
 - `s` starts track or artist radio from Plex (needs Plex Pass and `plex.allow_writes`).
+- Radio keeps going as the queue nears its end, and the Queue tab shows the station's name.
 - `m` lists tracks, albums or artists that sound like the selected one, from Plex's sonic analysis (needs Plex Pass).
+- `w` picks tracks as stops and `W` builds a Sonic Adventure, a path of sonically close tracks through them (needs Plex Pass).
 - `Esc` in the Search tab goes back a step at a time, ending at the tab where `m` was pressed.
 - `v` selects a range in the Search tab's album view and similar list.
 - Track lists show a rated track's rating after its title.
@@ -22,9 +22,9 @@ All notable changes to shmc are documented here. The format follows
 
 - Discover is tab 2, so Browser, Playlists, Search and Help move to 3–6.
 - The sleep timer moves from `S` to `t`.
-- `b` works on a playlist's tracks, and `o` in Discover and Search.
+- `b` now works on a playlist's tracks, and `o` in Discover and Search.
 - `plex.allow_writes` replaces `plex.set_ratings`; `shmc config --check` names the old key.
-- `r` rates the highlighted track instead of the playing one; on an artist or album it does nothing.
+- `r` rates the highlighted track instead of the playing one.
 - Building from source needs Rust 1.88 or newer.
 
 ### Fixed
