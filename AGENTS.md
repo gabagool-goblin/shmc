@@ -15,7 +15,9 @@
 | `cargo clippy --release --all-targets -- -D warnings` | Lint; must be clean |
 | `cargo fmt` | Format; CI runs `cargo fmt --check` |
 
-- Run `cargo fmt`, the suite and clippy before every commit.
+- Before a commit, run `cargo fmt`, clippy and the tests for what changed.
+  CI runs the full suite on every pull request; run it locally before a
+  version bump.
 - A fix gets a regression test that fails without it; so does a change to an
   invariant below or to how the token and private files are handled.
 - One test per behaviour, asserting the outcome: the queue, the file on disk,
