@@ -257,8 +257,7 @@ impl App {
         }
     }
 
-    /// Replaces the queue with `tracks`, shuffle off, and makes `queue` the
-    /// active radio once the replace applies.
+    /// Replaces the queue, shuffle off; `queue` becomes the active radio once that applies.
     pub(super) fn play_radio(&mut self, tracks: Vec<Track>, name: String, queue: RadioQueue) {
         self.random = false;
         let confirm = Confirm::FromList { name: name.clone() };

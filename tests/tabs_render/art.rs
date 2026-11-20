@@ -82,7 +82,7 @@ async fn new_cover_is_immediate_and_resize_holds() {
 
 const AL1_THUMB: &str = "/library/metadata/al1/thumb";
 
-/// Tracks 0-1 share an album, 2 has another, 3 has no cover path; 0 is playing with its cover shown.
+/// Tracks 0-1 share an album, 2 has another, 3 has no cover path; 0 plays with its cover.
 async fn app_showing_album_cover(
 ) -> (TestApp, Terminal<TestBackend>, tokio::sync::mpsc::UnboundedReceiver<PlexCmd>) {
     let (mut app, mut plex) = new_app_with_plex().await;
@@ -137,8 +137,7 @@ async fn cover_for_shown_path_is_noop() {
     assert_eq!(app.art.hold_until, hold);
 }
 
-/// Another album's cover is requested once; a failure can retry; a track
-/// without a cover path drops the old one.
+/// Another album's cover is requested once and can retry; a track without one drops it.
 #[tokio::test]
 async fn new_cover_loads_once() {
     let (mut app, _terminal, mut plex) = app_showing_album_cover().await;
@@ -185,7 +184,6 @@ async fn square_art_pane_respects_the_percentage_cap() {
         "square mode must cap the box at the configured art percentage\n{cover_line}"
     );
 
-    // the space below the capped square holds the metadata
     let divider = bars[3];
     let cover_y = frame.lines().position(|l| l.contains("No cover")).expect("cover line");
     let left_text: String = frame
@@ -233,8 +231,7 @@ async fn disabling_art_gives_the_queue_full_width() {
     assert!(!frame.contains("No cover"), "no empty art placeholder\n{frame}");
 }
 
-/// When the art pane is height-limited, the empty-cover box fills it; the
-/// pane is cut for the image's rows, not the metadata footer's.
+/// In a height-limited pane the empty-cover box fills the rows above the metadata.
 #[tokio::test]
 async fn cover_box_fills_height_limited_pane() {
     let mut app = new_app().await;
@@ -326,7 +323,7 @@ async fn cover_needs_a_cached_file() {
     assert!(covers_sent(&mut rx).is_empty(), "no file, yet a cover was sent");
 }
 
-/// With the cover off, as on Linux, nothing reaches mpv.
+/// With the cover off, nothing reaches mpv.
 #[tokio::test]
 async fn cover_not_sent_when_off() {
     let (mut app, mut rx) = app_awaiting_cover().await;

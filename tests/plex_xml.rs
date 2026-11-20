@@ -139,7 +139,6 @@ fn parse_playlists_fixture() {
     assert!(list.iter().all(|p| p.duration_ms.is_some()));
 }
 
-/// Playlist order is meaningful and must be preserved.
 #[test]
 fn parse_playlist_items_fixture() {
     let c: MediaContainer =

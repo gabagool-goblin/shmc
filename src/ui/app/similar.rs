@@ -1,5 +1,4 @@
-//! `m`: tracks, albums or artists that sound like the selected one, from Plex's
-//! sonic analysis.
+//! `m`: tracks, albums or artists that sound like the selected one.
 
 use super::{App, ListKind, ListRef, PlexCmd, SearchDetail, Tab};
 use crate::plex::{HitKind, SearchHit, Track};

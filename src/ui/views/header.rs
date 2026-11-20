@@ -13,14 +13,12 @@ use ratatui::Frame;
 /// The volume meter's cells: always eight, whatever its glyphs.
 pub(crate) const METER_CELLS: usize = 8;
 
-/// Meter cells to light for a volume percentage.
 pub(crate) fn volume_fill(volume: f64) -> usize {
     let cells = METER_CELLS as f64;
     ((volume / 100.0) * cells).round().clamp(0.0, cells) as usize
 }
 
-/// The meter as spans, `filled` cells lit. A ramp theme has cell `i` as its
-/// `i`th glyph lit or not; a pair has one glyph for lit and one for unlit.
+/// A ramp theme lights glyph `i` in cell `i`; a pair has one lit and one unlit glyph.
 pub(crate) fn volume_meter(filled: usize) -> Vec<Span<'static>> {
     let meter = theme::symbols().volume_meter;
     (0..METER_CELLS)
@@ -41,8 +39,7 @@ pub(crate) fn volume_meter(filled: usize) -> Vec<Span<'static>> {
         .collect()
 }
 
-/// The header's volume: the meter, the percentage or both, as `display` says.
-/// The config screen's preview draws through here too.
+/// The header's volume; the config screen's preview draws through here too.
 pub(crate) fn volume_spans(volume: f64, display: VolumeDisplay) -> Vec<Span<'static>> {
     let mut spans = vec![Span::styled("Volume: ", theme::accent())];
     let pct = volume.round() as i32;
@@ -59,8 +56,7 @@ pub(crate) fn volume_spans(volume: f64, display: VolumeDisplay) -> Vec<Span<'sta
     spans
 }
 
-/// The mode flags as words, widest spelling first. Shuffle and Single collide
-/// on their first letter, so the letters are R Z S C (Z is the shuffle key).
+/// Widest spelling first; Z is shuffle, since Shuffle and Single share an S.
 pub(crate) const MODE_SPELLINGS: [[&str; 4]; 3] = [
     ["Repeat", "Shuffle", "Single", "Consume"],
     ["Rep", "Shu", "Sin", "Con"],
@@ -70,8 +66,7 @@ pub(crate) const MODE_SPELLINGS: [[&str; 4]; 3] = [
 /// The four words, separators and a gap before the state on the left.
 pub(crate) const MODE_WORDS_W: u16 = 35;
 
-/// Width of both side columns, shared so the title stays centred. Fits
-/// "0:42 / 4:17 (FLAC 44.1k/16)"; the flags shorten before it passes a third.
+/// Shared by both side columns so the title stays centred; 27 fits `0:42 / 4:17 (FLAC 44.1k/16)`.
 pub(crate) fn header_side_width(inner_w: u16, words: bool) -> u16 {
     let third = inner_w / 3;
     let pct = (inner_w as u32 * 15 / 100) as u16;
@@ -92,7 +87,6 @@ pub(crate) fn mode_flag_labels(words: bool, ascii: bool, room: usize) -> [&'stat
     MODE_SPELLINGS.into_iter().find(|l| width(l) <= room).unwrap_or(MODE_SPELLINGS[2])
 }
 
-/// The four flags as one row: on is accent and bold, off is dim.
 pub(crate) fn mode_flag_spans(labels: [&'static str; 4], on: [bool; 4]) -> Vec<Span<'static>> {
     let mut spans = Vec::new();
     for (i, label) in labels.iter().enumerate() {
@@ -107,8 +101,7 @@ pub(crate) fn mode_flag_spans(labels: [&'static str; 4], on: [bool; 4]) -> Vec<S
     spans
 }
 
-/// Audio info as (long, compact). Lossy tracks show the bitrate and their
-/// compact form drops the rate: `44.1k/320k` would read as rate/depth.
+/// (long, compact); a lossy compact form drops the rate: `44.1k/320k` reads as rate/depth.
 fn format_audio(audio: &crate::plex::AudioInfo) -> (String, String) {
     let codec = audio.codec.as_deref().map(|c| c.to_ascii_uppercase());
     let rate = audio.sample_rate_hz.map(format_rate);
@@ -134,8 +127,7 @@ fn format_audio(audio: &crate::plex::AudioInfo) -> (String, String) {
     }
 }
 
-/// `0:42 / 4:17` plus the longest audio form that fits `width`; the time alone
-/// is ellipsized if it does not fit.
+/// The time plus the longest audio form that fits `width`.
 fn header_times(times: &str, long: &str, compact: &str, width: u16) -> String {
     let forms = [long, compact].map(|info| {
         if info.is_empty() {
@@ -163,8 +155,7 @@ fn star_count(rating: u8) -> usize {
     usize::from(rating.min(10) + 1) / 2
 }
 
-/// A rating as the short form after a list title: `4★`, or `★` for one star.
-/// None when unrated or when the style shows nothing.
+/// `4★`, or `★` for one star; None when unrated or the style shows nothing.
 pub(crate) fn rating_short(style: RatingStyle, rating: u8, ascii: bool) -> Option<String> {
     if rating == 0 {
         return None;
@@ -177,8 +168,7 @@ pub(crate) fn rating_short(style: RatingStyle, rating: u8, ascii: bool) -> Optio
     }
 }
 
-/// A rating (Plex's 0 to 10, a star is 2) as stars; an odd value rounds up.
-/// None when unrated or when the style shows nothing.
+/// Plex's 0 to 10 as stars (a star is 2, odd rounds up); None as in [`rating_short`].
 pub(crate) fn rating_glyphs(style: RatingStyle, rating: u8, ascii: bool) -> Option<String> {
     if rating == 0 {
         return None;
@@ -198,8 +188,7 @@ pub(crate) fn rating_glyphs(style: RatingStyle, rating: u8, ascii: bool) -> Opti
     }
 }
 
-/// What the header shows, as plain data: the player fills it from the app and
-/// the config screen's preview from placeholders, and both draw through here.
+/// Filled from the app by the player and from placeholders by the config screen's preview.
 pub(crate) struct HeaderInfo {
     pub stopped: bool,
     pub paused: bool,
@@ -215,7 +204,7 @@ pub(crate) struct HeaderInfo {
     /// Repeat, shuffle, single, consume.
     pub flags: [bool; 4],
     pub sleep: Option<String>,
-    /// The playing track's rating as glyphs, drawn after the title when it fits.
+    /// Drawn after the title when it fits.
     pub rating: Option<String>,
 }
 
@@ -415,8 +404,7 @@ fn flag_label_forms(words: bool, ascii: bool) -> Vec<[&'static str; 4]> {
     }
 }
 
-/// The compact header's right side, widest first: the flags shorten before the
-/// volume drops its meter, then its label.
+/// Widest first: the flags shorten, then the volume drops its meter, then its label.
 fn compact_right_forms(info: &HeaderInfo) -> Vec<(Vec<Span<'static>>, u16)> {
     let mut volumes = vec![volume_spans(info.volume, info.volume_display)];
     if info.volume_display != VolumeDisplay::Percent {
@@ -440,8 +428,7 @@ fn compact_right_forms(info: &HeaderInfo) -> Vec<(Vec<Span<'static>>, u16)> {
     forms
 }
 
-/// The compact header: sleep timer, tabs and right side on one row. The tabs
-/// are never cut; the right side goes first, the sleep timer last.
+/// Sleep timer, tabs and right side on one row; the tabs are never cut.
 pub(crate) fn draw_tab_row(
     f: &mut Frame,
     area: Rect,

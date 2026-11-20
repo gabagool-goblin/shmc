@@ -34,8 +34,7 @@ impl Screen {
         let current = self.values();
         let before: std::collections::BTreeMap<String, SettingRow> =
             self.saved.setting_rows().into_iter().map(|row| (row.key.clone(), row)).collect();
-        // An unset colour override shows the theme's colour in its row: say
-        // so rather than show a hex that was never written.
+        // An unset override shows the theme's colour, not a hex that was never written.
         let set_in = |cfg: &Config| cfg.flat_values().unwrap_or_default();
         let (flat_now, flat_before) = (set_in(&self.cfg), set_in(&self.saved));
         let shown = |rows: &std::collections::BTreeMap<String, SettingRow>,
@@ -86,16 +85,13 @@ impl Screen {
     }
 
     pub(super) fn dirty(&self) -> bool {
-        // Not `setting_rows()`: it redacts the token, so a new one would
-        // compare equal to the old.
+        // Not `setting_rows()`: its redacted token would hide a new one.
         toml::to_string(&self.cfg).ok() != toml::to_string(&self.saved).ok()
     }
 
-    /// True when the file was written. Only the screen's edits are written, so
-    /// other changes made meanwhile survive.
+    /// True when written. Only the screen's edits go in, so other changes survive.
     pub(super) fn save(&mut self) -> bool {
-        // A missing or unreadable file is a plain save; one that does not
-        // parse is refused by the writer.
+        // Unreadable is a plain save; the writer refuses a file that does not parse.
         let outside = Config::outside_changes(&self.path, &self.saved).unwrap_or_default();
         let conflicts = self.conflicts(&outside);
         if !conflicts.is_empty() {
@@ -127,7 +123,6 @@ impl Screen {
         both.into_iter().filter(|k| differ.contains(k)).collect()
     }
 
-    /// Back up, write the screen's changes and reload what the file holds.
     /// `kept` is how many changes made elsewhere the file still has.
     fn write(&mut self, kept: usize) -> bool {
         let backup =
@@ -145,7 +140,6 @@ impl Screen {
                 format!("saved {} (previous kept as config.toml.bak)", self.path.display())
             }
             Some(Err(e)) => {
-                // Refusing to save would lose the edit; say what happened.
                 self.status_error = true;
                 format!("saved without a backup: {e:#}")
             }
@@ -267,8 +261,7 @@ impl Screen {
             }
         }
         if self.tab == Tab::Theme {
-            // An override equal to the theme's colour is not "changed", so
-            // the loop skipped it; it must not stay pinned.
+            // The loop skipped overrides equal to the theme's; they must not stay pinned.
             self.cfg.theme.clear_overrides();
             self.apply_theme();
         }
@@ -283,8 +276,7 @@ impl Screen {
 
 /// The changes a save would write.
 pub(super) struct Review {
-    /// Key, old, new, and whether it is a secret (shown only as `(changed)`;
-    /// its values are not kept here).
+    /// Key, old, new, and whether it is a secret (whose values are not kept).
     pub(super) rows: Vec<(String, String, String, bool)>,
     pub(super) scroll: usize,
     /// Rows the panel showed at the last draw.

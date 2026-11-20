@@ -1,5 +1,4 @@
-//! Runs `cava` in raw 8-bit mode and streams bar heights to the UI. The audio
-//! source depends on the platform, see [`input_modes`].
+//! Runs `cava` in raw 8-bit mode and streams bar heights to the UI.
 
 use crate::config::CavaConfig;
 use anyhow::{Context, Result};
@@ -9,8 +8,7 @@ use tokio::process::{Child, Command};
 use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
 use tracing::{info, warn};
 
-/// Bars per frame requested from cava (1 byte each); the UI downsamples to fit
-/// the pane.
+/// Bars per frame requested from cava; the UI downsamples them to fit.
 pub const BARS: usize = 96;
 
 pub struct CavaHandle {
@@ -61,8 +59,7 @@ impl CavaControl {
     }
 }
 
-/// Owns the cava child. Capturing audio can keep the machine awake, so cava
-/// runs only while there is something to draw.
+/// Owns the cava child. Capturing audio can keep the machine awake.
 pub fn controller(cfg: CavaConfig) -> (CavaControl, UnboundedReceiver<CavaEvent>) {
     let (cmd_tx, mut cmd_rx) = unbounded_channel::<CavaCmd>();
     let (ev_tx, ev_rx) = unbounded_channel::<CavaEvent>();
@@ -257,8 +254,7 @@ pub async fn spawn(cfg: &CavaConfig) -> Result<(CavaHandle, UnboundedReceiver<Ve
     anyhow::bail!("cava could not start: {}", problems.join("; "))
 }
 
-/// Escape for a TOML basic string: `cava.source` is user input inside quotes,
-/// and must not be able to inject keys into the generated config.
+/// `cava.source` goes inside quotes and must not inject keys into the config.
 fn escape_toml_string(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     for c in s.chars() {
@@ -285,8 +281,7 @@ pub fn preset_noise_reduction(style: &str) -> i64 {
     }
 }
 
-/// The cava config for one attempt. Numbers come range-checked from
-/// `CavaConfig::settings`; `source` is the only free text, and is escaped.
+/// The numbers come range-checked; `source`, the only free text, is escaped.
 fn build_config(cfg: &CavaConfig, method: &str, source: &str) -> String {
     let s = cfg.settings();
     CONFIG_TEMPLATE
@@ -350,8 +345,7 @@ async fn spawn_with(
     Ok((CavaHandle { child: tokio::sync::Mutex::new(child) }, rx))
 }
 
-/// The first non-blank lines of cava's stderr, enough to include the hint that
-/// follows some errors (the tap-permission notice).
+/// The first non-blank lines of cava's stderr, with the hint some errors add.
 fn stderr_excerpt(path: &Path) -> String {
     std::fs::read_to_string(path)
         .map(|s| {
@@ -552,8 +546,7 @@ noise_reduction = 77
         assert!(modes.iter().all(|(_, s)| s == "BlackHole 2ch"));
     }
 
-    /// An idle player must not keep capturing audio, which keeps the machine
-    /// awake.
+    /// An idle player must not keep capturing audio.
     #[cfg(unix)]
     #[tokio::test]
     async fn controller_starts_and_stops_cava() {

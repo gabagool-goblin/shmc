@@ -1,10 +1,8 @@
-//! Command-line validation: `main` ignores what it does not know, so this
-//! refuses `shmc confg` before anything has a side effect.
+//! `main` ignores unknown words, so this refuses `shmc confg` before any side effect.
 
 const COMMANDS: &[&str] = &["config", "setup", "cache", "log"];
 
-/// For the "did you mean" line. `-h`, `-V` and `-v` are left out: any two
-/// one-character flags are within the edit distance, so `-x` would suggest `-V`.
+/// `-h`, `-V` and `-v` are left out: every one-letter flag is a near miss for them.
 const OPTIONS: &[&str] = &["--version", "--help", "--config", "--check", "--list"];
 
 const CONFIG_OPTIONS: &[&str] = &["--check", "--list"];
@@ -221,7 +219,6 @@ mod tests {
 
     #[test]
     fn config_path_is_not_a_command() {
-        // the value of `--config` is not a command
         assert!(validate(&args(&["--config", "/tmp/log", "config"])).is_ok());
         assert!(validate(&args(&["--config=/tmp/log", "config"])).is_ok());
         let err = validate(&args(&["--config"])).unwrap_err();

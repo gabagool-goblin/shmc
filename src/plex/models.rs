@@ -2,8 +2,7 @@
 
 use serde::{Deserialize, Deserializer};
 
-/// A numeric attribute that is `None` when it does not parse (`duration="-1"`,
-/// `year=""`) instead of failing the whole listing over one odd item.
+/// `None` when the attribute does not parse, instead of failing the whole listing.
 fn lenient<'de, D, T>(d: D) -> Result<Option<T>, D::Error>
 where
     D: Deserializer<'de>,
@@ -188,8 +187,7 @@ pub struct WirePlaylist {
     pub summary: Option<String>,
 }
 
-/// A `<Hub>` of `/hubs/search` results, grouped by `type`; kinds other than
-/// track, album and artist are ignored.
+/// A `<Hub>` of `/hubs/search` results; kinds other than track, album and artist are ignored.
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct WireHub {
     #[serde(rename = "@type", default)]
@@ -312,8 +310,7 @@ pub struct Track {
 }
 
 impl Track {
-    /// The stream URL for mpv, token included. Built with `Url`: concatenating
-    /// `@evil.example/x` would send the token to another host.
+    /// The stream URL for mpv, token included; built with `Url` so the host cannot change.
     pub fn stream_url(&self, base: &str, token: &str) -> Option<String> {
         let key = self.part_key.as_ref()?;
         let mut url = url::Url::parse(base).ok()?;
@@ -455,8 +452,7 @@ impl MediaContainer {
         self.tracks.into_iter().map(|t| t.into_track()).collect()
     }
 
-    /// Search hits: tracks, then albums, then artists. Flat (non-hub) results
-    /// go in the same buckets, so the plain `/search` shape parses too.
+    /// Tracks, then albums, then artists; the flat `/search` shape parses too.
     pub fn into_search_hits(self) -> Vec<SearchHit> {
         let mut tracks = Vec::new();
         let mut albums = Vec::new();

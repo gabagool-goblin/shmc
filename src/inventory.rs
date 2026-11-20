@@ -20,8 +20,7 @@ pub enum Kind {
     Enum {
         options: &'static [&'static str],
     },
-    /// One of a set that depends on the machine (cava's audio sources, the
-    /// themes), found when the editor opens.
+    /// One of a set found when the editor opens: cava's sources, the themes.
     EnumDynamic,
     /// A list, one item per line.
     List,
@@ -59,8 +58,7 @@ pub struct Applies {
     pub reason: &'static str,
 }
 
-/// What the other setting must be, as `shmc config --list` prints it
-/// (`true`/`false` for a yes/no).
+/// As `shmc config --list` prints it (`true`/`false` for a yes/no).
 #[derive(Debug, Clone, Copy)]
 pub enum When {
     Is(&'static str),
@@ -68,8 +66,7 @@ pub enum When {
 }
 
 impl Setting {
-    /// Why this setting has no effect right now, or None when it has (or
-    /// always does). `current` reads a setting's value by key.
+    /// Why this setting has no effect now, if so; `current` reads a value by key.
     pub fn unused_because(&self, current: impl Fn(&str) -> Option<String>) -> Option<&'static str> {
         let rule = self.applies?;
         let now = current(rule.key)?;
@@ -100,8 +97,7 @@ pub fn is_theme_group(group: &str) -> bool {
     THEME_GROUPS.contains(&group)
 }
 
-/// Grouped for reading, ordered by key inside a group. `shmc config --list`
-/// sorts its own rows.
+/// Grouped for reading, ordered by key inside a group.
 pub const ALL: &[Setting] = &[
     Setting {
         key: "plex.server",
@@ -883,8 +879,7 @@ mod tests {
 
     #[test]
     fn enum_options_match_what_code_accepts() {
-        // The code that reads a setting is the authority; an option it
-        // accepts must be offered here.
+        // An option the reading code accepts must be offered here.
         assert_eq!(options("ui.icons"), Some(&["nerd", "ascii"][..]), "ui.icons");
         assert_eq!(
             options("ui.volume_display"),

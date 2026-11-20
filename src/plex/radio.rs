@@ -1,5 +1,4 @@
-//! Plex radio: an artist's station, a station for a track, and the play queue
-//! the server builds from one.
+//! Plex radio: artist and track stations and the play queues built from them.
 
 use super::client::{read_capped, redirect_error, PlexClient, MAX_XML_BYTES};
 use super::models::{MediaContainer, Track};
@@ -102,8 +101,7 @@ impl PlexClient {
         Ok(stations_from(c))
     }
 
-    /// Creates a play queue from the station and keeps its first `want` tracks, reading
-    /// up to `MAX_READS` times. The create is never retried; a failed read keeps the rest.
+    /// The first `want` tracks of a new play queue; a failed read after the create keeps the rest.
     pub async fn radio_tracks(
         &self,
         client_id: &str,
@@ -148,8 +146,7 @@ impl PlexClient {
         Ok((items.into_iter().map(|(t, _)| t).collect(), RadioQueue { id, last }))
     }
 
-    /// Reads on from `queue.last` until it has `want` tracks, a read adds nothing or
-    /// `MAX_READS` is reached; a later failure keeps what was read.
+    /// Reads on from `queue.last` until it has `want` tracks; a failure keeps what was read.
     pub async fn radio_read_on(&self, client_id: &str, queue: &RadioQueue, want: usize) -> ReadOn {
         let mut last = queue.last.clone();
         let mut found: Vec<(Track, String)> = Vec::new();

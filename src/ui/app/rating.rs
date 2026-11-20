@@ -16,14 +16,12 @@ pub(super) struct PendingRating {
 }
 
 impl App {
-    /// The rating of a track: a known value for its key, else what its own
-    /// metadata carried.
+    /// A known value for its key, else what its own metadata carried.
     pub(crate) fn rating_of(&self, t: &crate::plex::Track) -> Option<u8> {
         self.rating_for(&t.rating_key, t.user_rating)
     }
 
-    /// `own` is the rating a list row carried; a cached None is a rating cleared
-    /// with r, so the row's own value must not come back.
+    /// A cached None is a rating cleared with `r`, so the row's `own` must not come back.
     pub(crate) fn rating_for(&self, key: &str, own: Option<u8>) -> Option<u8> {
         match self.ratings.get(key) {
             Some(known) => *known,
@@ -36,7 +34,6 @@ impl App {
         rating_short(self.rating_style, self.rating_for(key, own)?, self.icons_ascii)
     }
 
-    /// The rating of the playing track.
     pub(crate) fn playing_rating(&self) -> Option<u8> {
         self.rating_of(self.current_track()?)
     }
@@ -116,8 +113,7 @@ impl App {
         self.transient_secs(question, self.confirm_timeout_secs, false);
     }
 
-    /// Whether the question took the key: `0` to `5` answer it, anything else
-    /// cancels. A lapsed question lets the key through.
+    /// `0` to `5` answer, anything else cancels; a lapsed question lets the key through.
     pub(super) fn answer_rating(&mut self, key: crossterm::event::KeyCode) -> bool {
         let Some(pending) = self.pending_rating.take() else {
             return false;

@@ -10,8 +10,7 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::Paragraph;
 use ratatui::Frame;
 
-/// `Title - Artist`, ellipsized to `width`: the title bold, the artist secondary.
-/// The rating follows the title while the title fits whole beside it.
+/// `Title - Artist`, ellipsized to `width`; the rating follows a title that fits whole.
 pub(super) fn now_playing(app: &App, width: u16) -> Option<Line<'static>> {
     let t = app.current_track()?;
     let (title, artist) = (clean(&t.title), clean(&t.artist));
@@ -39,7 +38,7 @@ pub(super) fn now_playing(app: &App, width: u16) -> Option<Line<'static>> {
     ]))
 }
 
-/// The title sits on the rule above the progress row, padded by a space each side.
+/// The title sits on the rule above the progress row.
 pub(super) fn draw_rule_title(f: &mut Frame, app: &App, rule: Rect) {
     let pad = theme::spacing().inset + 1;
     let room = rule.width.saturating_sub(pad * 2 + 2);
@@ -181,8 +180,7 @@ fn adventure_line(app: &App, width: u16) -> Option<String> {
     Some(theme::ellipsize(&format!("{head}{list}{tail}"), width))
 }
 
-/// The end of `text` that fits `width` cells less `reserved` (prompt and caret),
-/// so what is being typed stays visible.
+/// The end of `text` that fits beside `reserved` cells, so the typing stays visible.
 fn tail_fit(text: &str, width: u16, reserved: u16) -> String {
     let room = width.saturating_sub(reserved) as usize;
     let mut used = 0;
@@ -213,8 +211,7 @@ fn draw_progress(f: &mut Frame, app: &App, inner: Rect) {
     let field = format!("{glyph:<2}");
     let gw = 2u16;
 
-    // Both halves are as wide as the duration, so the bar does not jump when
-    // the position gains a digit (9:59 -> 10:00).
+    // Both halves as wide as the duration, so the bar does not jump at 9:59 -> 10:00.
     let dur = theme::format_time(app.duration);
     let pos = theme::format_time(app.position);
     let half = dur.len().max(pos.len());
@@ -222,7 +219,7 @@ fn draw_progress(f: &mut Frame, app: &App, inner: Rect) {
     let right_w = (times.chars().count() as u16).saturating_add(1);
     let cols = Layout::horizontal([
         Constraint::Length(gw),
-        Constraint::Length(1), // one blank cell before the bar
+        Constraint::Length(1),
         Constraint::Min(6),
         Constraint::Length(right_w),
     ])
@@ -242,7 +239,7 @@ fn draw_progress(f: &mut Frame, app: &App, inner: Rect) {
         (app.position / app.duration).clamp(0.0, 1.0)
     };
     let filled = ((frac * bar_w as f64).round() as usize).min(bar_w);
-    // Solid bar of background-coloured cells: `░` rendered dotted in some fonts.
+    // Background-coloured cells: `░` renders dotted in some fonts.
     let fill_style = theme::progress_fill();
     let track_style = theme::progress_track(symbols.progress_empty.is_none());
     let solid_bg =
@@ -276,8 +273,7 @@ fn draw_progress(f: &mut Frame, app: &App, inner: Rect) {
             spans.push(part(symbols.progress_filled, body, fill_style));
         }
         if let (Some(head), true) = (symbols.progress_head, filled > 0) {
-            // Over a solid track the head takes its colour as background, so a
-            // Powerline triangle's empty half joins the track.
+            // The head's background is the solid track's, so a triangle's empty half joins it.
             let style = match symbols.progress_empty {
                 None => solid_bg(track_style).patch(fill_style),
                 Some(_) => fill_style,

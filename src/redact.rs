@@ -1,12 +1,10 @@
-//! Keeps the Plex token out of logs. Everything written to disk or printed by
-//! `shmc log` goes through here.
+//! Keeps the Plex token out of the log file and `shmc log` output.
 
 pub const PLACEHOLDER: &str = "<redacted>";
 
 const KEY: &str = "X-Plex-Token=";
 
-/// Replace every `X-Plex-Token=<value>` with `X-Plex-Token=<redacted>`; the
-/// value ends at `&`, a quote, whitespace or the end.
+/// The value ends at `&`, a quote, whitespace or the end.
 pub fn redact_secrets(text: &str) -> String {
     if !text.contains(KEY) {
         return text.to_string();
@@ -28,8 +26,7 @@ pub fn redact_secrets(text: &str) -> String {
     out
 }
 
-/// A server URL fit for a bug report: no token in the query and no password
-/// in the userinfo.
+/// No token in the query and no password in the userinfo.
 pub fn redact_url(url: &str) -> String {
     let url = redact_secrets(url);
     let Some(scheme_end) = url.find("://") else { return url };
@@ -41,8 +38,7 @@ pub fn redact_url(url: &str) -> String {
     }
 }
 
-/// A newline in a Plex title must not forge a second log line, and an escape
-/// sequence must not reach the terminal when the log is printed.
+/// A newline in a title must not forge a log line, nor an escape reach the terminal.
 pub fn escape_field(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     for c in s.chars() {

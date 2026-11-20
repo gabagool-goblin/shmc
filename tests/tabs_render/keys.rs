@@ -536,8 +536,7 @@ async fn sleep_timer_keeps_a_paused_track_paused() {
     assert!(app.paused && !app.stopped);
 }
 
-/// The `:` line, the `/` filter and the search input keep the caret and the
-/// tail in view when the text is wider than the progress row.
+/// The `:` line, the filter and the search input keep the caret and the tail in view.
 #[tokio::test]
 async fn long_prompt_keeps_caret_and_tail_visible() {
     for (open, tab) in [(':', Tab::Queue), ('/', Tab::Queue), ('/', Tab::Search)] {

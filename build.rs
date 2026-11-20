@@ -1,12 +1,10 @@
-//! Stamps the commit into `shmc --version`, the only build identity a stripped
-//! release binary has. Builds without `.git` too.
+//! Stamps the commit into `shmc --version`; builds without `.git` too.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
 fn main() {
-    // `rerun-if-changed=build.rs` alone would disable cargo's default and freeze
-    // the stamp at the first build's commit, so watch the checkout.
+    // `rerun-if-changed=build.rs` alone would freeze the stamp at the first commit.
     if let Some(git_dir) = git(["rev-parse", "--absolute-git-dir"]).map(PathBuf::from) {
         watch(&git_dir.join("HEAD"));
         if let Ok(head) = std::fs::read_to_string(git_dir.join("HEAD")) {

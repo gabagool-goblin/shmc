@@ -26,7 +26,7 @@ pub struct Theme {
     pub viz_bottom: Color,
     pub viz_mid: Color,
     pub viz_top: Color,
-    /// Painted behind everything. `None` paints nothing (the terminal's own).
+    /// `None` is the terminal's own background.
     pub background: Option<Color>,
 }
 
@@ -51,8 +51,6 @@ impl Default for Theme {
     }
 }
 
-/// How blocks are drawn: boxes, boxes with rounded or double-line frames, one
-/// rule between blocks, or nothing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BorderStyle {
     Box,
@@ -80,19 +78,16 @@ impl BorderStyle {
         Self::NAMES[self as usize]
     }
 
-    /// Whether a block has a frame of its own.
     pub fn boxed(self) -> bool {
         matches!(self, Self::Box | Self::Rounded | Self::Double)
     }
 }
 
-/// The numbers are small whole numbers: more would leave no room for content.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Spacing {
-    /// Empty rows between the header, the tab bar, the content and the
-    /// progress row.
+    /// Empty rows between the header, tabs, content and progress row.
     pub block_gap: u16,
-    /// Columns between a box's border and what is inside it, on each side.
+    /// Columns inside a box's border on each side.
     pub inset: u16,
     pub borders: BorderStyle,
 }
@@ -105,14 +100,13 @@ impl Spacing {
 /// The header reserves eight cells for the meter either way.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Meter {
-    /// Lowest first: cell `i` is the `i`th glyph, lit or not (the colour says which).
+    /// Lowest first: cell `i` draws the `i`th glyph, lit or not.
     Ramp([char; 8]),
     /// Lit, unlit.
     Pair(char, char),
 }
 
-/// Each slot is one character one column wide (see [`parse_glyph`]), so the
-/// layout never changes.
+/// Each slot is one single-column character, so the layout never changes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Symbols {
     /// `None` is a cell coloured through its background, no glyph.
@@ -127,7 +121,7 @@ pub struct Symbols {
     pub scroll_down: char,
     pub scroll_thumb: char,
     pub volume_meter: Meter,
-    /// Lowest level first; a full row is the last.
+    /// Lowest level first.
     pub visualizer: [char; 8],
 }
 
@@ -227,8 +221,7 @@ impl Role {
     }
 }
 
-/// A role is looked up each time the style is built, so it follows overrides
-/// and the live preview.
+/// Looked up each time a style is built, so it follows overrides and the preview.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ColorRef {
     Role(Role),
@@ -279,8 +272,7 @@ pub enum Element {
 }
 
 impl Element {
-    /// In the order an export writes them. Each is styled on its own:
-    /// `tab_active` does not follow `current`, nor `warn` `secondary`.
+    /// In export order. `tab_active` does not follow `current`, nor `warn` `secondary`.
     pub const ALL: [(&'static str, Element); 13] = [
         ("accent", Element::Accent),
         ("secondary", Element::Secondary),
@@ -392,7 +384,7 @@ impl Styles {
         self.0[element as usize]
     }
 
-    /// Set an element's patch; an empty one is no patch.
+    /// An empty patch clears the slot.
     pub fn set(&mut self, element: Element, patch: StylePatch) {
         self.0[element as usize] = (!patch.is_empty()).then_some(patch);
     }
@@ -402,8 +394,7 @@ impl Styles {
     }
 }
 
-/// What a theme sets besides colours, layered like [`Theme`]. Styles come from
-/// theme files only.
+/// What a theme sets besides colours; styles come from theme files only.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Look {
     pub spacing: Spacing,
@@ -415,8 +406,7 @@ impl Look {
     pub const DEFAULT: Look =
         Look { spacing: Spacing::DEFAULT, symbols: Symbols::DEFAULT, styles: Styles::NONE };
 
-    /// Every non-ASCII symbol put back to the default: `ui.icons = "ascii"` is
-    /// for terminals that cannot draw more, so a theme must not override it.
+    /// Every non-ASCII symbol back to the default, for `ui.icons = "ascii"`.
     pub fn for_ascii(self) -> Look {
         let (mut s, d) = (self.symbols, Symbols::DEFAULT);
         let keep = |c: &Option<char>| c.is_none_or(|c| c.is_ascii());
@@ -474,8 +464,7 @@ impl Default for Look {
 #[cfg(not(test))]
 static LOOK: RwLock<Look> = RwLock::new(Look::DEFAULT);
 
-// Per thread in unit tests so one test's glyphs do not leak into another.
-// Integration tests share the global, serialised.
+// Per thread in unit tests so glyphs do not leak between tests.
 #[cfg(test)]
 thread_local! {
     static LOOK: std::cell::Cell<Look> = const { std::cell::Cell::new(Look::DEFAULT) };
@@ -519,8 +508,7 @@ pub fn ellipsis() -> char {
     symbols().ellipsis
 }
 
-/// Exactly one character, one column wide: control, wide (CJK, emoji),
-/// zero-width and combining glyphs would shift the cells the layout counts on.
+/// One character, one column wide: anything else shifts the cells the layout counts.
 pub fn parse_glyph(text: &str) -> Option<char> {
     let mut chars = text.chars();
     let c = chars.next()?;
@@ -541,8 +529,7 @@ pub fn parse_ramp(text: &str) -> Option<[char; 8]> {
     glyphs.iter().all(|c| parse_glyph(&c.to_string()).is_some()).then_some(glyphs)
 }
 
-/// A value that is exactly a preset name is that preset, anything else is
-/// glyphs. The first of each is the default.
+/// A value that is exactly a name is that preset, else glyphs; the first is the default.
 pub const METER_PRESETS: &[(&str, Meter)] = &[
     ("blocks", Meter::Ramp(EIGHTHS)),
     ("squares", Meter::Pair('■', '·')),
@@ -553,8 +540,7 @@ pub const METER_PRESETS: &[(&str, Meter)] = &[
 pub const VISUALIZER_PRESETS: &[(&str, [char; 8])] =
     &[("blocks", EIGHTHS), ("ascii", ['_', '.', '-', '=', '+', '*', '#', '@'])];
 
-/// A name sets all five glyphs; a glyph key applied after it replaces one part.
-/// `angled` and `rounded` need Powerline glyphs (Nerd Fonts).
+/// `angled` and `rounded` need Powerline glyphs.
 pub const PROGRESS_PRESETS: &[(&str, ProgressGlyphs)] = &[
     ("solid", [None; 5]),
     ("line", [Some('━'), Some('─'), None, None, None]),
@@ -651,8 +637,7 @@ pub fn set_spacing(look: &mut Look, key: &str, value: i64) -> bool {
     true
 }
 
-/// False, and the look untouched, for an unknown key or a value that is not
-/// one of the key's words.
+/// False, and the look untouched, for an unknown key or word.
 pub fn set_spacing_text(look: &mut Look, key: &str, text: &str) -> bool {
     match (key, BorderStyle::parse(text)) {
         ("borders", Some(style)) => look.spacing.borders = style,
@@ -668,8 +653,7 @@ pub fn spacing_text_rule(key: &str) -> &'static str {
     }
 }
 
-/// One look key as the config shows it and an export writes it; an unset
-/// progress glyph is `solid`.
+/// As the config shows and an export writes it; an unset progress glyph is `solid`.
 pub fn look_text(look: &Look, key: &str) -> Option<String> {
     let s = &look.symbols;
     let glyph = |c: Option<char>| c.map_or_else(|| "solid".to_string(), String::from);
@@ -707,8 +691,7 @@ pub fn look_text(look: &Look, key: &str) -> Option<String> {
     })
 }
 
-/// Rows of chrome that do not depend on the gap. In `none`, compact keeps a row
-/// for the now-playing line.
+/// Chrome rows that do not depend on the gap; compact `none` keeps one for the track.
 pub fn fixed_block_rows(compact: bool, style: BorderStyle) -> u16 {
     let boxed = style.boxed();
     let blocks: u16 = if compact { 2 } else { 3 };
@@ -723,7 +706,6 @@ pub fn fixed_block_rows(compact: bool, style: BorderStyle) -> u16 {
     header + tabs_and_progress + rules + np_row
 }
 
-/// Gaps between the blocks: one fewer than the blocks.
 pub fn block_gaps(compact: bool) -> u16 {
     if compact {
         2
@@ -732,8 +714,7 @@ pub fn block_gaps(compact: bool) -> u16 {
     }
 }
 
-/// The gap a terminal `height` rows tall can afford without taking the content
-/// under six rows, given the `fixed` rows of the blocks and the `gaps` between them.
+/// The largest gap up to `block_gap` that leaves the content six rows.
 pub fn effective_block_gap(height: u16, block_gap: u16, fixed: u16, gaps: u16) -> u16 {
     let room = height.saturating_sub(fixed + 6) / gaps.max(1);
     block_gap.min(room)
@@ -749,16 +730,14 @@ pub fn set_theme(theme: Theme) {
     *THEME.write().expect("theme lock") = theme;
 }
 
-/// Held for the whole of a test that sets the palette or asserts on a colour.
-/// Tolerates poisoning so one failing test does not fail the rest.
+/// Held by a test that sets the palette or checks a colour; survives poisoning.
 #[cfg(test)]
 pub(crate) fn palette_test_lock() -> std::sync::MutexGuard<'static, ()> {
     static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
     LOCK.lock().unwrap_or_else(|e| e.into_inner())
 }
 
-/// The chosen theme without overrides, and the problems met finding it. An
-/// unknown name starts on the default rather than refusing.
+/// The chosen theme without overrides; an unknown name is the default, and a problem.
 pub fn base_appearance(cfg: &ThemeConfig) -> (Appearance, Vec<String>) {
     let (found, mut problems) = crate::ui::themes::resolve_base(&cfg.name, cfg.dir.as_deref());
     match found {
@@ -773,8 +752,7 @@ pub fn base_appearance(cfg: &ThemeConfig) -> (Appearance, Vec<String>) {
     }
 }
 
-/// The chosen theme with the config's `[theme]` overrides. An invalid override
-/// is replaced by the theme's own value and reported.
+/// The chosen theme with `[theme]` overrides; a bad one is the theme's, and a problem.
 pub fn appearance_from_config(cfg: &ThemeConfig) -> (Appearance, Vec<String>) {
     let (base, problems) = base_appearance(cfg);
     let (theme, more) = with_overrides(base.theme, cfg);
@@ -853,8 +831,7 @@ pub(crate) fn role_slot<'a>(theme: &'a mut Theme, role: &str) -> Option<&'a mut 
     })
 }
 
-/// `#rrggbb`, and for `background` also `none`. False, and the theme
-/// untouched, when the text does not fit.
+/// `#rrggbb`, or `none` for `background`; false, theme untouched, when it does not fit.
 pub(crate) fn set_role(theme: &mut Theme, role: &str, value: &str) -> bool {
     if role == "background" {
         if value.trim().eq_ignore_ascii_case("none") {
@@ -902,8 +879,7 @@ pub fn hex(colour: Color) -> String {
     }
 }
 
-/// First in a frame, before any widget. Sets only `bg`, so a widget's own bg
-/// and the album cover's cells are unaffected.
+/// First in a frame; sets only `bg`, so a widget's own bg and the cover stay.
 pub fn paint_background(buf: &mut ratatui::buffer::Buffer, area: ratatui::layout::Rect) {
     if let Some(bg) = theme().background {
         buf.set_style(area, Style::default().bg(bg));
@@ -984,7 +960,7 @@ pub fn warn() -> Style {
     styled(Element::Warn, Style::default().fg(theme().secondary))
 }
 
-/// Parse a `#rrggbb` colour (the leading `#` is optional).
+/// The leading `#` is optional.
 pub fn parse_hex(value: &str) -> Option<Color> {
     let hex = value.trim();
     let hex = hex.strip_prefix('#').unwrap_or(hex);
@@ -997,8 +973,7 @@ pub fn parse_hex(value: &str) -> Option<Color> {
     Some(Color::Rgb(r, g, b))
 }
 
-/// Gradient by absolute row position, so low bars stay in the bottom colour and
-/// only tall bars reach the top one. `t_from_bottom` is 0.0 at the bottom row.
+/// By absolute row, so only tall bars reach the top colour.
 pub fn viz_color(t_from_bottom: f32) -> Color {
     let t = t_from_bottom.clamp(0.0, 1.0);
     let palette = theme();
@@ -1027,8 +1002,7 @@ pub fn format_time(secs: f64) -> String {
     }
 }
 
-/// Fits `59:59`, so the column keeps its width when a track of ten minutes or
-/// more is queued. A table widens it to its longest time at draw time.
+/// Fits `59:59`; a table widens it to its longest time.
 pub const LEN_COL_MIN: u16 = 5;
 
 /// Width of a right-aligned row number column.
@@ -1036,8 +1010,7 @@ pub fn digits(n: usize) -> u16 {
     n.max(1).to_string().len() as u16
 }
 
-/// U+FE0F (VS16) is zero-width and forces its base char to the 2-cell emoji
-/// presentation.
+/// VS16 (U+FE0F) is zero-width and makes its base a 2-cell emoji.
 fn char_width(c: char, next: Option<char>) -> usize {
     if c == '\u{fe0f}' {
         return 0;
@@ -1055,8 +1028,7 @@ pub fn str_width(s: &str) -> usize {
     chars.iter().enumerate().map(|(i, &c)| char_width(c, chars.get(i + 1).copied())).sum()
 }
 
-/// Truncate to `w` display columns ending with the ellipsis. Never splits a
-/// character or leaves a dangling variation selector.
+/// Truncate to `w` columns with the ellipsis, never splitting off a VS16.
 pub fn ellipsize(s: &str, w: u16) -> String {
     ellipsize_with(s, w, ellipsis())
 }
@@ -1127,7 +1099,6 @@ mod tests {
     fn str_width_handles_emoji_and_vs16() {
         assert_eq!(str_width("abc"), 3);
         assert_eq!(str_width("デス"), 4);
-        // VS16 is zero width and promotes its base to 2 cells
         assert_eq!(str_width("\u{263a}\u{fe0f}"), 2);
         assert_eq!(str_width("\u{263a}"), 1);
         assert_eq!(str_width("a\u{263a}\u{fe0f}b"), 4);
@@ -1137,7 +1108,6 @@ mod tests {
     fn ellipsize_emoji_keeps_vs16_attached() {
         // 3 columns: "😀" (2) + ellipsis (1)
         assert_eq!(ellipsize("😀abc", 3), "😀…");
-        // VS16 never split from its base at the cut
         assert_eq!(ellipsize("\u{263a}\u{fe0f}xy", 3), "\u{263a}\u{fe0f}…");
     }
 
@@ -1150,8 +1120,7 @@ mod tests {
         assert_eq!(digits(100), 3);
     }
 
-    /// Run `f` under another palette and put the old one back. The caller holds
-    /// `palette_test_lock()`.
+    /// Run `f` under another palette; the caller holds `palette_test_lock()`.
     fn with_palette<T>(palette: Theme, f: impl FnOnce() -> T) -> T {
         let previous = theme();
         set_theme(palette);
@@ -1171,14 +1140,12 @@ mod tests {
         };
         let (theme, problems) = from_config(&cfg);
         assert_eq!(theme.accent, Color::Rgb(0x12, 0x34, 0x56));
-        // A typo falls back to the theme's colour, not the default's, and says
-        // so.
+        // A typo falls back to the theme's colour, not the default's.
         assert_eq!(theme.text, mocha.text);
         assert_eq!(theme.secondary, mocha.secondary);
         assert_eq!(problems.len(), 1, "{problems:?}");
         assert!(problems[0].contains("theme.text"), "{problems:?}");
 
-        // An unknown name is the default, with a problem, not a failure.
         let cfg = ThemeConfig { name: "nope".into(), ..ThemeConfig::default() };
         let (theme, problems) = from_config(&cfg);
         assert_eq!(theme, DEFAULT);
@@ -1215,12 +1182,10 @@ mod tests {
             assert_eq!(viz_color(0.0), DEFAULT.viz_bottom);
             assert_eq!(viz_color(0.5), DEFAULT.viz_mid);
             assert_eq!(viz_color(1.0), DEFAULT.viz_top);
-            // Midpoints interpolate rather than snapping.
             let quarter = viz_color(0.25);
             assert_ne!(quarter, DEFAULT.viz_bottom);
             assert_ne!(quarter, DEFAULT.viz_mid);
-            // The ramp is bottom -> middle -> top, so 0.15 is 30% of the way to
-            // the middle.
+            // 0.15 is 30% of the way from the bottom colour to the middle one.
             assert_eq!(viz_color(0.15), Color::Rgb(0xe7, 0x46, 0xa1));
         });
     }
@@ -1236,8 +1201,7 @@ mod tests {
         assert_eq!(parse_hex(""), None);
     }
 
-    /// Run `f` under another look and put the old one back. The caller holds
-    /// `palette_test_lock()`.
+    /// Run `f` under another look; the caller holds `palette_test_lock()`.
     fn with_look<T>(look: Look, f: impl FnOnce() -> T) -> T {
         let previous = self::look();
         set_look(look);
@@ -1246,15 +1210,12 @@ mod tests {
         out
     }
 
-    /// The one rule every symbol goes through: by display width, not by
-    /// length, so a glyph that would widen its cell never gets in.
+    /// By display width, not length.
     #[test]
     fn symbol_lengths_are_checked() {
         for good in ["x", "…", "▶", "█", " ", "·"] {
             assert!(parse_glyph(good).is_some(), "{good:?}");
         }
-        // empty, two glyphs, wide (CJK, emoji), a control character, a
-        // zero-width one, a base with a combining mark, and a VS16 emoji.
         for bad in
             ["", "ab", "界", "😀", "\t", "\u{1b}", "\u{200b}", "e\u{301}", "\u{263a}\u{fe0f}"]
         {
@@ -1269,7 +1230,6 @@ mod tests {
         for bad in ["", "■", "■··", "■界", "abcdefg"] {
             assert!(parse_meter(bad).is_none(), "{bad:?}");
         }
-        // The visualizer takes a ramp only, never a pair.
         let mut look = Look::DEFAULT;
         assert!(!set_symbol(&mut look, "visualizer", "■·"));
         assert!(!set_symbol(&mut look, "ellipsis", "界"));
@@ -1289,8 +1249,7 @@ mod tests {
         assert_eq!(ellipsize("hello", 4), "hel…", "the default is back");
     }
 
-    /// `solid` is a value of its own, not an absent one: it beats a glyph the
-    /// theme set, in the config's overrides and in a theme file alike.
+    /// `solid` beats a theme's glyph, from the config and from a theme file.
     #[test]
     fn solid_overrides_a_themes_progress_glyph() {
         let mut base = Look::DEFAULT;
@@ -1313,8 +1272,7 @@ mod tests {
         assert!(!set_symbol(&mut file, "ellipsis", "solid"), "only the progress glyphs take it");
     }
 
-    /// A preset name sets all five slots; a name is never a glyph, so nothing
-    /// else is read as one; a glyph set after it replaces its part only.
+    /// A preset sets all five slots; a glyph set after it replaces its part only.
     #[test]
     fn part_after_preset_wins() {
         for (name, glyphs) in PROGRESS_PRESETS {
@@ -1325,7 +1283,6 @@ mod tests {
             for c in glyphs.iter().flatten() {
                 assert!(parse_glyph(&c.to_string()).is_some(), "{name}: {c:?} is not one column");
             }
-            // A name is no literal for a glyph row, and a glyph is no name.
             if *name != "solid" {
                 assert!(!set_symbol(&mut look, "progress_head", name), "{name}");
             }
@@ -1338,7 +1295,6 @@ mod tests {
         }
         assert_eq!(look, Look::DEFAULT, "a refused value changes nothing");
 
-        // The config applies the preset first whatever else it sets.
         let cfg = ThemeConfig {
             progress_head: Some("solid".into()),
             progress_end: Some("]".into()),
@@ -1363,8 +1319,7 @@ mod tests {
         }
     }
 
-    /// `ui.icons = "ascii"` is for fonts that cannot draw more: a theme's
-    /// symbols that are not ASCII give way to the defaults, the rest stay.
+    /// `ui.icons = "ascii"`: a theme's non-ASCII symbols give way to the defaults.
     #[test]
     fn ascii_mode_drops_only_non_ascii_symbols() {
         let _palette = palette_test_lock();
@@ -1397,8 +1352,7 @@ mod tests {
         set_look(before.1);
     }
 
-    /// An override beats the theme's own value, which beats the default; a
-    /// value that does not fit is the theme's, and is named by key only.
+    /// Override beats theme beats default; a bad value is the theme's, named by key.
     #[test]
     fn override_beats_theme_beats_default() {
         let tmp = tempfile::tempdir().unwrap();
@@ -1436,8 +1390,7 @@ mod tests {
         assert!(!text.contains("SECRET") && !text.contains('7'), "keys only: {text}");
     }
 
-    /// The words are matched without case; one that is not a style is named by
-    /// key and leaves the theme's.
+    /// Matched without case; a bad word is named by key and leaves the theme's.
     #[test]
     fn bad_border_word_is_named() {
         let tmp = tempfile::tempdir().unwrap();
@@ -1516,12 +1469,10 @@ mod tests {
         assert_eq!(meter("plain"), Some(Meter::Pair('#', '-')));
         assert_eq!(parse_visualizer("blocks"), Some(EIGHTHS));
         assert_eq!(parse_visualizer("ascii"), Some(['_', '.', '-', '=', '+', '*', '#', '@']));
-        // anything else is literal glyphs
         assert_eq!(meter("■·"), Some(Meter::Pair('■', '·')));
         assert_eq!(meter("12345678"), Some(Meter::Ramp(['1', '2', '3', '4', '5', '6', '7', '8'])));
         assert_eq!(parse_visualizer("12345678").map(|r| r[7]), Some('8'));
         assert!(meter("square").is_none() && parse_visualizer("Ascii").is_none(), "no near misses");
-        // the preset glyphs pass the width rule themselves
         for (name, m) in METER_PRESETS {
             let glyphs: Vec<char> = match m {
                 Meter::Ramp(r) => r.to_vec(),
@@ -1532,7 +1483,6 @@ mod tests {
         for (name, r) in VISUALIZER_PRESETS {
             assert!(r.iter().all(|c| parse_glyph(&c.to_string()).is_some()), "{name}");
         }
-        // an effective value is shown as its preset's name, else as glyphs
         let mut look = Look::DEFAULT;
         assert_eq!(look_text(&look, "volume_meter").as_deref(), Some("blocks"));
         assert!(set_symbol(&mut look, "volume_meter", "■·"));
@@ -1541,8 +1491,7 @@ mod tests {
         assert_eq!(look_text(&look, "volume_meter").as_deref(), Some("<>"));
     }
 
-    /// A name must never be mistaken for glyphs: not a valid literal, and not
-    /// the length of one.
+    /// A preset name is neither a valid literal nor the length of one.
     #[test]
     fn preset_names_never_read_as_glyphs() {
         let names =
@@ -1594,8 +1543,7 @@ mod tests {
         look
     }
 
-    /// A patch changes only what it lists, over today's style; roles are read
-    /// at call time; an element not listed is untouched.
+    /// A patch changes only the fields it lists; roles are read at call time.
     #[test]
     fn style_patch_changes_only_listed_fields() {
         let _palette = palette_test_lock();

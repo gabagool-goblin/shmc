@@ -193,8 +193,7 @@ pub enum Msg {
         rating_key: String,
         tracks: Vec<Track>,
     },
-    /// Unlike `Error` it names what failed, so a pending Browser jump is ended only
-    /// by the load that serves it.
+    /// Names what failed, so only the load serving a Browser jump ends it.
     LoadFailed {
         key: String,
         error: String,
@@ -225,7 +224,6 @@ pub enum Msg {
     ArtReady {
         thumb_path: String,
         img: Arc<DynamicImage>,
-        /// The cached cover file, if there is one.
         file: Option<PathBuf>,
     },
     /// The cover's dwell is over; draw again.
@@ -360,18 +358,15 @@ pub const COVER_DWELL: std::time::Duration = std::time::Duration::from_millis(12
 pub struct ArtState {
     pub img: Option<Arc<DynamicImage>>,
     pub protocol: Option<ratatui_image::protocol::StatefulProtocol>,
-    /// Where the cover was painted. While it matches the layout, later frames
-    /// only skip those cells instead of copying the protocol payload again.
+    /// Where the cover was painted; later frames skip those cells, not re-send it.
     pub shown_rect: Option<ratatui::layout::Rect>,
     /// The rect `protocol` was pre-centred and encoded for.
     pub prepared_rect: Option<ratatui::layout::Rect>,
-    /// The cover stays out until then: re-sending the image in a draw holds the
-    /// screen. Set after its cells were cleared.
+    /// Re-sending the image in a draw holds the screen, so it stays out until then.
     pub hold_until: Option<Instant>,
     /// The Queue tab was left since the cover was last on screen.
     pub away: bool,
-    /// The protocol was rendered in the frame being drawn; the UI loop resets
-    /// it per frame and reports it when a draw is slow.
+    /// The protocol was rendered this frame; reported when a draw is slow.
     pub emitted: bool,
     /// The path `img` came from; the same path is never loaded again.
     pub thumb: Option<String>,
@@ -399,8 +394,7 @@ struct ShuffleSnapshot {
     order: Vec<Track>,
 }
 
-/// A reveal in the Browser while it resolves the artist. A missing album ends
-/// the jump on the artist, a missing track on the album.
+/// A Browser reveal waiting on the artist; a missing album or track stops a level up.
 #[derive(Debug, Clone)]
 struct PendingGoto {
     artist_key: String,
@@ -470,12 +464,10 @@ pub struct App {
     pub loop_file: bool,
     pub random: bool,
     shuffle_snapshot: Option<ShuffleSnapshot>,
-    /// `d` removals for `u`, newest last. Any other queue change clears it,
-    /// since the indices only hold for the queue the removals left.
+    /// `d` removals for `u`; other queue changes clear it, as the indices no longer hold.
     removed: Vec<Vec<(usize, Track)>>,
     pub visual: Option<Visual>,
-    /// Cleared by the matching event and by every app-initiated playback
-    /// change.
+    /// Cleared by the matching event and by every app-initiated playback change.
     expect_pos: Option<PosGuard>,
     sleep_epoch: u64,
     sleep_until: Option<Instant>,
@@ -486,15 +478,13 @@ pub struct App {
     /// App-side: each track leaves the queue once it finishes.
     pub consume: bool,
     pending_playlist: Option<PendingPlaylist>,
-    /// When "clear the queue?" was asked; `y` or `D` confirms, any other key
-    /// cancels, and it times out like `pending_playlist`.
+    /// When "clear the queue?" was asked.
     pending_clear: Option<Instant>,
     /// The "rate the track?" question, with the track it named.
     pending_rating: Option<rating::PendingRating>,
     /// Ratings known per rating key, from a track's metadata or a confirmed write.
     pub ratings: HashMap<String, Option<u8>>,
     pub rating_style: RatingStyle,
-    /// Changing the server is allowed (`plex.allow_writes`).
     pub allow_writes: bool,
     /// Where playback reports go; None when `plex.report_playback` is off.
     pub reporter: Option<UnboundedSender<crate::plex::report::Report>>,
@@ -507,7 +497,6 @@ pub struct App {
     /// 0 = previews off.
     pub preview_tracks: usize,
     pub preview_debounce_ms: u64,
-    /// Ask before queueing more tracks than this.
     pub confirm_playlist_over: usize,
     /// After this long a y/n question lapses and the key goes through.
     pub confirm_timeout_secs: u64,
@@ -515,11 +504,9 @@ pub struct App {
     /// Not asked again while it stays highlighted.
     preview_blocked: Option<String>,
     pub audio_cache: HashMap<String, AudioInfo>,
-    /// The track mpv failed on; `>` while stopped resumes after it. A reorder
-    /// remaps it, an insert or removal clears it.
+    /// The track mpv failed on, for `>` while stopped; inserts and removals clear it.
     pub failed_at: Option<usize>,
-    /// Failures since a file last loaded; a burst means the queue or the
-    /// server is broken, not one file.
+    /// Failures since a file last loaded.
     err_streak: u32,
 
     pub discover: DiscoverView,
@@ -536,7 +523,7 @@ pub struct App {
 
     pub picker: Option<Picker>,
     pub art_enabled: bool,
-    /// Hand the cover to mpv for Now Playing; macOS only.
+    /// Hand the cover to mpv for Now Playing.
     pub now_playing_cover: bool,
     /// mpv's playing file has no cover yet.
     cover_due: bool,
@@ -581,8 +568,7 @@ pub struct App {
     msg_tx: UnboundedSender<Msg>,
 }
 
-/// Failures in a row that mean the queue is unplayable, not one bad file; a
-/// dead server would otherwise run through the queue in seconds.
+/// Stops a dead server from running through the queue in seconds.
 const FAILED_STREAK_LIMIT: u32 = 3;
 
 const MAX_UNDO: usize = 20;
@@ -744,8 +730,7 @@ impl App {
         });
     }
 
-    /// The epoch bump makes the pending timer's `ClearStatus` a no-op, so a
-    /// message set by this same key press keeps its full lifetime.
+    /// The epoch bump voids the pending `ClearStatus`, so a message from this key keeps its time.
     fn dismiss_status(&mut self) {
         if self.status.is_empty() {
             return;
@@ -840,8 +825,7 @@ impl SelState for TableState {
     }
 }
 
-/// "year" (the fallback), "year_desc" or "title". No year sorts last and ties
-/// are broken, so the server's order never shows through.
+/// No year sorts last, and ties are broken so the server's order never shows.
 pub fn sort_albums(albums: &mut [Album], mode: &str) {
     let title = |a: &Album| a.title.to_lowercase();
     let oldest = |a: &Album| a.year.unwrap_or(u32::MAX);

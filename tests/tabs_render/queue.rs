@@ -98,8 +98,7 @@ async fn consume_keeps_cursor_on_item_under_filter() {
     assert_eq!(app.queue.items[real].rating_key, "t29", "the cursor moved to another item");
 }
 
-/// Removing the playing track hands playback to the one that slid in (random
-/// mode: any); removing the last track stops.
+/// Removing the playing track hands playback to the next (any, in random mode); the last stops.
 #[tokio::test]
 async fn removing_the_playing_track_hands_playback_on() {
     let mut app = new_app().await;
@@ -129,8 +128,7 @@ async fn removing_the_playing_track_hands_playback_on() {
     app.random = false;
 }
 
-/// One unplayable track is skipped; only a burst of failures stops playback
-/// and points at `>`.
+/// One unplayable track is skipped; a burst of failures stops and points at `>`.
 #[tokio::test]
 async fn burst_of_failures_stops_playback() {
     let mut app = new_app().await;
@@ -461,8 +459,7 @@ async fn queue_follow_pins_playing_until_browse() {
     assert_eq!(app.scroll.offset(ScrollId::Queue), 110);
 }
 
-/// The first step after `o` must move one row, not rewind the pane by
-/// the scrolloff margin.
+/// The first step after `o` moves one row, not back by the scrolloff margin.
 #[tokio::test]
 async fn first_step_after_o_does_not_scroll() {
     let mut app = new_app().await;
@@ -501,8 +498,7 @@ async fn first_step_after_o_does_not_scroll() {
     assert_eq!(app.scroll.offset(ScrollId::Queue), 81);
 }
 
-/// A move arriving before the `o` pin is drawn must scroll normally, not pin
-/// the new cursor to the top (with auto-follow on or off).
+/// A move before the `o` pin is drawn scrolls normally, auto-follow on or off.
 #[tokio::test]
 async fn move_after_o_does_not_repin_row() {
     for follow in [true, false] {
@@ -756,8 +752,7 @@ async fn auto_follow_can_be_disabled() {
     );
 }
 
-/// After a consume mpv can report the pre-removal index of the next track; that
-/// stale position must not move `current` past the queue.
+/// After a consume a stale pre-removal position must not move `current` past the queue.
 #[tokio::test]
 async fn stale_playlist_pos_keeps_current_track() {
     let mut app = new_app().await;
@@ -801,8 +796,7 @@ async fn play_next_after_consume_does_not_panic() {
     assert_eq!(app.queue.items[2].rating_key, "t10");
 }
 
-/// The consume guard stays armed (mpv sends no position for the advance); the
-/// position for the user's `>` must not be swallowed by it.
+/// The consume guard stays armed but must not swallow the position for a later `>`.
 #[tokio::test]
 async fn next_after_a_consume_follows_mpv() {
     let mut app = new_app().await;
@@ -823,8 +817,7 @@ async fn next_after_a_consume_follows_mpv() {
     assert_eq!(app.current, Some(1), "current must follow mpv after `>`");
 }
 
-/// With consume `>` removes the track you leave; the guard swallows the
-/// pre-removal position mpv may report, but not the real one.
+/// With consume `>` removes the track left; the guard swallows only the stale position.
 #[tokio::test]
 async fn next_with_consume_removes_left_track() {
     let mut app = new_app().await;
@@ -849,7 +842,7 @@ async fn next_with_consume_removes_left_track() {
     assert_eq!(keys, ["t0", "t3"]);
 }
 
-/// `>` with nothing to advance to consumes nothing; with repeat on it consumes the last entry and wraps.
+/// `>` at the end consumes nothing; with repeat on it consumes the last entry and wraps.
 #[tokio::test]
 async fn next_with_consume_on_the_last_entry() {
     let mut app = new_app().await;
@@ -874,8 +867,7 @@ async fn next_with_consume_on_the_last_entry() {
     assert_eq!(app.queue.items.len(), 1, "a lone track wraps to itself");
 }
 
-/// Plays the position events mpv sends during a reorder; the stale ones must
-/// not move `current` or the cursor, or fetch art. Returns the final index.
+/// Sends mpv's positions for a reorder and returns the final index.
 fn reorder_storm(app: &mut App, plex: &mut tokio::sync::mpsc::UnboundedReceiver<PlexCmd>) -> usize {
     let expected = app.current.expect("a reorder only guards a playing track");
     let playing_thumb = app.current_track().and_then(|t| t.thumb.clone());
@@ -910,8 +902,7 @@ fn reorder_storm(app: &mut App, plex: &mut tokio::sync::mpsc::UnboundedReceiver<
     expected
 }
 
-/// `z` off reports ~n intermediate positions; they must not fetch art
-/// for other tracks or bounce the cursor.
+/// `z` off reports intermediate positions that must not fetch art or bounce the cursor.
 #[tokio::test]
 async fn reorder_ignores_intermediate_positions() {
     let (mut app, mut plex) = new_app_with_plex().await;
@@ -941,8 +932,7 @@ async fn reorder_ignores_intermediate_positions() {
     assert_eq!(app.current, Some(21), "the position guard must not wedge");
 }
 
-/// `z` off must not be quadratic: the wall-clock bound fails an O(n²) walk at
-/// 50 000 tracks.
+/// `z` off is not quadratic: the time bound fails an O(n²) walk at 50 000 tracks.
 #[tokio::test]
 async fn shuffle_off_restores_large_queue_quickly() {
     let mut app = new_app().await;
@@ -966,8 +956,7 @@ async fn shuffle_off_restores_large_queue_quickly() {
     );
 }
 
-/// A track with the given title; artist and album stay x-free so a one-letter
-/// filter matches only the title (the real filter checks all three columns).
+/// Artist and album stay x-free, so a one-letter filter matches only the title.
 fn named(i: usize, title: &str) -> Track {
     Track { title: title.into(), artist: "Artist".into(), album: "Album".into(), ..track(i) }
 }
@@ -1020,7 +1009,7 @@ async fn shuffle_keeps_highlighted_track_under_filter() {
     }
 }
 
-/// `>` while stopped must resume the highlighted row under a filter, not the row at that raw index.
+/// `>` while stopped resumes the highlighted row under a filter, not that raw index.
 #[tokio::test]
 async fn stopped_next_resumes_highlighted_row_under_filter() {
     let mut app = new_app().await;
@@ -1065,8 +1054,7 @@ async fn play_queue_index_highlights_filtered_row() {
     );
 }
 
-/// A reorder carries `failed_at` to the failed track's new slot; paths
-/// without an exact mapping clear it.
+/// A reorder moves `failed_at` with the failed track; an unmapped path clears it.
 #[tokio::test]
 async fn reorder_carries_failure_marker_with_track() {
     let mut app = new_app().await;
@@ -1237,8 +1225,7 @@ async fn prev_on_first_entry_restarts_unless_repeat() {
     assert!(matches!(rx.try_recv(), Ok(mpv::MpvCmd::Prev)));
 }
 
-/// `:stop` drops a replace still in flight, so it neither replaces the queue
-/// nor starts playing when it lands.
+/// `:stop` drops a replace in flight: it neither replaces the queue nor plays when it lands.
 #[tokio::test]
 async fn stop_cancels_a_replace_still_in_flight() {
     let (mut app, mut plex) = new_app_with_plex().await;

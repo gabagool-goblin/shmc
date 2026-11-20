@@ -21,8 +21,7 @@ pub(super) fn draw_queue_tab(f: &mut Frame, app: &mut App, area: Rect) -> bool {
     if inner.width < 10 || inner.height < 5 {
         return false;
     }
-    // The art pane is pixel-square, capped at `art_pct` so the queue keeps its
-    // columns. With art disabled it collapses and the queue gets the full width.
+    // Pixel-square art, capped at `art_pct` so the queue keeps its columns.
     let (art_area, queue_area) = if !app.art_enabled {
         (None, inner)
     } else {
@@ -102,8 +101,7 @@ fn square_art_width(height: u16, cell: (u16, u16)) -> u16 {
     ((height as f64 * cell.1 as f64 / cell.0 as f64).round() as u16).max(1)
 }
 
-/// Visualizer rows for a percentage of the queue column (0 hides it). At least
-/// `MIN_VIZ_ROWS`, but the queue keeps 6 rows: the visualizer shrinks to 3, then hides.
+/// The queue keeps 6 rows: below `MIN_VIZ_ROWS` the visualizer drops to 3, then hides.
 fn viz_height(pct: u16, available: u16) -> u16 {
     if pct == 0 {
         return 0;
@@ -126,7 +124,6 @@ fn draw_art_pane(f: &mut Frame, app: &mut App, pane: Rect) -> bool {
     let content = Rect {
         x,
         y: pane.y,
-        // ends just before the divider
         width: (pane.x + pane.width).saturating_sub(1).saturating_sub(x),
         height: pane.height,
     };
@@ -154,8 +151,7 @@ fn draw_art_image(f: &mut Frame, app: &mut App, content: Rect) {
         return;
     }
 
-    // A cover is placed on a canvas of the whole area, to the pixel; without
-    // one the placeholder box depends only on the layout.
+    // A cover is centred to the pixel on a canvas of the whole area.
     let covered = app.art.img.is_some() && app.picker.is_some();
     let rect = if covered {
         Some(content)
@@ -167,8 +163,7 @@ fn draw_art_image(f: &mut Frame, app: &mut App, content: Rect) {
         return;
     };
 
-    // The terminal already holds this image: skip its cells rather than copy
-    // the protocol payload again.
+    // The terminal already holds this image: skip its cells, never resend the payload.
     if app.art.protocol.is_some()
         && app.art.shown_rect == Some(rect)
         && app.art.prepared_rect == Some(rect)
@@ -192,8 +187,7 @@ fn draw_art_image(f: &mut Frame, app: &mut App, content: Rect) {
         app.art.hold_until = None;
     }
 
-    // ratatui-image pads a resized image at (0, 0), so centre the cover on a
-    // canvas of the rect's size first.
+    // ratatui-image pads a resized image at (0, 0), so centre it on a canvas first.
     if app.art.protocol.is_none() || app.art.prepared_rect != Some(rect) {
         let picker = app.picker;
         let img = app.art.img.clone();
@@ -280,8 +274,7 @@ fn art_padding_fill() -> image::Rgba<u8> {
     }
 }
 
-/// The cover fitted and centred in pixels on a canvas the size of `area`, with
-/// `pad_px` on the limiting axis and at most `max_px` (0 = unlimited).
+/// The cover fitted and centred on a canvas of `area`, `pad_px` on the limiting axis.
 fn centered_art_canvas(
     img: &DynamicImage,
     area: Rect,
@@ -314,8 +307,7 @@ fn centered_art_canvas(
     Some(DynamicImage::ImageRgba8(canvas))
 }
 
-/// The whole-cell box closest to the cover's square, with an even leftover so
-/// it centres exactly. `None` when the pane is too small.
+/// The whole-cell box closest to a square, with an even leftover so it centres exactly.
 pub(super) fn art_rect(content: Rect, cell: Option<(u16, u16)>) -> Option<Rect> {
     let (art_w, art_h) = match cell.filter(|c| c.0 > 0 && c.1 > 0) {
         Some(cell) => square_box(content, cell),
@@ -345,8 +337,7 @@ fn two_to_one_box(content: Rect) -> (u16, u16) {
     (art_w, art_h)
 }
 
-/// The (width, height) closest to a pixel square of the shorter side, with an
-/// even leftover; a tie takes the larger box.
+/// Closest to a pixel square of the shorter side with an even leftover; ties take the larger.
 fn square_box(content: Rect, cell: (u16, u16)) -> (u16, u16) {
     let (cw, ch) = (cell.0 as u32, cell.1 as u32);
     let side = (content.width as u32 * cw).min(content.height as u32 * ch);
@@ -437,13 +428,11 @@ mod tests {
         assert_eq!(viz_height(100, 28), 22);
         assert_eq!(viz_height(80, 10), 4);
         assert_eq!(viz_height(0, 28), 0);
-        // the floor
         assert_eq!(viz_height(50, 17), 8);
         assert_eq!(viz_height(50, 14), 8);
         assert_eq!(viz_height(50, 13), 7);
         // tight: the 3-row floor
         assert_eq!(viz_height(50, 9), 3);
-        // too tight: hidden
         assert_eq!(viz_height(50, 8), 0);
         assert_eq!(viz_height(50, 6), 0);
         assert_eq!(viz_height(50, 4), 0);
@@ -473,8 +462,7 @@ mod tests {
         ([x0, w - 1 - x1, y0, h - 1 - y1], (x1 - x0 + 1, y1 - y0 + 1))
     }
 
-    /// Opposite gaps differ by at most a pixel, the limiting axis has the
-    /// padding, and the cap holds.
+    /// Opposite gaps within a pixel, padding on the limiting axis, and the cap holds.
     #[test]
     fn cover_centred_in_pixels_at_every_size() {
         let covers = [(300u32, 300u32), (400, 200), (200, 400), (300, 290)];
@@ -531,8 +519,6 @@ mod tests {
         }
     }
 
-    /// With a theme background the letterbox is that colour, opaque; without
-    /// one it stays transparent.
     #[test]
     fn cover_padding_takes_theme_background() {
         let _palette = theme::palette_test_lock();

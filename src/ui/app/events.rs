@@ -27,8 +27,7 @@ impl App {
             Msg::Paste(text) => self.handle_paste(text),
             Msg::Quit => self.should_quit = true,
             Msg::Resize => {
-                // ratatui clears the screen on a size change; the cover's cells
-                // would stay skipped as "already painted".
+                // ratatui clears the screen on a resize; the cover's cells would stay skipped
                 self.art.shown_rect = None;
                 // a drag-resize sends the image once, after it settles
                 self.hold_art();
@@ -237,8 +236,7 @@ impl App {
             Msg::ArtReady { thumb_path, img, file } => {
                 let wanted = self.current_thumb_path();
                 if wanted.as_deref() != Some(thumb_path.as_str()) {
-                    // Playback moved on. Without this the path stays "in
-                    // flight" and coming back to that track never asks again.
+                    // Playback moved on; a path left in flight is never asked for again.
                     if self.art.requested.as_deref() == Some(thumb_path.as_str()) {
                         self.art.requested = None;
                     }
@@ -246,7 +244,6 @@ impl App {
                     if self.art.thumb.as_deref() == Some(thumb_path.as_str())
                         && self.art.img.is_some()
                     {
-                        // Already showing this cover: leave it as it is.
                         self.art.requested = None;
                         return;
                     }
@@ -285,8 +282,7 @@ impl App {
             }
             Msg::Mpv(ev) => self.handle_mpv(ev),
             Msg::Cava(frame) => {
-                // cava emits frames before playback starts: don't gate on
-                // `stopped`
+                // cava emits frames before playback starts, so not gated on `stopped`
                 self.cava_frame = frame;
                 self.cava_alive = true;
                 self.cava_note.clear();
@@ -340,8 +336,7 @@ impl App {
                 }
             }
             Msg::PreviewFailed { key } => {
-                // Retry on the next highlight, not on every message: a dead
-                // server would be asked nonstop.
+                // Retry on the next highlight, or a dead server is asked on every message
                 if self.playlists.tracks_for.as_deref() == Some(key.as_str()) {
                     self.playlists.tracks_for = None;
                     self.preview_blocked = Some(key);
@@ -353,8 +348,7 @@ impl App {
         self.follow_radio();
     }
 
-    /// Whether `pos` is a stale position to ignore. The guard ends on its
-    /// expected value, count or deadline.
+    /// The guard ends on its expected value, count or deadline.
     fn stale_position(&mut self, pos: usize) -> bool {
         let Some(guard) = self.expect_pos.as_mut() else {
             return false;
@@ -379,8 +373,7 @@ impl App {
                     if let Some(v) = value.as_ref().and_then(|v| v.as_f64()) {
                         self.position = v;
                         self.report_position(v);
-                        // a failing file never gets a playback time, so this is
-                        // the one signal that a track really plays
+                        // a failing file never gets a playback time: the sign a track really plays
                         if v > 0.0 {
                             self.err_streak = 0;
                             self.failed_at = None;
@@ -414,8 +407,7 @@ impl App {
                     match pos {
                         Some(p) if p >= 0 => {
                             let p = p as usize;
-                            // stale: the queue shrank (consume) before mpv's
-                            // correction; `current` must not point past the end
+                            // stale after a consume; `current` must not point past the end
                             if p >= self.queue.items.len() {
                                 return;
                             }
@@ -447,16 +439,14 @@ impl App {
                 self.report_end(&reason);
                 if reason == "error" {
                     self.err_streak += 1;
-                    // mpv may fail a few entries before the Stop lands, so keep
-                    // the first failure of the burst
+                    // mpv may fail a few entries before the Stop lands: keep the first
                     let marker = self.failed_at.or(self.current);
                     self.failed_at = marker;
                     let title = marker
                         .and_then(|i| self.queue.items.get(i))
                         .map(|t| t.title.clone())
                         .unwrap_or_else(|| "track".into());
-                    // with repeat on mpv wraps; the streak limit ends a queue
-                    // where everything fails
+                    // with repeat mpv wraps; the streak limit ends an all-failing queue
                     let more = (self.loop_playlist && self.queue.items.len() > 1)
                         || marker.map_or(!self.queue.items.is_empty(), |f| {
                             f + 1 < self.queue.items.len()

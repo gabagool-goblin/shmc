@@ -4,8 +4,7 @@
 /// Rows between the cursor and an edge before the view scrolls (vim's scrolloff).
 pub const DEFAULT_SCROLL_OFF: usize = 4;
 
-/// The new offset for a cursor. The margin shrinks in a short pane and gives
-/// way at the list's ends.
+/// The margin shrinks in a short pane and gives way at the list's ends.
 pub fn compute_offset(
     cursor: usize,
     offset: usize,
@@ -85,13 +84,11 @@ pub struct ScrollStore {
     vis: [usize; 14],
     /// The next draw centres this list's cursor.
     pub center_once: Option<ScrollId>,
-    /// Queue auto-follow: every draw puts the cursor on the top row until the
-    /// user browses.
+    /// Queue auto-follow: the cursor stays on the top row until the user browses.
     pub top_lock: Option<ScrollId>,
     /// Like `top_lock`, for one draw (`o` with auto-follow off).
     pub top_once: Option<ScrollId>,
-    /// The pinned offset, kept after release so the first step does not rewind
-    /// the view by the margin.
+    /// Kept after release so the first step does not rewind the view by the margin.
     top_anchor: Option<(ScrollId, usize)>,
 }
 
@@ -177,8 +174,7 @@ impl ScrollStore {
         off
     }
 
-    /// Whether the released pin still holds: the cursor is in the pane and
-    /// short of the bottom margin. Otherwise the anchor is dropped.
+    /// The released pin holds while the cursor is in the pane, short of the bottom margin.
     fn anchor_holds(
         &mut self,
         id: ScrollId,
@@ -208,19 +204,15 @@ mod tests {
 
     #[test]
     fn top_edge() {
-        // cursor in the top margin pulls the view up to keep the margin
         assert_eq!(compute_offset(1, 3, 10, 30, 4), 0);
         assert_eq!(compute_offset(0, 0, 10, 30, 4), 0);
-        // cursor above the margin from the previous offset scrolls up
         assert_eq!(compute_offset(5, 10, 10, 30, 4), 1);
     }
 
     #[test]
     fn bottom_edge() {
-        // last row: offset clamps so the list ends flush (no gap after end)
         assert_eq!(compute_offset(29, 0, 10, 30, 4), 20);
-        assert_eq!(compute_offset(25, 10, 10, 30, 4), 20); // 25+4 >= 10+10
-                                                           // cursor within the visible middle does not scroll
+        assert_eq!(compute_offset(25, 10, 10, 30, 4), 20);
         assert_eq!(compute_offset(15, 10, 10, 30, 4), 10);
     }
 
@@ -236,7 +228,6 @@ mod tests {
         // pane of 3 rows: margin clamps to (3-1)/2 = 1
         assert_eq!(compute_offset(5, 0, 3, 30, 4), 4);
         assert_eq!(compute_offset(28, 29, 3, 30, 4), 27);
-        // 1-row pane: margin 0, plain bottom-clamp behavior
         assert_eq!(compute_offset(10, 0, 1, 30, 4), 10);
         assert_eq!(compute_offset(0, 0, 0, 30, 4), 0);
     }

@@ -15,8 +15,7 @@ fn generate() -> std::io::Result<String> {
     Ok(bytes.iter().map(|b| format!("{b:02x}")).collect())
 }
 
-/// The stored id, or a new one written to `dir` when the file is missing or
-/// does not hold one.
+/// The stored id, or a new one written to `dir`.
 pub fn load_or_create(dir: &Path) -> std::io::Result<String> {
     let path = dir.join(FILE);
     if let Ok(text) = std::fs::read_to_string(&path) {

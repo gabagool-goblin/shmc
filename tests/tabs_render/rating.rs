@@ -227,8 +227,7 @@ async fn rating_never_moves_the_title() {
     }
 }
 
-/// The compact layout has no header: the now-playing line carries the rating
-/// in every border style, and drops it when the title would be cut.
+/// The compact now-playing line has the rating in every border style, unless the title is cut.
 #[tokio::test]
 async fn compact_line_shows_the_rating_after_the_title() {
     use super::theme::{with_borders, LookGuard, STYLES};
@@ -250,8 +249,7 @@ async fn compact_line_shows_the_rating_after_the_title() {
     }
 }
 
-/// Where the cover's metadata replaces the now-playing line, its title carries
-/// the rating; the full layout leaves it to the header.
+/// The cover metadata's title has the rating in compact only.
 #[tokio::test]
 async fn cover_metadata_shows_the_rating_in_compact_only() {
     let (mut app, _plex) = playing(RatingStyle::Five).await;
@@ -342,7 +340,7 @@ async fn rated_message_changes_the_queue_row() {
     assert!(!row_of(&render(&mut app, 120, 30), "Starfall! 0").contains('*'));
 }
 
-/// A long title is cut earlier so the rating shows; a column too narrow for both drops the rating.
+/// A long title is cut for the rating; a column too narrow for both drops it.
 #[tokio::test]
 async fn long_title_keeps_the_rating_and_a_narrow_column_drops_it() {
     let (mut app, _plex) = playing(RatingStyle::Five).await;

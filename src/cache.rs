@@ -1,5 +1,4 @@
-//! On-disk cache: album art and per-run files. Audio is streamed by mpv and
-//! never written to disk.
+//! Album art and per-run files; audio is never written to disk.
 
 use std::fs::File;
 use std::path::{Path, PathBuf};
@@ -13,8 +12,7 @@ fn no_home() -> std::io::Error {
     std::io::Error::new(std::io::ErrorKind::NotFound, crate::config::NO_HOME)
 }
 
-/// The cache root, created 0700 (`~/.cache` is often world-readable). Callers
-/// that must not fall back to a shared dir use [`try_ensure_cache_dir`].
+/// The cache root, created 0700 (`~/.cache` is often world-readable).
 pub fn ensure_cache_dir() -> Option<PathBuf> {
     match try_ensure_cache_dir() {
         Ok(dir) => Some(dir),
@@ -25,16 +23,14 @@ pub fn ensure_cache_dir() -> Option<PathBuf> {
     }
 }
 
-/// [`ensure_cache_dir`], but a directory that cannot be made 0700 is an error:
-/// the art cache and the mpv log FIFO then do without.
+/// [`ensure_cache_dir`], but a directory that cannot be made 0700 is an error.
 pub fn try_ensure_cache_dir() -> std::io::Result<PathBuf> {
     let dir = self::dir().ok_or_else(no_home)?;
     ensure_private_dir(&dir)?;
     Ok(dir)
 }
 
-/// Create `dir` and force mode 0700. The chmod is not redundant: an existing
-/// directory keeps its old mode.
+/// The chmod tightens an existing directory, which keeps its old mode.
 pub fn ensure_private_dir(dir: &Path) -> std::io::Result<()> {
     #[cfg(unix)]
     {
@@ -46,16 +42,14 @@ pub fn ensure_private_dir(dir: &Path) -> std::io::Result<()> {
     std::fs::create_dir_all(dir)
 }
 
-/// Where mpv's socket lives: mpv uses its own umask, so the 0700 parent keeps
-/// other users out. Errors rather than let mpv fall back to the temp dir.
+/// For mpv's socket: mpv uses its own umask, so the 0700 parent keeps others out.
 pub fn private_run_dir() -> std::io::Result<PathBuf> {
     let dir = self::dir().ok_or_else(no_home)?.join("run");
     ensure_private_dir(&dir)?;
     Ok(dir)
 }
 
-/// Open a cache file 0600. The chmod tightens a file that already existed:
-/// `mode` only applies on create.
+/// Open a cache file 0600; the chmod tightens one that already existed.
 pub fn open_private(path: &Path, append: bool) -> std::io::Result<File> {
     let mut opts = std::fs::OpenOptions::new();
     opts.write(true).create(true);
@@ -86,8 +80,7 @@ pub fn set_private(path: &Path) -> std::io::Result<()> {
     Ok(())
 }
 
-/// Write `dest` so a reader (or a kill mid-write) sees the old file or the
-/// whole new one: a 0600 sibling temp file, renamed over `dest`.
+/// Readers, even after a kill mid-write, see the old file or the whole new one.
 pub fn write_private_atomic(dest: &Path, bytes: &[u8]) -> std::io::Result<()> {
     use std::io::Write;
     use std::sync::atomic::{AtomicU64, Ordering};
@@ -117,8 +110,7 @@ pub fn write_private_atomic(dest: &Path, bytes: &[u8]) -> std::io::Result<()> {
     result
 }
 
-/// Eviction leaves a recent temp file alone (a write is in progress) and sweeps
-/// an old one (its writer was killed).
+/// A recent temp file is a write in progress; an old one's writer was killed.
 const TEMP_SUFFIX: &str = ".tmp";
 const STALE_TEMP_AGE: std::time::Duration = std::time::Duration::from_secs(600);
 
@@ -195,8 +187,7 @@ pub fn human_bytes(bytes: u64) -> String {
     }
 }
 
-/// Keep the art cache in `dir` at or below `cap_mb` MiB by deleting the
-/// least-recently-used files first. `0` clears it entirely.
+/// Delete least recently used art until `dir` fits in `cap_mb` MiB (0 clears it).
 pub fn prune_art_at(dir: &Path, cap_mb: u64) {
     // Saturating: a wrapped product would be a tiny cap and empty the cache.
     let cap = cap_mb.saturating_mul(1024 * 1024);
@@ -284,7 +275,7 @@ mod tests {
         let dest = dir.join("cover.img");
         std::fs::write(&dest, b"old").unwrap();
 
-        // Racing writers; the reader must only ever see a complete payload.
+        // The reader must only ever see a complete payload.
         let payloads: Vec<Vec<u8>> = (0..4u8).map(|i| vec![i; 512 * 1024]).collect();
         let stop = std::sync::atomic::AtomicBool::new(false);
         std::thread::scope(|s| {

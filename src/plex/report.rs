@@ -31,8 +31,7 @@ pub struct Report {
     pub duration_ms: u64,
 }
 
-/// Owns the task that sends reports. A failure never retries; only the first
-/// one reaches `on_first_failure`.
+/// Owns the sending task. Failures never retry; only the first reaches `on_first_failure`.
 pub struct Reporter {
     tx: UnboundedSender<Report>,
     task: JoinHandle<()>,

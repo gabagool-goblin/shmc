@@ -108,8 +108,7 @@ async fn background_leaves_cover_painted_once() {
             .any(|p| first.cell(p).is_some_and(|c| c.symbol() != " ")),
         "the first frame carries the image"
     );
-    // the letterbox must be opaque: some terminals draw transparent pixels over
-    // their own background (a dark band on a light theme); the corner is padding
+    // the letterbox must be opaque; the corner is padding
     let corner = first.cell((rect.left(), rect.top())).unwrap();
     let bg = Color::Rgb(0x2e, 0x34, 0x40);
     assert!(corner.fg == bg && corner.bg == bg, "padding is {:?}/{:?}", corner.fg, corner.bg);
@@ -296,8 +295,7 @@ async fn progress_glyphs_only_when_theme_sets_them() {
     assert_eq!(at(filled[0]).bg, Color::Reset, "a glyph is drawn in the foreground");
 }
 
-/// Caps take cells from the bar and take the colour of the part they touch; a
-/// head over a solid track has the track as background.
+/// Caps take cells and colour from the bar; a head over a solid track has it as background.
 #[tokio::test]
 async fn progress_caps_and_head_take_theme_colours() {
     let mut app = new_app().await;
@@ -565,8 +563,7 @@ fn chrome_rows(compact: bool, style: theme::BorderStyle, h: u16) -> (u16, u16, u
     }
 }
 
-/// Every header mode and border style keeps the tabs whole, the progress row
-/// and what is playing on every tab, and the content between them.
+/// Every header mode and border style keeps the tabs, content, progress row and now-playing.
 #[tokio::test]
 async fn every_header_border_combo_fits() {
     let mut app = new_app().await;
@@ -627,8 +624,7 @@ async fn every_header_border_combo_fits() {
     }
 }
 
-/// `none` draws no frame glyph anywhere, `rounded` rounds the corners, `double`
-/// draws double lines and `lines` has no boxes.
+/// Each border style draws its own glyphs, and `none` draws no frame glyph.
 #[tokio::test]
 async fn border_styles_draw_their_glyphs() {
     let mut app = new_app().await;
@@ -663,8 +659,7 @@ async fn border_styles_draw_their_glyphs() {
     }
 }
 
-/// In compact `none` the row above the progress row is kept whatever the
-/// cover metadata does, so the content never changes height between tabs.
+/// Compact `none` keeps the row above the progress row, so the content height never changes.
 #[tokio::test]
 async fn compact_without_borders_keeps_now_playing_row() {
     let mut app = new_app().await;

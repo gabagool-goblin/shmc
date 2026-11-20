@@ -117,8 +117,7 @@ fn draw_search_results(f: &mut Frame, app: &mut App, inner: Rect) {
     }
 }
 
-/// Every row of a similar albums or artists list is the same kind, so the list
-/// has columns of its own instead of the mixed results' ones.
+/// A similar list is all one kind, so it has its own columns.
 fn draw_similar_hits(f: &mut Frame, app: &mut App, area: Rect) {
     let Some(s) = app.search.similar.as_ref() else { return };
     let albums = s.kind == SimilarKind::Albums;

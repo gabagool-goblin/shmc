@@ -12,8 +12,7 @@ const HEARTBEAT: f64 = 10.0;
 /// The largest time-pos step that is play; anything else is a seek or a stall.
 const MAX_STEP: f64 = 2.0;
 
-/// One track's report. The key and duration are fixed when the file loads, so
-/// a queue change cannot redirect later reports.
+/// The key and duration are fixed at load, so a queue change cannot redirect reports.
 pub(super) struct TrackReport {
     rating_key: String,
     duration_ms: u64,

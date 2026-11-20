@@ -54,8 +54,7 @@ pub(super) fn cell(text: &str, w: u16, needle: &str, base: Style) -> Cell<'stati
     Cell::from(Line::from(spans_clean(shown, needle, base)))
 }
 
-/// The title's spans, then its rating when the cell has room for it and at
-/// least three cells of title; otherwise the title alone, as `cell` draws it.
+/// The title, then its rating when it fits with at least three cells of title.
 pub(super) fn title_spans(
     text: &str,
     rating: Option<&str>,
@@ -85,8 +84,7 @@ pub(super) fn spans_clean(text: String, needle: &str, base: Style) -> Vec<Span<'
         .collect()
 }
 
-/// The `filter: text (n/total)` line; None while empty or typing (the footer
-/// shows the input then).
+/// The `filter: text (n/total)` line; None while empty or typing.
 pub(super) fn indicator_text(f: &ListFilter, total: usize) -> Option<String> {
     if f.typing {
         None
@@ -172,7 +170,6 @@ pub(super) fn render_list(
     f.render_stateful_widget(List::new(items).highlight_style(highlight), area, &mut state);
 }
 
-/// Cursor style: full when the pane has focus, muted otherwise.
 pub(super) fn hl(focused: bool) -> Style {
     if focused {
         theme::current()
@@ -222,8 +219,7 @@ mod tests {
     use super::super::queue::art_rect;
     use super::*;
 
-    /// The box is centred exactly, with equal leftover on both sides of both
-    /// axes, whatever the pane and cell size.
+    /// Equal leftover on both sides of both axes, whatever the pane and cell size.
     #[test]
     fn placeholder_box_centred_in_cells() {
         let cells =
@@ -261,7 +257,6 @@ mod tests {
             assert_eq!((r.width, r.height), want, "{w}x{h}");
         }
 
-        // too small
         assert_eq!(art_rect(Rect { x: 0, y: 0, width: 3, height: 10 }, None), None);
         assert_eq!(art_rect(Rect { x: 0, y: 0, width: 10, height: 1 }, None), None);
     }

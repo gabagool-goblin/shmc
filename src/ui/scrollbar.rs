@@ -5,8 +5,6 @@ use crate::ui::theme;
 use ratatui::layout::Rect;
 use ratatui::Frame;
 
-/// Split `pane` into `(content, bar)`: on overflow the content loses a blank
-/// gutter and the bar column, otherwise it keeps the whole pane.
 pub fn list_split(pane: Rect, total: usize, visible: usize) -> (Rect, Option<Rect>) {
     if visible > 0 && total > visible && pane.width >= 4 {
         let content = Rect { width: pane.width - 2, ..pane };
@@ -17,8 +15,7 @@ pub fn list_split(pane: Rect, total: usize, visible: usize) -> (Rect, Option<Rec
     }
 }
 
-/// The thumb's first row and length. The length depends only on
-/// `total`/`visible`, so it never changes while scrolling.
+/// The length depends only on `total` and `visible`, so it never changes while scrolling.
 fn thumb_geometry(total: usize, visible: usize, offset: usize, track: usize) -> (usize, usize) {
     if track == 0 || visible == 0 || total <= visible {
         return (0, 0);
@@ -35,8 +32,7 @@ fn thumb_geometry(total: usize, visible: usize, offset: usize, track: usize) -> 
     (start.min(travel), thumb_len)
 }
 
-/// Draw the ▲/▼ bar into the 1-cell column from [`list_split`]; `offset` is the
-/// first visible row.
+/// Into the column from [`list_split`]; `offset` is the first visible row.
 pub fn render_scrollbar(f: &mut Frame, area: Rect, total: usize, offset: usize, visible: usize) {
     if visible == 0 || area.width == 0 || total <= visible {
         return;

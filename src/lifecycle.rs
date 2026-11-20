@@ -1,5 +1,4 @@
-//! How a run ends: why the UI loop stopped, what the process says and exits
-//! with, and what a signal does.
+//! How a run ends: exit status, the last message, signals.
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use tokio::sync::watch;
@@ -80,8 +79,7 @@ pub fn begin_orderly() {
     ORDERLY.store(true, Ordering::SeqCst);
 }
 
-/// Without a handler mpv outlives shmc. Raw-mode Ctrl-C is a key, not SIGINT.
-/// Call inside the runtime.
+/// Without a handler mpv outlives shmc. Call inside the runtime.
 pub fn install_signal_handlers() -> std::io::Result<watch::Receiver<Option<i32>>> {
     use tokio::signal::unix::{signal, SignalKind};
 

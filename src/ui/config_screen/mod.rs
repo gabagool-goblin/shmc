@@ -1,5 +1,4 @@
-//! The config screen: the settings as a form that looks like the player. Not
-//! part of `App`: it has no Plex client, mpv or playback state.
+//! The config screen. Not part of `App`: it has no Plex client, mpv or playback state.
 
 use crate::config::{Config, SettingRow};
 use crate::doctor::{self, Report};
@@ -45,24 +44,19 @@ impl Tab {
 /// A quit waiting on a y/n answer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum QuitAsk {
-    /// Nothing is pending: "quit? (y/n)".
     Clean,
-    /// There are unsaved changes: save, or leave them.
     Dirty,
 }
 
 type CheckSlot = std::sync::Arc<std::sync::Mutex<Option<Result<Report, String>>>>;
 
-/// What the editor pane is doing, if anything.
 enum Editor {
-    /// A text field: text, number, colour.
+    /// Text, number or colour.
     Field {
         text: TextInput,
-        /// What the field opened with. Committing exactly this changes nothing:
-        /// the text is a lossy view of some values.
+        /// Committing exactly this changes nothing: the text is a lossy view of some values.
         initial: String,
-        /// Masked as typed, and starts empty: the list only has a redacted
-        /// placeholder, which must never replace the real secret.
+        /// Masked and starts empty: the list's placeholder must never replace the secret.
         secret: bool,
     },
     /// One of a set: an enum, or the platform's cava sources.
@@ -103,11 +97,9 @@ pub struct Screen {
     /// In chars of `filter.text`.
     filter_cursor: usize,
     scroll: crate::ui::scroll::ScrollStore,
-    /// The player's setting, so the screen scrolls like the player.
     scrolloff: usize,
     diag_scroll: usize,
-    /// The report pane's height and scroll range, recorded when it draws:
-    /// only the pane knows them, and paging and `End` need them.
+    /// Set when the report pane draws: paging and `End` need its height.
     diag_visible: usize,
     diag_max: usize,
     editor: Option<Editor>,
@@ -122,8 +114,7 @@ pub struct Screen {
     conflict_ask: Option<Vec<String>>,
     /// `R` waiting on y/n: how many settings it would change.
     restore_ask: Option<usize>,
-    /// The checks run on their own thread: the Plex client's timeouts and
-    /// retries would freeze the screen for most of a minute.
+    /// On a thread: the Plex client's timeouts and retries would freeze the screen.
     check_slot: CheckSlot,
     /// Kept to notice a thread that ended without filling the slot.
     check_thread: Option<std::thread::JoinHandle<()>>,
@@ -169,7 +160,7 @@ impl Screen {
         }
     }
 
-    /// Runs until the user quits. Returns the config as left, saved or not.
+    /// Returns the config as left, saved or not.
     pub fn run(&mut self, terminal: &mut crate::ui::term::Term) -> Result<Config> {
         loop {
             terminal.draw(|f| self.draw(f))?;
@@ -222,8 +213,7 @@ impl Screen {
         }
     }
 
-    /// Re-applies the filter, keeping the cursor on its setting or the next
-    /// match. Read the position before the text changes.
+    /// Re-filters, keeping the cursor on its setting or the next match.
     fn edit_filter(&mut self, edit: impl FnOnce(&mut String)) {
         let old = self.real_cursor();
         edit(&mut self.filter.text);
@@ -386,8 +376,6 @@ impl Screen {
         }
     }
 
-    /// The Plex client retries transport errors with 15-second timeouts, so
-    /// the checks run off the UI thread.
     fn start_check(&mut self) {
         if self.checking {
             return;
@@ -537,7 +525,6 @@ impl Screen {
         Ok(true)
     }
 
-    /// With edits pending the question offers to save them.
     fn ask_to_quit(&mut self) {
         if self.dirty() {
             self.quit_ask = Some(QuitAsk::Dirty);
@@ -578,8 +565,7 @@ impl Screen {
         self.filter.clear();
     }
 
-    /// Enter keeps the filter and hands the keys back; Esc, or deleting the
-    /// last character, drops it.
+    /// Enter keeps the filter; Esc, or deleting its last character, drops it.
     fn handle_filter(&mut self, key: KeyEvent) {
         match key.code {
             KeyCode::Esc => self.clear_filter(),

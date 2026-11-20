@@ -1,5 +1,4 @@
-//! Layout: a box per region (header, tabs, main, progress row). The progress
-//! row also holds the status, the `/` filter and the `:` line.
+//! Layout: a box per region; the progress row also holds the status, filter and `:` line.
 
 mod bottom;
 mod header;
@@ -41,8 +40,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     let spacing = theme::spacing();
     let style = spacing.borders;
     let compact = app.header_compact;
-    // Without a gap, no spacer rows at all: zero-height ones would still change
-    // how the solver squeezes a terminal below the minimum.
+    // Zero-height spacers would still change how the solver squeezes a small terminal.
     let gap = theme::effective_block_gap(
         area.height,
         spacing.block_gap,
@@ -50,8 +48,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         theme::block_gaps(compact),
     );
     let (header_h, tabs_h, progress_h) = if style.boxed() { (4, 3, 3) } else { (2, 1, 1) };
-    // Compact in `none` always keeps a row above the progress row for the
-    // now-playing line, so the content does not change height between tabs.
+    // Compact `none` keeps a now-playing row, so the content height is the same on every tab.
     let np_row = compact && style == theme::BorderStyle::None;
     let mut blocks = Vec::new();
     if !compact {
@@ -196,8 +193,7 @@ pub(crate) fn draw_block(f: &mut Frame, area: Rect) -> Rect {
     draw_block_as(f, area, theme::spacing().borders, None)
 }
 
-/// An inner rule on `sides` of `area`, and the area inside it. In `none` the
-/// rule is not drawn but its cell stays, so the layout is the same.
+/// An inner rule on `sides`; in `none` its cell stays undrawn, so the layout is the same.
 fn draw_divider(f: &mut Frame, area: Rect, sides: Borders) -> Rect {
     let block = Block::default().borders(sides).border_style(theme::border());
     let inner = block.inner(area);
@@ -207,8 +203,7 @@ fn draw_divider(f: &mut Frame, area: Rect, sides: Borders) -> Rect {
     inner
 }
 
-/// `theme.inset` cells of horizontal padding inside a bordered box; a box
-/// too narrow to keep a column is left as it is.
+/// `theme.inset` columns of padding inside a box, unless that leaves no column.
 pub(crate) fn inset_h(r: Rect) -> Rect {
     let inset = theme::spacing().inset;
     if r.width > inset * 2 {

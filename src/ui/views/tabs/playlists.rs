@@ -97,8 +97,7 @@ pub(in crate::ui::views) fn draw_playlists_tab(f: &mut Frame, app: &mut App, are
     let raw = app.playlists.tracks.items.len();
     let total = app.playlists.tracks.filter.len(raw);
     let ind = indicator_text(&app.playlists.tracks.filter, raw);
-    // Sized from the preview cap, not the previewed length, so the columns do
-    // not move when the selection changes.
+    // Sized from the preview cap, so the columns stay put as the selection moves.
     let num_w = if app.numbers_playlists {
         Some(track_number_width(app.preview_tracks.max(1)))
     } else {

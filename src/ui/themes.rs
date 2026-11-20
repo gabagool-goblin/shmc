@@ -1,6 +1,4 @@
-//! The built-in themes are the files in `themes/`, embedded at build time and
-//! inspired by well-known palettes (credited in docs/themes.md); `default` is
-//! in code. `[theme]` colours override them.
+//! The built-in themes: `default` in code, the files in `themes/` embedded at build time.
 
 use crate::ui::theme::{self, Appearance, Look, Theme};
 use std::path::{Path, PathBuf};
@@ -22,8 +20,7 @@ const BUILTIN: &[(&str, &str)] = &[
     ("dracula", include_str!("../../themes/dracula.toml")),
 ];
 
-/// `default`, then the embedded files. One that does not parse is left out; a
-/// test keeps them clean.
+/// `default`, then the embedded files; one that does not parse is left out.
 pub fn presets() -> &'static [Entry] {
     static PRESETS: OnceLock<Vec<Entry>> = OnceLock::new();
     PRESETS.get_or_init(|| {
@@ -83,8 +80,7 @@ pub struct Available {
 const MAX_FILE_BYTES: u64 = 64 * 1024;
 const MAX_FILES: usize = 256;
 
-/// `[a-z0-9][a-z0-9_-]*`. Checked before an id is joined onto a path, so a
-/// `theme.name` such as `../x` never reaches the filesystem.
+/// `[a-z0-9][a-z0-9_-]*`, checked before joining a path so `../x` never reaches it.
 pub fn valid_id(id: &str) -> bool {
     let mut chars = id.chars();
     chars.next().is_some_and(|c| c.is_ascii_lowercase() || c.is_ascii_digit())
@@ -101,8 +97,7 @@ enum Load {
 fn load_file(dir: &Path, id: &str) -> Load {
     use std::io::Read;
     let path = dir.join(format!("{id}.toml"));
-    // Not a symlink (it could point anywhere), nor a FIFO or device (opening
-    // one can block).
+    // Not a symlink (it could point anywhere), nor a FIFO or device (opening can block).
     let meta = match std::fs::symlink_metadata(&path) {
         Ok(meta) => meta,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Load::Missing,
@@ -134,8 +129,7 @@ fn load_file(dir: &Path, id: &str) -> Load {
     }
 }
 
-/// `None` when `raw` is not TOML. Everything else is lenient: a bad value is
-/// a problem and the default's.
+/// `None` when `raw` is not TOML; a bad value is the default's, and a problem.
 fn parse(id: &str, raw: &str, source: Source) -> Option<(Entry, Vec<String>)> {
     let table = raw.parse::<toml::Table>().ok()?;
 
@@ -146,7 +140,6 @@ fn parse(id: &str, raw: &str, source: Source) -> Option<(Entry, Vec<String>)> {
             .map(|v| v.trim().to_string())
             .filter(|v| !v.is_empty())
     };
-    // A missing or invalid colour is the default theme's; an invalid one is reported.
     let mut theme = theme::DEFAULT;
     let mut problems = Vec::new();
     for role in crate::config::ThemeConfig::ROLES {
@@ -243,8 +236,7 @@ fn parse(id: &str, raw: &str, source: Source) -> Option<(Entry, Vec<String>)> {
     Some((entry, problems))
 }
 
-/// The themes directory is looked in first, so a file named like a preset
-/// replaces it. `None` when there is no such theme.
+/// A file in `dir` replaces the preset of its name.
 pub fn resolve_base(name: &str, dir: Option<&Path>) -> (Option<Appearance>, Vec<String>) {
     let mut problems = Vec::new();
     if let (Some(dir), true) = (dir, valid_id(name)) {
@@ -259,8 +251,7 @@ pub fn resolve_base(name: &str, dir: Option<&Path>) -> (Option<Appearance>, Vec<
     (preset(name).map(|p| Appearance { theme: p.theme, look: p.look }), problems)
 }
 
-/// The presets, then the files in `dir` by id; a file named like a preset takes
-/// its place. Reads the directory: for the picker and `--check`, not drawing.
+/// The presets, then the files in `dir`; reads the dir, so not for drawing.
 pub fn available(dir: Option<&Path>) -> Available {
     let mut out = Available { entries: presets().to_vec(), problems: Vec::new() };
     let Some(dir) = dir else {
@@ -311,8 +302,7 @@ pub fn available(dir: Option<&Path>) -> Available {
 /// First line of a file shmc exported: the only kind it will overwrite.
 pub const EXPORT_MARK: &str = "# exported by shmc";
 
-/// Writes `themes/<id>.toml` via a temp file, 0644. Refuses a bad id, a
-/// non-file, or a file shmc did not export.
+/// Refuses a bad id, a non-file, or a file shmc did not export.
 pub fn export(
     dir: &Path,
     id: &str,
@@ -353,12 +343,10 @@ pub fn export(
         body.push_str(&format!("variant = \"{}\"\n", variant.name()));
     }
     for role in crate::config::ThemeConfig::ROLES {
-        // No background is no line: a missing key is none.
         if let Some(colour) = theme::role_colour(theme, role) {
             body.push_str(&format!("{role} = \"{}\"\n", theme::hex(colour)));
         }
     }
-    // Only what differs from the default.
     let differs = |key: &str| theme::look_text(look, key) != theme::look_text(&Look::DEFAULT, key);
     let spacing: Vec<&str> =
         crate::config::ThemeConfig::SPACING.into_iter().filter(|k| differs(k)).collect();
@@ -488,7 +476,6 @@ mod tests {
         std::fs::create_dir(dir.join("adir.toml")).unwrap();
         #[cfg(unix)]
         std::os::unix::fs::symlink(dir.join("sparse.toml"), dir.join("linked.toml")).unwrap();
-        // A file named like a preset replaces it, in the preset's place.
         write(dir, "nord.toml", "name = \"My Nord\"\naccent = \"#010101\"\n");
 
         let found = available(Some(dir));
@@ -621,8 +608,7 @@ mod tests {
             assert_eq!(mode & 0o044, 0o044, "a theme is not secret: {mode:o}");
         }
 
-        // A theme with no background writes no line, and loads back as none;
-        // a preset without one is not the same as one with one.
+        // No background writes no line and loads back as none.
         let nobg = Theme { background: None, ..mocha.theme };
         let path = export(&dir, "plain", None, &nobg, &Look::DEFAULT).unwrap();
         assert!(!std::fs::read_to_string(&path).unwrap().contains("background"));
@@ -645,8 +631,7 @@ mod tests {
         );
         assert!(export(&dir, "../escape", None, &theme::DEFAULT, &Look::DEFAULT).is_err());
 
-        // A symlink at the destination is not followed, even to a file that
-        // would pass for shmc's own.
+        // A symlink at the destination is not followed, even to shmc's own export.
         #[cfg(unix)]
         {
             let target = tmp.path().join("elsewhere.toml");
@@ -657,8 +642,7 @@ mod tests {
         }
     }
 
-    /// A theme file may set spacing and symbols; what does not fit is
-    /// reported by file and key — never by its text — and is the default's.
+    /// Bad spacing and symbols are the default's, named by file and key, never text.
     #[test]
     fn theme_file_bad_value_named_not_quoted() {
         let tmp = tempfile::tempdir().unwrap();
@@ -711,9 +695,7 @@ mod tests {
         assert!(!problems.contains("roomy"), "{problems}");
     }
 
-    /// Every shipped theme file loads cleanly and every key in it is one shmc
-    /// reads, since unknown keys are skipped silently. `themes/` is what is
-    /// built in; `themes/extra/` is opt-in.
+    /// Every shipped theme loads cleanly with known keys only: unknown ones are skipped.
     #[test]
     fn shipped_theme_files_load_clean() {
         let root = Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/themes"));
@@ -769,8 +751,7 @@ mod tests {
         assert_eq!(top, built_in, "a file in themes/ is built in, and extra/ never is");
     }
 
-    /// An export carries only what differs from the default, so a theme that
-    /// sets none has no tables, and what it does set loads back unchanged.
+    /// An export carries only what differs from the default, and loads back.
     #[test]
     fn export_writes_only_changed_spacing() {
         let tmp = tempfile::tempdir().unwrap();
@@ -802,8 +783,7 @@ mod tests {
         assert_eq!(found.entries.iter().find(|e| e.id == "mine").unwrap().look, look);
     }
 
-    /// `progress_bar` applies before the glyphs whatever the order in the file,
-    /// and an export of a preset or of glyphs loads back.
+    /// `progress_bar` applies first whatever the file order; exports load back.
     #[test]
     fn progress_preset_loads_first_and_round_trips() {
         let tmp = tempfile::tempdir().unwrap();
@@ -836,8 +816,7 @@ mod tests {
         }
     }
 
-    /// A preset name in a theme file is that preset; an export writes the name
-    /// when the glyphs are a preset's, and the glyphs otherwise; both load back.
+    /// An export writes a preset's name when the glyphs match one; both forms load back.
     #[test]
     fn presets_and_literals_round_trip_through_file() {
         let tmp = tempfile::tempdir().unwrap();
@@ -867,8 +846,7 @@ mod tests {
         }
     }
 
-    /// `[styles]`: what fits applies, what does not is ignored and reported by
-    /// file, element and key — never by its value — and a newer file still loads.
+    /// `[styles]`: what fits applies, the rest is reported by key, never by value.
     #[test]
     fn theme_styles_read_leniently() {
         use ratatui::style::Modifier;
@@ -912,7 +890,6 @@ mod tests {
         assert_eq!(by("only-styles").get(theme::Element::Secondary).unwrap().add, Modifier::BOLD);
         assert_eq!(by("nord"), theme::Styles::NONE, "a preset sets none");
 
-        // What fits in a bad entry still applies.
         let bad = by("bad");
         let accent = bad.get(theme::Element::Accent).unwrap();
         assert_eq!((accent.fg, accent.add, accent.remove), (None, Modifier::BOLD, none));
@@ -934,8 +911,7 @@ mod tests {
         assert!(!problems.contains("styled:") && !problems.contains("only-styles"), "{problems}");
     }
 
-    /// An export keeps the styles of a styled theme, in a stable order and only
-    /// the fields that were set; a theme without any writes no table.
+    /// An export keeps only the style fields that were set, in a stable order.
     #[test]
     fn export_keeps_styles_and_loads_back() {
         let tmp = tempfile::tempdir().unwrap();

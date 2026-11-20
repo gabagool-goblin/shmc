@@ -5,7 +5,6 @@ use shmc::config::MpvConfig;
 use shmc::playback::{mpv, LoadItem, MpvCmd, MpvEvent};
 
 /// The tests share audio and log resources, so they run one at a time.
-/// Deadlines are long: a loaded machine can take seconds to start mpv.
 static MPV_TEST_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 
 /// The last events seen, so a timeout says what did arrive.
@@ -29,8 +28,7 @@ impl Seen {
     }
 }
 
-/// Let a transition settle: briefly fold `playlist-pos` into `pos` and drop its
-/// own late `end-file`.
+/// Briefly fold `playlist-pos` into `pos` and drop the transition's late `end-file`.
 async fn settle(events: &mut tokio::sync::mpsc::UnboundedReceiver<MpvEvent>, pos: &mut i64) {
     let until = tokio::time::Instant::now() + tokio::time::Duration::from_millis(400);
     loop {
@@ -44,12 +42,11 @@ async fn settle(events: &mut tokio::sync::mpsc::UnboundedReceiver<MpvEvent>, pos
     }
 }
 
-/// Wait for mpv to report `want` by asking, as a late event can be missed. An
-/// `end-file` fails unless `allow_stop`.
 fn item(url: String) -> LoadItem {
     LoadItem { url, title: "Test track".into() }
 }
 
+/// Asks, as a late event can be missed. An `end-file` fails unless `allow_stop`.
 async fn wait_for_property(
     handle: &mpv::MpvHandle,
     events: &mut tokio::sync::mpsc::UnboundedReceiver<MpvEvent>,
@@ -187,8 +184,7 @@ async fn mpv_gapless_advances_through_queue() {
     handle.shutdown().await;
 }
 
-/// `MpvCmd::Stop` halts playback but keeps the playlist, which mpv's own
-/// `stop` would wipe.
+/// `MpvCmd::Stop` keeps the playlist, which mpv's own `stop` would wipe.
 #[tokio::test]
 async fn mpv_stop_keeps_the_queue_playable() {
     let _guard = MPV_TEST_LOCK.lock().await;
@@ -222,7 +218,6 @@ async fn mpv_stop_keeps_the_queue_playable() {
 
     handle.tx.send(MpvCmd::Stop).expect("send stop");
 
-    // playback stops …
     let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(20);
     loop {
         let Ok(Some(ev)) = tokio::time::timeout_at(deadline, events.recv()).await else {
@@ -238,7 +233,6 @@ async fn mpv_stop_keeps_the_queue_playable() {
         }
     }
 
-    // … but entry 1 is still there: the queue survived, so it can be played
     handle.tx.send(MpvCmd::PlayIndex(1)).expect("send play index");
     let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(20);
     loop {
@@ -257,8 +251,7 @@ async fn mpv_stop_keeps_the_queue_playable() {
         }
     }
 
-    // … and what `D` does next — stop, then clear — empties mpv's playlist
-    // completely (a bare clear would keep the entry it had loaded).
+    // Stop, then clear, as `D` does: a bare clear would keep the loaded entry.
     handle.tx.send(MpvCmd::Stop).expect("send stop");
     handle.tx.send(MpvCmd::Clear).expect("send clear");
     let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(20);
@@ -282,8 +275,7 @@ async fn mpv_stop_keeps_the_queue_playable() {
     handle.shutdown().await;
 }
 
-/// `playlist-move` must keep the playing entry playing, or shuffle would
-/// restart the song. Waits ask for the value, as in `wait_for_property`.
+/// `playlist-move` must keep the playing entry playing, or shuffle restarts the song.
 #[tokio::test]
 async fn insert_and_move_keep_playing_entry() {
     let _guard = MPV_TEST_LOCK.lock().await;
@@ -536,8 +528,7 @@ async fn mpv_log_reaches_disk_redacted() {
     handle.shutdown().await;
 }
 
-/// An mpv that exits before it listens fails the start at once, not after the
-/// 5 s connect timeout, and leaves no log FIFO (its reader would wait forever).
+/// An mpv that exits before it listens fails the start at once and leaves no log FIFO.
 #[tokio::test]
 async fn failed_mpv_start_leaves_no_log_pipe() {
     let _guard = MPV_TEST_LOCK.lock().await;
@@ -604,8 +595,7 @@ async fn dropping_the_mpv_handle_removes_its_socket() {
     assert!(!sock.exists(), "socket left behind at {}", sock.display());
 }
 
-/// A question asked after mpv is gone fails at once instead of waiting out the
-/// ten-second reply timeout.
+/// After mpv is gone a question fails at once, not after the reply timeout.
 #[tokio::test]
 async fn get_property_fails_after_mpv_exit() {
     let _guard = MPV_TEST_LOCK.lock().await;
@@ -673,8 +663,7 @@ async fn long_queue_start_does_not_deadlock() {
     handle.shutdown().await;
 }
 
-/// The user's mpv.conf and scripts must not apply: they could write the
-/// token-bearing URL to disk. `MPV_HOME` is where mpv looks for both.
+/// mpv.conf and scripts could write the token URL to disk; `MPV_HOME` holds both.
 #[tokio::test]
 async fn mpv_ignores_the_users_config_and_scripts() {
     let _guard = MPV_TEST_LOCK.lock().await;
