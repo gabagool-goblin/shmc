@@ -186,14 +186,14 @@ pub const BINDINGS: &[Binding] = &[
     Binding { ctx: KeyCtx::Global, keys: &["<"], act: Act::PrevTrack, desc: "previous track, or restart it after a few seconds" },
     Binding { ctx: KeyCtx::Global, keys: &["."], act: Act::VolUp, desc: "volume up" },
     Binding { ctx: KeyCtx::Global, keys: &[","], act: Act::VolDown, desc: "volume down" },
-    Binding { ctx: KeyCtx::Global, keys: &["]"], act: Act::SeekFwd, desc: "seek forward 5s" },
-    Binding { ctx: KeyCtx::Global, keys: &["["], act: Act::SeekBack, desc: "seek back 5s" },
+    Binding { ctx: KeyCtx::Global, keys: &["]"], act: Act::SeekFwd, desc: "seek forward 5 seconds" },
+    Binding { ctx: KeyCtx::Global, keys: &["["], act: Act::SeekBack, desc: "seek back 5 seconds" },
     Binding { ctx: KeyCtx::Global, keys: &["z"], act: Act::ToggleShuffle, desc: "shuffle on or off" },
     Binding { ctx: KeyCtx::Global, keys: &["Z"], act: Act::Reshuffle, desc: "reshuffle the queue" },
     Binding { ctx: KeyCtx::Global, keys: &["x"], act: Act::ToggleRepeat, desc: "repeat (loop playlist)" },
     Binding { ctx: KeyCtx::Global, keys: &["c"], act: Act::ToggleSingle, desc: "single (loop track)" },
     Binding { ctx: KeyCtx::Global, keys: &["C"], act: Act::ToggleConsume, desc: "consume (remove played tracks)" },
-    Binding { ctx: KeyCtx::Global, keys: &["S"], act: Act::SleepTimer, desc: "sleep timer: 15, 30 or 60 minutes, or off" },
+    Binding { ctx: KeyCtx::Global, keys: &["t"], act: Act::SleepTimer, desc: "sleep timer: 15, 30 or 60 minutes, or off" },
     Binding { ctx: KeyCtx::Global, keys: &["r"], act: Act::Rate, desc: "rate the highlighted track" },
     Binding { ctx: KeyCtx::Global, keys: &["R"], act: Act::RatePlaying, desc: "rate the playing track" },
     Binding { ctx: KeyCtx::Queue, keys: &["k", "Up"], act: Act::MoveUp, desc: "move up" },
@@ -202,16 +202,16 @@ pub const BINDINGS: &[Binding] = &[
     Binding { ctx: KeyCtx::Queue, keys: &["PgDn"], act: Act::PageDown, desc: "page down" },
     Binding { ctx: KeyCtx::Queue, keys: &["gg", "Home"], act: Act::Top, desc: "go to top" },
     Binding { ctx: KeyCtx::Queue, keys: &["G", "End"], act: Act::Bottom, desc: "go to bottom" },
-    Binding { ctx: KeyCtx::Queue, keys: &["Enter"], act: Act::Play, desc: "play selected track" },
-    Binding { ctx: KeyCtx::Queue, keys: &["v"], act: Act::VisualMode, desc: "select a range (visual mode)" },
+    Binding { ctx: KeyCtx::Queue, keys: &["Enter"], act: Act::Play, desc: "play the highlighted track" },
+    Binding { ctx: KeyCtx::Queue, keys: &["v"], act: Act::VisualMode, desc: "select tracks (visual mode)" },
     Binding { ctx: KeyCtx::Queue, keys: &["d"], act: Act::RemoveFromQueue, desc: "remove from queue" },
     Binding { ctx: KeyCtx::Queue, keys: &["u"], act: Act::UndoRemove, desc: "undo a removal (repeat for older ones)" },
     Binding { ctx: KeyCtx::Queue, keys: &["D"], act: Act::ClearQueue, desc: "clear queue" },
     Binding { ctx: KeyCtx::Queue, keys: &["b"], act: Act::GotoAlbum, desc: "show track in Browser" },
     Binding { ctx: KeyCtx::Queue, keys: &["m"], act: Act::Similar, desc: "sonically similar tracks" },
     Binding { ctx: KeyCtx::Queue, keys: &["s"], act: Act::Radio, desc: "track radio" },
-    Binding { ctx: KeyCtx::Queue, keys: &["p"], act: Act::AddStop, desc: "add to a Sonic Adventure" },
-    Binding { ctx: KeyCtx::Queue, keys: &["P"], act: Act::BuildAdventure, desc: "build the Sonic Adventure" },
+    Binding { ctx: KeyCtx::Queue, keys: &["w"], act: Act::AddStop, desc: "add to a Sonic Adventure" },
+    Binding { ctx: KeyCtx::Queue, keys: &["W"], act: Act::BuildAdventure, desc: "build the Sonic Adventure" },
     Binding { ctx: KeyCtx::Queue, keys: &["Esc"], act: Act::Back, desc: "clear the Sonic Adventure stops" },
     Binding { ctx: KeyCtx::Queue, keys: &["o"], act: Act::JumpToPlaying, desc: "jump to the playing track and resume follow" },
     Binding { ctx: KeyCtx::Queue, keys: &["J"], act: Act::MoveQueueDown, desc: "move track down" },
@@ -231,10 +231,11 @@ pub const BINDINGS: &[Binding] = &[
     Binding { ctx: KeyCtx::Discover, keys: &["v"], act: Act::VisualMode, desc: "select tracks (visual mode)" },
     Binding { ctx: KeyCtx::Discover, keys: &["m"], act: Act::Similar, desc: "sonically similar tracks" },
     Binding { ctx: KeyCtx::Discover, keys: &["s"], act: Act::Radio, desc: "track radio" },
-    Binding { ctx: KeyCtx::Discover, keys: &["p"], act: Act::AddStop, desc: "add to a Sonic Adventure" },
-    Binding { ctx: KeyCtx::Discover, keys: &["P"], act: Act::BuildAdventure, desc: "build the Sonic Adventure" },
+    Binding { ctx: KeyCtx::Discover, keys: &["w"], act: Act::AddStop, desc: "add to a Sonic Adventure" },
+    Binding { ctx: KeyCtx::Discover, keys: &["W"], act: Act::BuildAdventure, desc: "build the Sonic Adventure" },
     Binding { ctx: KeyCtx::Discover, keys: &["Esc"], act: Act::Back, desc: "clear the Sonic Adventure stops" },
     Binding { ctx: KeyCtx::Discover, keys: &["b"], act: Act::GotoAlbum, desc: "show track in Browser" },
+    Binding { ctx: KeyCtx::Discover, keys: &["o"], act: Act::JumpToPlaying, desc: "jump to the playing track" },
     Binding { ctx: KeyCtx::Browser, keys: &["h", "Left"], act: Act::ColumnLeft, desc: "focus the column to the left" },
     Binding { ctx: KeyCtx::Browser, keys: &["l", "Right"], act: Act::ColumnRight, desc: "open, or focus the column to the right" },
     Binding { ctx: KeyCtx::Browser, keys: &["k", "Up"], act: Act::MoveUp, desc: "move up" },
@@ -249,9 +250,9 @@ pub const BINDINGS: &[Binding] = &[
     Binding { ctx: KeyCtx::Browser, keys: &["v"], act: Act::VisualMode, desc: "select tracks (visual mode)" },
     Binding { ctx: KeyCtx::Browser, keys: &["m"], act: Act::Similar, desc: "sonically similar tracks, albums or artists" },
     Binding { ctx: KeyCtx::Browser, keys: &["s"], act: Act::Radio, desc: "track or artist radio" },
-    Binding { ctx: KeyCtx::Browser, keys: &["p"], act: Act::AddStop, desc: "add to a Sonic Adventure" },
-    Binding { ctx: KeyCtx::Browser, keys: &["P"], act: Act::BuildAdventure, desc: "build the Sonic Adventure" },
-    Binding { ctx: KeyCtx::Browser, keys: &["o"], act: Act::JumpToPlaying, desc: "jump to playing track" },
+    Binding { ctx: KeyCtx::Browser, keys: &["w"], act: Act::AddStop, desc: "add to a Sonic Adventure" },
+    Binding { ctx: KeyCtx::Browser, keys: &["W"], act: Act::BuildAdventure, desc: "build the Sonic Adventure" },
+    Binding { ctx: KeyCtx::Browser, keys: &["o"], act: Act::JumpToPlaying, desc: "jump to the playing track" },
     Binding { ctx: KeyCtx::Browser, keys: &["/"], act: Act::StartFilter, desc: "filter this column" },
     Binding { ctx: KeyCtx::Browser, keys: &["Esc", "BSpace"], act: Act::Back, desc: "back one column, or to the Queue from the artists" },
     Binding { ctx: KeyCtx::Playlists, keys: &["h", "Left"], act: Act::ColumnLeft, desc: "focus list" },
@@ -268,10 +269,11 @@ pub const BINDINGS: &[Binding] = &[
     Binding { ctx: KeyCtx::Playlists, keys: &["v"], act: Act::VisualMode, desc: "select tracks (visual mode)" },
     Binding { ctx: KeyCtx::Playlists, keys: &["m"], act: Act::Similar, desc: "sonically similar tracks" },
     Binding { ctx: KeyCtx::Playlists, keys: &["s"], act: Act::Radio, desc: "track radio" },
-    Binding { ctx: KeyCtx::Playlists, keys: &["p"], act: Act::AddStop, desc: "add to a Sonic Adventure" },
-    Binding { ctx: KeyCtx::Playlists, keys: &["P"], act: Act::BuildAdventure, desc: "build the Sonic Adventure" },
+    Binding { ctx: KeyCtx::Playlists, keys: &["w"], act: Act::AddStop, desc: "add to a Sonic Adventure" },
+    Binding { ctx: KeyCtx::Playlists, keys: &["W"], act: Act::BuildAdventure, desc: "build the Sonic Adventure" },
     Binding { ctx: KeyCtx::Playlists, keys: &["Esc"], act: Act::Back, desc: "clear the Sonic Adventure stops" },
-    Binding { ctx: KeyCtx::Playlists, keys: &["o"], act: Act::JumpToPlaying, desc: "jump to playing track" },
+    Binding { ctx: KeyCtx::Playlists, keys: &["b"], act: Act::GotoAlbum, desc: "show track in Browser" },
+    Binding { ctx: KeyCtx::Playlists, keys: &["o"], act: Act::JumpToPlaying, desc: "jump to the playing track" },
     Binding { ctx: KeyCtx::Playlists, keys: &["/"], act: Act::StartFilter, desc: "filter this list" },
     Binding { ctx: KeyCtx::Search, keys: &["k", "Up"], act: Act::MoveUp, desc: "move up" },
     Binding { ctx: KeyCtx::Search, keys: &["j", "Down"], act: Act::MoveDown, desc: "move down" },
@@ -285,9 +287,10 @@ pub const BINDINGS: &[Binding] = &[
     Binding { ctx: KeyCtx::Search, keys: &["v"], act: Act::VisualMode, desc: "select tracks (visual mode)" },
     Binding { ctx: KeyCtx::Search, keys: &["m"], act: Act::Similar, desc: "sonically similar tracks, albums or artists" },
     Binding { ctx: KeyCtx::Search, keys: &["s"], act: Act::Radio, desc: "track or artist radio" },
-    Binding { ctx: KeyCtx::Search, keys: &["p"], act: Act::AddStop, desc: "add to a Sonic Adventure" },
-    Binding { ctx: KeyCtx::Search, keys: &["P"], act: Act::BuildAdventure, desc: "build the Sonic Adventure" },
+    Binding { ctx: KeyCtx::Search, keys: &["w"], act: Act::AddStop, desc: "add to a Sonic Adventure" },
+    Binding { ctx: KeyCtx::Search, keys: &["W"], act: Act::BuildAdventure, desc: "build the Sonic Adventure" },
     Binding { ctx: KeyCtx::Search, keys: &["b"], act: Act::GotoAlbum, desc: "show result in Browser" },
+    Binding { ctx: KeyCtx::Search, keys: &["o"], act: Act::JumpToPlaying, desc: "jump to the playing track" },
     Binding { ctx: KeyCtx::Search, keys: &["/"], act: Act::StartSearch, desc: "new search" },
     Binding { ctx: KeyCtx::Search, keys: &["Esc"], act: Act::Back, desc: "back" },
     Binding { ctx: KeyCtx::Help, keys: &["k", "Up"], act: Act::MoveUp, desc: "scroll up" },
@@ -681,7 +684,7 @@ mod tests {
         let (map, problems) = from_toml(
             "[keys.global]\nnext_track = [\">\", \"n\"]\n\n\
              [keys.queue]\nundo = []\nmove_down = [\"y\"]\n\n\
-             [keys.lists]\nmove_down = [\"w\"]\n",
+             [keys.lists]\nmove_down = [\"e\"]\n",
         );
         assert!(problems.is_empty(), "{problems:?}");
         // an entry replaces the action's keys
@@ -691,12 +694,12 @@ mod tests {
         assert_eq!(map.lookup(KeyCtx::Queue, "u"), None);
         // lists reaches every context with the action
         for ctx in [KeyCtx::Browser, KeyCtx::Playlists, KeyCtx::Search, KeyCtx::Help] {
-            assert_eq!(map.lookup(ctx, "w"), Some(&Act::MoveDown), "{ctx:?}");
+            assert_eq!(map.lookup(ctx, "e"), Some(&Act::MoveDown), "{ctx:?}");
             assert_eq!(map.lookup(ctx, "j"), None, "{ctx:?}");
         }
         // ... but a per-context entry wins
         assert_eq!(map.lookup(KeyCtx::Queue, "y"), Some(&Act::MoveDown));
-        assert_eq!(map.lookup(KeyCtx::Queue, "w"), None);
+        assert_eq!(map.lookup(KeyCtx::Queue, "e"), None);
         assert_eq!(map.lookup(KeyCtx::Queue, "j"), None);
     }
 

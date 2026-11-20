@@ -266,6 +266,22 @@ fn hit(kind: HitKind, key: &str, album: Option<&str>, artist: Option<&str>) -> S
     }
 }
 
+/// `b` on a playlist's track opens it in the Browser, but not from the playlist list.
+#[tokio::test]
+async fn b_opens_a_playlist_track_in_the_browser() {
+    let mut app = new_app().await;
+    on_playlist(&mut app, 0);
+    let key0 = app.playlists.list.items[0].rating_key.clone();
+    app.playlists.tracks_for = Some(key0.clone());
+    app.handle_msg(Msg::PlaylistItemsLoaded { rating_key: key0, tracks: vec![track(0)] });
+    app.handle_msg(key('b'));
+    assert_eq!(app.tab, Tab::Playlists);
+
+    app.playlists.focus = PlaylistsCol::Items;
+    app.handle_msg(key('b'));
+    assert_eq!(app.tab, Tab::Browser);
+}
+
 fn reveal_hit(
     app: &mut TestApp,
     plex: &mut tokio::sync::mpsc::UnboundedReceiver<PlexCmd>,

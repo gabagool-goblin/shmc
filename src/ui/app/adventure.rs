@@ -1,4 +1,4 @@
-//! Sonic Adventure: `p` picks stops and `P` asks Plex for a path through them.
+//! Sonic Adventure: `w` picks stops and `W` asks Plex for a path through them.
 
 use super::plex_worker::cached_features;
 use super::{App, ListKind, Msg, PlexCmd, SearchDetail, Tab};

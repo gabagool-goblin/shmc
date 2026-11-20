@@ -1,6 +1,7 @@
 use super::*;
 use shmc::plex::models::Artist;
-use shmc::ui::app::BrowserCol;
+use shmc::plex::models::{HitKind, SearchHit};
+use shmc::ui::app::{BrowserCol, DiscoverCol, SearchDetail};
 
 fn key_table(text: &str) -> KeyTable {
     toml::from_str::<shmc::config::Config>(text).unwrap().keys
@@ -462,16 +463,16 @@ async fn g_letter_jumps_to_first_matching_title() {
 #[tokio::test]
 async fn sleep_timer_cycles_and_pauses_at_deadline() {
     let mut app = new_app().await;
-    app.handle_msg(key('S'));
+    app.handle_msg(key('t'));
     assert!(
         app.sleep_timer_label().is_some_and(|s| s.starts_with("sleep 15m")),
         "first S sets 15 minutes"
     );
-    app.handle_msg(key('S'));
+    app.handle_msg(key('t'));
     assert!(app.sleep_timer_label().is_some_and(|s| s.starts_with("sleep 30m")));
-    app.handle_msg(key('S'));
+    app.handle_msg(key('t'));
     assert!(app.sleep_timer_label().is_some_and(|s| s.starts_with("sleep 60m")));
-    app.handle_msg(key('S'));
+    app.handle_msg(key('t'));
     assert!(app.sleep_timer_label().is_none());
 
     // firing the posted timer pauses playback and clears it
@@ -480,7 +481,7 @@ async fn sleep_timer_cycles_and_pauses_at_deadline() {
     app.stopped = false;
     let (tx, mut rx) = unbounded_channel();
     app.mpv.tx = tx;
-    app.handle_msg(key('S'));
+    app.handle_msg(key('t'));
     app.handle_msg(Msg::SleepTimer { epoch: 5 });
     assert!(matches!(rx.try_recv(), Ok(mpv::MpvCmd::SetPause { paused: true })));
     assert!(rx.try_recv().is_err(), "nothing but the pause is sent");
@@ -528,7 +529,7 @@ async fn sleep_timer_keeps_a_paused_track_paused() {
     let (tx, mut rx) = unbounded_channel();
     app.mpv.tx = tx;
 
-    app.handle_msg(key('S'));
+    app.handle_msg(key('t'));
     app.handle_msg(Msg::SleepTimer { epoch: 1 });
 
     assert!(matches!(rx.try_recv(), Ok(mpv::MpvCmd::SetPause { paused: true })));
@@ -550,4 +551,51 @@ async fn long_prompt_keeps_caret_and_tail_visible() {
         let bottom = text.lines().nth(18).unwrap();
         assert!(bottom.contains('█') && bottom.contains("TAIL"), "{open} {tab:?}: {bottom}");
     }
+}
+
+/// `o` finds the playing track in Discover's tracks, a Search list and the results.
+#[tokio::test]
+async fn o_finds_the_playing_track_in_discover_and_search() {
+    let mut app = new_app().await;
+    app.queue.items = vec![track(5)];
+    app.current = Some(0);
+    app.discover.tracks = (0..8).map(track).collect();
+    app.discover.tracks_state.select(Some(0));
+    app.discover.focus = DiscoverCol::Tracks;
+    app.tab = Tab::Discover;
+    app.handle_msg(key('o'));
+    assert_eq!(app.discover.tracks_state.selected(), Some(5));
+
+    let mut state = ratatui::widgets::TableState::default();
+    state.select(Some(0));
+    let tracks = (0..8).map(track).collect();
+    app.search.detail = Some(SearchDetail {
+        key: "al1".into(),
+        label: "Album".into(),
+        tracks,
+        state,
+        matches: None,
+        radio: None,
+    });
+    app.tab = Tab::Search;
+    app.handle_msg(key('o'));
+    assert_eq!(app.search.detail.as_ref().and_then(|d| d.state.selected()), Some(5));
+
+    app.search.detail = None;
+    app.search.hits = (0..8)
+        .map(|i| SearchHit {
+            kind: HitKind::Track,
+            rating_key: format!("t{i}"),
+            title: format!("Hit {i}"),
+            artist: "Artist".into(),
+            subtitle: String::new(),
+            duration_ms: None,
+            album_key: None,
+            artist_key: None,
+            user_rating: None,
+        })
+        .collect();
+    app.search.state.select(Some(0));
+    app.handle_msg(key('o'));
+    assert_eq!(app.search.state.selected(), Some(5));
 }
