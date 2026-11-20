@@ -182,6 +182,7 @@ impl App {
                     tracks,
                     state,
                     matches: Some(matches),
+                    radio: None,
                 }));
                 self.search.focused = false;
                 self.goto_tab(Tab::Search);

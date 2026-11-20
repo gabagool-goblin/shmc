@@ -309,6 +309,7 @@ fn search_detail(app: &mut App) {
         tracks: vec![Track { user_rating: Some(7), ..track(0) }, track(2)],
         state: Default::default(),
         matches: Some(vec![Some(96), Some(95)]),
+        radio: None,
     });
 }
 

@@ -238,6 +238,7 @@ async fn found_albums_replace_the_search_results() {
         tracks: vec![track(0)],
         state,
         matches: None,
+        radio: None,
     });
     app.handle_msg(key('m'));
     app.handle_msg(found_albums("al1"));
@@ -269,6 +270,7 @@ async fn empty_outcomes_leave_the_tab_and_the_list_alone() {
             tracks: vec![track(0)],
             state,
             matches: None,
+            radio: None,
         });
         app.handle_msg(key('m'));
         app.handle_msg(Msg::SimilarLoaded { key: "t2".into(), label: "x".into(), outcome });
@@ -342,6 +344,7 @@ async fn album_view_has_no_match_column() {
         tracks: (0..3).map(track).collect(),
         state,
         matches: None,
+        radio: None,
     });
     app.tab = Tab::Search;
     let frame = render(&mut app, 80, 24);

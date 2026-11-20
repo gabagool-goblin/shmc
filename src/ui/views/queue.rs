@@ -1,4 +1,5 @@
 use super::tables::{build_track_rows, table_frame, QueueCols};
+use super::tabs::draw_list_label;
 use super::visualizer::draw_visualizer;
 use super::widgets::{clean, indicator_text, no_matches, placeholder, placeholder_box};
 use super::{draw_block, draw_divider};
@@ -58,7 +59,13 @@ pub(super) fn draw_queue_tab(f: &mut Frame, app: &mut App, area: Rect) -> bool {
         Constraint::Length(viz_h),
     ])
     .split(queue_area);
-    let qarea = draw_divider(f, rows[0], Borders::BOTTOM);
+    let mut qarea = draw_divider(f, rows[0], Borders::BOTTOM);
+    if let Some(radio) = app.radio.as_ref().filter(|_| qarea.height > 3) {
+        let [label, rest] =
+            Layout::vertical([Constraint::Length(1), Constraint::Min(1)]).areas(qarea);
+        draw_list_label(f, label, &radio.name, "");
+        qarea = rest;
+    }
     draw_queue_table(f, app, qarea);
     if viz_h > 0 {
         draw_visualizer(f, app, rows[1]);

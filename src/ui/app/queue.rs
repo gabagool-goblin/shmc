@@ -58,6 +58,13 @@ impl App {
                     self.cancel_playlist_load();
                 }
             }
+            QueueOutcome::Radio { tracks, confirm, name, queue } => {
+                self.playlist_load = None;
+                if self.replace_queue_and_play(tracks, confirm) {
+                    self.begin_radio(name, queue);
+                }
+            }
+            QueueOutcome::RadioMore { id, result } => self.apply_radio_more(&id, result),
             QueueOutcome::Failed(e) => {
                 tracing::error!(e);
                 self.transient_err(e);
@@ -82,8 +89,14 @@ impl App {
         confirm: Confirm,
         action: QueueAction,
     ) {
-        let id = self.issue_seq(action == QueueAction::Replace);
-        let due = self.queue_seq.deliver(id, QueueOutcome::Tracks { tracks, confirm, action });
+        let outcome = QueueOutcome::Tracks { tracks, confirm, action };
+        self.queue_outcome_local(action == QueueAction::Replace, outcome);
+    }
+
+    /// An outcome already in hand, ordered like a request.
+    pub(super) fn queue_outcome_local(&mut self, replaces: bool, outcome: QueueOutcome) {
+        let id = self.issue_seq(replaces);
+        let due = self.queue_seq.deliver(id, outcome);
         if due.is_empty() {
             self.transient("queued after the request that is still loading".into());
             return;
@@ -131,7 +144,7 @@ impl App {
 
     /// Put the playable `tracks` at the end of the app queue and of mpv's
     /// playlist, in step. Returns how many there were.
-    fn append_playable(&mut self, tracks: Vec<Track>) -> usize {
+    pub(super) fn append_playable(&mut self, tracks: Vec<Track>) -> usize {
         let (playable, items) = self.playable(tracks);
         let n = playable.len();
         if n == 0 {
@@ -206,6 +219,7 @@ impl App {
             self.transient_err("no playable media for selection".into());
             return false;
         }
+        self.radio = None;
         self.shuffle_new_queue(&mut playable);
         let (playable, items) = self.playable(playable);
         self.queue.items = playable;
@@ -648,6 +662,7 @@ impl App {
     }
 
     pub fn clear_queue(&mut self) {
+        self.radio = None;
         self.queue.items.clear();
         self.shuffle_snapshot = None;
         self.removed.clear();

@@ -369,6 +369,7 @@ async fn search_album_view_reveals_the_selected_track() {
         tracks: vec![track(0), track(1)],
         state,
         matches: None,
+        radio: None,
     });
     app.tab = Tab::Search;
     app.handle_msg(key('b'));
@@ -388,6 +389,7 @@ async fn similar_list_reveals_the_tracks_album() {
         tracks: vec![track(10), track(11)],
         state,
         matches: Some(vec![Some(96), Some(95)]),
+        radio: None,
     });
     app.tab = Tab::Search;
     app.handle_msg(key('b'));

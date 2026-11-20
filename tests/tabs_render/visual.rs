@@ -257,6 +257,7 @@ fn on_search_detail(app: &mut App) {
         tracks: (0..6).map(track).collect(),
         state,
         matches: None,
+        radio: None,
     });
 }
 

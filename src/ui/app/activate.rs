@@ -260,6 +260,11 @@ impl App {
                 let Some(d) = self.search.detail.as_ref() else { return };
                 let Some(i) = d.state.selected() else { return };
                 let tracks = d.tracks[i..].to_vec();
+                if let Some(queue) = d.radio.clone() {
+                    let name = d.label.clone();
+                    self.play_radio(tracks, name, queue);
+                    return;
+                }
                 let confirm = Confirm::FromList { name: d.label.clone() };
                 self.queue_local(tracks, confirm, QueueAction::Replace);
             }
