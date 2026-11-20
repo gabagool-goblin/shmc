@@ -183,10 +183,10 @@ impl App {
             }
             SimilarOutcome::NoSonic => self.transient("sonic analysis needs Plex Pass".into()),
             SimilarOutcome::NotAnalysed => {
-                self.transient("Plex hasn't analysed this track yet".into());
+                self.transient("track not analysed yet".into());
             }
             SimilarOutcome::NoneFound => {
-                self.transient(format!("Plex found no similar {}", kind.plural()));
+                self.transient(format!("no similar {}", kind.plural()));
             }
         }
     }

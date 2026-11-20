@@ -282,7 +282,7 @@ async fn a_dropped_play_queue_ends_the_radio() {
     let (seq, _) = reads(&mut plex).remove(0);
     app.handle_msg(more(seq, ReadOn::Gone));
     assert!(app.radio.is_none());
-    assert_eq!(app.status, "radio ended: Plex dropped the station");
+    assert_eq!(app.status, "radio ended: the station no longer exists");
 }
 
 #[tokio::test]

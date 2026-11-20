@@ -528,6 +528,9 @@ impl App {
 
     /// Esc / Backspace.
     pub(super) fn back(&mut self) {
+        if self.clear_adventure() {
+            return;
+        }
         match self.tab {
             Tab::Browser => match self.browser.focus {
                 BrowserCol::Tracks => {

@@ -35,6 +35,8 @@ The header shows the playing track's rating: five stars, one star or none, set b
 
 `s` on a track or artist starts its Plex radio, which needs Plex Pass and `plex.allow_writes`. The tracks open in the Search tab like similar tracks, and `s` again starts a fresh station. `Enter` on a row plays the list from there as a radio, which keeps going: shmc reads more tracks as the queue nears its end. While it plays, the Queue tab shows the station name and shuffle is off. Replacing or clearing the queue ends it.
 
+`p` on a track adds it as a stop of a Sonic Adventure, up to 10, and the bottom row lists the stops. `P` builds a path of sonically close tracks through them, which needs Plex Pass, and opens it in the Search tab like similar tracks. `Esc` clears the stops first, then goes back as usual.
+
 On macOS, the media keys and the Control Center buttons work like shmc's own keys: play/pause like `Space`, next and previous like `>` and `<`, fast-forward and rewind seek 5 seconds, and stop like `:stop`. To leave the media keys alone, add `--input-media-keys=no` to `mpv.extra_args`.
 
 ## Lists
@@ -206,4 +208,5 @@ If `[keys]` contains an invalid section, action, key name or duplicate binding w
 | `move_track_down`, `move_track_up` | `J`, `K` | queue |
 | `show_in_browser` | `b` | queue, discover, search |
 | `search` | `/` | search |
-| `back` | `Esc`, `BSpace` (browser); `Esc` (search); `Esc`, `q` (help) | browser, search, help |
+| `back` | `Esc`, `BSpace` (browser); `Esc` (queue, discover, playlists, search); `Esc`, `q` (help) | queue, discover, browser, playlists, search, help |
+| `adventure_add`, `adventure_build` | `p`, `P` | queue, discover, browser, playlists, search |

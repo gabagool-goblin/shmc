@@ -1,3 +1,4 @@
+use super::adventure::{self, Stop};
 use super::discover;
 use super::radio::{self, RadioEnv, RadioSeed};
 use super::similar::{SimilarKind, SimilarOutcome};
@@ -69,6 +70,11 @@ pub enum PlexCmd {
         /// Tracks only: the album artist whose own tracks are left out.
         exclude: Option<String>,
         label: String,
+    },
+    /// Replies once with `Msg::AdventureBuilt`, never `Msg::Error`.
+    BuildAdventure {
+        key: String,
+        stops: Vec<Stop>,
     },
     /// Replies once with `Msg::RadioLoaded`, never `Msg::Error`.
     StartRadio {
@@ -286,6 +292,9 @@ pub fn spawn_plex_worker(
                     PlexCmd::LoadSimilar { key, kind, exclude, label } => {
                         let outcome = find_similar(&client, &features, &key, kind, exclude).await;
                         let _ = tx.send(Msg::SimilarLoaded { key, label, outcome });
+                    }
+                    PlexCmd::BuildAdventure { key, stops } => {
+                        adventure::run(&client, &section, &features, &tx, key, stops).await;
                     }
                     PlexCmd::StartRadio { key, seed, label } => {
                         radio::run(&client, &features, &radio_env, &tx, key, seed, label).await;

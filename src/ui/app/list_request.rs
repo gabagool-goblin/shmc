@@ -7,6 +7,7 @@ pub enum ListKind {
     Album,
     Similar(SimilarKind),
     Radio,
+    Adventure,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

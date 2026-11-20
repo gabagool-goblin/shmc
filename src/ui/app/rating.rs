@@ -47,7 +47,7 @@ impl App {
     }
 
     /// Key, title and own rating of the highlighted track.
-    fn highlighted_track(&self) -> Option<(String, String, Option<u8>)> {
+    pub(super) fn highlighted_track(&self) -> Option<(String, String, Option<u8>)> {
         let list = self.active_list();
         let real = self.real_at(list)?;
         let track = match list {
