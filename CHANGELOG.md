@@ -6,6 +6,10 @@ All notable changes to shmc are documented here. The format follows
 
 ## Unreleased
 
+### Added
+
+- The queue is kept across restarts and comes back paused where it was, with its shuffle, repeat, single and consume modes (`ui.restore_queue`).
+
 ### Changed
 
 - Building from source needs Rust 1.90 or newer.

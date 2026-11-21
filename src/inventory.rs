@@ -148,6 +148,14 @@ pub const ALL: &[Setting] = &[
         applies: None,
     },
     Setting {
+        key: "ui.restore_queue",
+        label: "Restore queue",
+        help: "Save the queue on quit and bring it back, paused, on the next start.",
+        kind: Kind::Bool,
+        group: "Playback",
+        applies: None,
+    },
+    Setting {
         key: "mpv.path",
         label: "mpv path",
         help: "Where mpv lives: a full path, or a bare name looked up on $PATH.",

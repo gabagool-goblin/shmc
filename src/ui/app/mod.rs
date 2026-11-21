@@ -28,6 +28,7 @@ mod queue;
 mod radio;
 mod rating;
 mod report;
+pub mod saved_queue;
 mod search_back;
 mod shuffle;
 mod similar;
@@ -508,6 +509,7 @@ pub struct App {
     pub failed_at: Option<usize>,
     /// Failures since a file last loaded.
     err_streak: u32,
+    restore: saved_queue::Restore,
 
     pub discover: DiscoverView,
     pub browser: Browser,
@@ -639,6 +641,7 @@ impl App {
             audio_cache: HashMap::new(),
             failed_at: None,
             err_streak: 0,
+            restore: saved_queue::Restore::default(),
             discover: DiscoverView::default(),
             radio: None,
             adventure: Adventure::default(),

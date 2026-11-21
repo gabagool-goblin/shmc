@@ -25,6 +25,7 @@ mod queue_requests;
 mod radio;
 mod rating;
 mod report;
+mod restore;
 mod similar;
 mod theme;
 mod visual;

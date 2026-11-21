@@ -112,6 +112,7 @@ prev_restart_secs = 3         # `<` restarts a track played longer than this; 0 
 preview_tracks = 500          # Tracks loaded for playlist previews; 0 = disabled
 preview_debounce_ms = 150     # Delay before loading a preview
 confirm_playlist_over = 1000  # Confirm before queueing larger playlists; 0 = disabled
+restore_queue = true          # Bring the queue back, paused, on the next start
 
 [theme]
 name = "default"              # See themes.md for available themes
@@ -147,6 +148,10 @@ The visualizer's bar width and gap are minimums. Narrow panes show fewer bars ra
 - **spread:** Shows up to `visualizer_bars`, then widens the bars or gaps according to `visualizer_anchor`.
 
 `cava.style` controls bar movement. `smooth` is calmer, `snappy` is faster, and `custom` uses the individual settings below it. Changes take effect the next time cava starts.
+
+### Saved queue
+
+With `restore_queue = true`, shmc saves the queue on quit, with the playing track, its position and the shuffle, repeat, single and consume modes. The next start brings it back paused at the same place. Tracks removed from the library are left out, and a radio comes back as its tracks without adding more.
 
 ### Queue columns
 
@@ -203,12 +208,15 @@ cava -p ~/.cache/shmc/cava/config
 | Config | `~/.config/shmc/` | `~/.config/shmc/` |
 | Cache (album art, mpv socket) | `~/Library/Caches/shmc/` | `~/.cache/shmc/` |
 | Logs (`shmc.log`, `mpv.log`) | `~/Library/Logs/shmc/` | `~/.local/state/shmc/` |
+| Saved queue (`queue.json`) | `~/Library/Application Support/shmc/` | `~/.local/state/shmc/` |
 
 With `report_playback` or `allow_writes` on, `client-id` beside the config file identifies shmc to Plex. Audio is never written to disk. Album art is cached up to `album_art.cache_mb`, with least recently used covers removed first.
 
 `shmc.log` rotates at 2 MB. `mpv.log` is replaced on each start. The Plex token is stripped from both logs before they're written and when displayed by `shmc log`.
 
-Cache and log directories use permissions `700`, and files use `600`. If shmc can't create a private directory for mpv's socket, it refuses to start mpv rather than use a shared one.
+The saved queue holds rating keys and modes, never the token.
+
+Cache, log and saved queue directories use permissions `700`, and files use `600`. If shmc can't create a private directory for mpv's socket, it refuses to start mpv rather than use a shared one.
 
 ## Command line
 

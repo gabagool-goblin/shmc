@@ -490,6 +490,7 @@ impl App {
             MpvEvent::Ready => {}
             MpvEvent::MediaKey(key) => self.media_key(key),
             MpvEvent::FileLoaded => {
+                self.seek_restored();
                 self.report_open();
                 self.cover_due = true;
                 self.attach_cover();
