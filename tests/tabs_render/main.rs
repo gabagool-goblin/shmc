@@ -26,6 +26,7 @@ mod radio;
 mod rating;
 mod report;
 mod restore;
+mod resume;
 mod similar;
 mod theme;
 mod visual;

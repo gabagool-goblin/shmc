@@ -28,6 +28,7 @@ mod queue;
 mod radio;
 mod rating;
 mod report;
+mod resume;
 pub mod saved_queue;
 mod search_back;
 mod shuffle;
@@ -229,6 +230,10 @@ pub enum Msg {
     },
     /// The cover's dwell is over; draw again.
     ArtDue,
+    ConnectionChecked {
+        epoch: u64,
+        ok: bool,
+    },
     ArtFailed {
         thumb_path: String,
     },
@@ -510,6 +515,7 @@ pub struct App {
     /// Failures since a file last loaded.
     err_streak: u32,
     restore: saved_queue::Restore,
+    resume: resume::Resume,
 
     pub discover: DiscoverView,
     pub browser: Browser,
@@ -642,6 +648,7 @@ impl App {
             failed_at: None,
             err_streak: 0,
             restore: saved_queue::Restore::default(),
+            resume: resume::Resume::default(),
             discover: DiscoverView::default(),
             radio: None,
             adventure: Adventure::default(),

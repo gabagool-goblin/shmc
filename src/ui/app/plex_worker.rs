@@ -101,6 +101,11 @@ pub enum PlexCmd {
     },
     /// Sample rate and bit depth come only from the full metadata.
     LoadTrackInfo(String),
+    /// Replies once with `Msg::ConnectionChecked`.
+    CheckConnection {
+        epoch: u64,
+        delay: std::time::Duration,
+    },
     /// Replies once with a `QueueReply`.
     RestoreQueue {
         seq: u64,
@@ -262,6 +267,11 @@ pub fn spawn_plex_worker(
                                     .send(QueueOutcome::Failed(format!("resolving artist: {e:#}")));
                             }
                         }
+                    }
+                    PlexCmd::CheckConnection { epoch, delay } => {
+                        tokio::time::sleep(delay).await;
+                        let ok = client.ping().await;
+                        let _ = tx.send(Msg::ConnectionChecked { epoch, ok });
                     }
                     PlexCmd::RestoreQueue { seq, saved } => {
                         let reply = QueueReplyGuard::new(tx, seq);

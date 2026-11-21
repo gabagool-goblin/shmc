@@ -260,6 +260,7 @@ impl App {
                 }
             }
             Msg::ArtDue => {}
+            Msg::ConnectionChecked { epoch, ok } => self.connection_checked(epoch, ok),
             Msg::ArtFailed { thumb_path } => {
                 if self.art.requested.as_deref() == Some(thumb_path.as_str()) {
                     self.art.requested = None;
@@ -417,8 +418,11 @@ impl App {
                             let changed = self.current != Some(p);
                             self.current = Some(p);
                             self.stopped = false;
-                            self.fetch_art_for_current();
-                            self.fetch_audio_for_current();
+                            // mpv may be failing through entries: fetch once one loads
+                            if self.err_streak == 0 {
+                                self.fetch_art_for_current();
+                                self.fetch_audio_for_current();
+                            }
                             if changed {
                                 self.follow_queue();
                             }
@@ -457,6 +461,9 @@ impl App {
                         "mpv failed to play a track"
                     );
                     if !more || self.err_streak >= FAILED_STREAK_LIMIT {
+                        if let Some(at) = marker {
+                            self.check_connection(at);
+                        }
                         let _ = self.mpv.tx.send(MpvCmd::Stop);
                         self.stopped = true;
                         self.position = 0.0;
@@ -490,6 +497,9 @@ impl App {
             MpvEvent::Ready => {}
             MpvEvent::MediaKey(key) => self.media_key(key),
             MpvEvent::FileLoaded => {
+                self.cancel_resume();
+                self.fetch_art_for_current();
+                self.fetch_audio_for_current();
                 self.seek_restored();
                 self.report_open();
                 self.cover_due = true;
