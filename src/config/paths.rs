@@ -1,4 +1,4 @@
-//! Where the config, cache and logs live.
+//! Where the config, cache, logs and saved state live.
 
 use std::path::{Path, PathBuf};
 
@@ -38,6 +38,21 @@ pub fn log_dir() -> Option<PathBuf> {
     {
         xdg_dir("XDG_STATE_HOME", ".local/state").map(|dir| dir.join("shmc"))
     }
+}
+
+pub fn state_dir() -> Option<PathBuf> {
+    #[cfg(target_os = "macos")]
+    {
+        dirs::data_dir().map(|dir| dir.join("shmc"))
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        xdg_dir("XDG_STATE_HOME", ".local/state").map(|dir| dir.join("shmc"))
+    }
+}
+
+pub fn queue_path() -> Option<PathBuf> {
+    state_dir().map(|dir| dir.join("queue.json"))
 }
 
 /// The log directory, created 0700, or the cache dir if it cannot be made.

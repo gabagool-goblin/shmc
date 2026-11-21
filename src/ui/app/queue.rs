@@ -61,6 +61,7 @@ impl App {
                 }
             }
             QueueOutcome::RadioMore { id, result } => self.apply_radio_more(&id, result),
+            QueueOutcome::Restored { tracks, saved } => self.apply_restore(tracks, saved),
             QueueOutcome::Failed(e) => {
                 tracing::error!(e);
                 self.transient_err(e);
@@ -110,7 +111,7 @@ impl App {
     }
 
     /// Built together so the queue and mpv's playlist cannot drift apart.
-    fn playable(&self, tracks: Vec<Track>) -> (Vec<Track>, Vec<LoadItem>) {
+    pub(super) fn playable(&self, tracks: Vec<Track>) -> (Vec<Track>, Vec<LoadItem>) {
         tracks
             .into_iter()
             .filter_map(|t| {
@@ -120,7 +121,7 @@ impl App {
             .unzip()
     }
 
-    fn load_item(&self, t: &Track) -> Option<LoadItem> {
+    pub(super) fn load_item(&self, t: &Track) -> Option<LoadItem> {
         Some(LoadItem { url: t.stream_url(&self.server, &self.token)?, title: t.title.clone() })
     }
 
@@ -211,6 +212,7 @@ impl App {
             return false;
         }
         self.radio = None;
+        self.restore.seek = None;
         self.shuffle_new_queue(&mut playable);
         let (playable, items) = self.playable(playable);
         self.queue.items = playable;
@@ -648,6 +650,7 @@ impl App {
 
     pub fn clear_queue(&mut self) {
         self.radio = None;
+        self.restore.unapplied = false;
         self.queue.items.clear();
         self.shuffle_snapshot = None;
         self.removed.clear();

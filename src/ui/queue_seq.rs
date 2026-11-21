@@ -34,6 +34,11 @@ pub enum QueueOutcome {
         id: String,
         result: ReadOn,
     },
+    /// The saved queue's tracks, each key once.
+    Restored {
+        tracks: Vec<Track>,
+        saved: crate::ui::app::saved_queue::SavedQueue,
+    },
     Failed(String),
     /// The playlist changed on the server and the picked start track is gone.
     StartMissing,

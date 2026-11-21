@@ -35,6 +35,7 @@
 | Config | `~/.config/shmc/` | `~/.config/shmc/` |
 | Logs | `~/Library/Logs/shmc/` | `~/.local/state/shmc/` |
 | Cache | `~/Library/Caches/shmc` | `~/.cache/shmc` |
+| State | `~/Library/Application Support/shmc/` | `~/.local/state/shmc/` |
 
 `$XDG_CONFIG_HOME/shmc/` replaces the config path when set.
 
@@ -48,6 +49,7 @@
   `(missing)`. The config screen never writes the redacted value back.
 - The config and its `.bak` are written atomically 0600. The cache dir is 0700
   and holds only album art and mpv's socket and FIFO; files there are 0600.
+  The saved queue (state dir, 0700/0600, atomic) holds rating keys, never a URL.
   What cannot be made private fails closed, never falls back to a shared
   location.
 

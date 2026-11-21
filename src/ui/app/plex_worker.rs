@@ -101,6 +101,11 @@ pub enum PlexCmd {
     },
     /// Sample rate and bit depth come only from the full metadata.
     LoadTrackInfo(String),
+    /// Replies once with a `QueueReply`.
+    RestoreQueue {
+        seq: u64,
+        saved: super::saved_queue::SavedQueue,
+    },
     /// `None` clears the rating.
     Rate {
         key: String,
@@ -256,6 +261,17 @@ pub fn spawn_plex_worker(
                                 reply
                                     .send(QueueOutcome::Failed(format!("resolving artist: {e:#}")));
                             }
+                        }
+                    }
+                    PlexCmd::RestoreQueue { seq, saved } => {
+                        let reply = QueueReplyGuard::new(tx, seq);
+                        let mut keys = saved.tracks.clone();
+                        keys.sort_unstable();
+                        keys.dedup();
+                        match client.tracks_by_keys(&keys).await {
+                            Ok(tracks) => reply.send(QueueOutcome::Restored { tracks, saved }),
+                            Err(e) => reply
+                                .send(QueueOutcome::Failed(format!("restoring the queue: {e:#}"))),
                         }
                     }
                     PlexCmd::ResolveAlbum { seq, key, confirm, action } => {

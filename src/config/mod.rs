@@ -6,7 +6,9 @@ mod settings;
 
 pub use file::retired_keys;
 pub(crate) use file::scrub_value;
-pub use paths::{cache_dir, config_path, log_dir, themes_dir_for, usable_log_dir, NO_HOME};
+pub use paths::{
+    cache_dir, config_path, log_dir, queue_path, state_dir, themes_dir_for, usable_log_dir, NO_HOME,
+};
 pub use settings::{SettingChange, SettingRow, NO_DEFAULT};
 
 use serde::{Deserialize, Serialize};
@@ -102,6 +104,7 @@ pub struct UiConfig {
     pub center_cursor: bool,
     /// Keep the Queue pinned to the playing row as playback moves.
     pub auto_follow: bool,
+    pub restore_queue: bool,
     /// "nerd" or "ascii"; ASCII when the locale is not UTF-8.
     pub icons: String,
     /// "meter" or "percent".
@@ -337,6 +340,7 @@ impl Default for UiConfig {
             scrolloff: 4,
             center_cursor: true,
             auto_follow: true,
+            restore_queue: true,
             icons: "nerd".into(),
             volume_display: "both".into(),
             rating_style: "five".into(),

@@ -708,6 +708,7 @@ fn ui_loop(terminal: &mut ui::term::Term, started: &mut Started) -> Result<UiEnd
     );
     app.allow_writes = cfg.plex.allow_writes;
     app.reporter = started.reporter.as_ref().map(|r| r.sender());
+    let queue_file = app.restore_saved_queue(cfg.ui.restore_queue);
 
     let cava = started.cava.clone();
     let mut cava_state = cava_wanted(&app);
@@ -792,6 +793,9 @@ fn ui_loop(terminal: &mut ui::term::Term, started: &mut Started) -> Result<UiEnd
         }
     }
     app.finish_reporting();
+    if let Some(path) = &queue_file {
+        app.save_queue(path);
+    }
     Ok(UiEnd::from_state(app.should_quit, app.mpv_exited))
 }
 

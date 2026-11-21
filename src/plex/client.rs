@@ -16,6 +16,9 @@ const LIST_PAGE_SIZE: usize = 500;
 /// Tracks per create/append request; the `uri` has to stay a sane length.
 const SAVE_CHUNK: usize = 100;
 
+/// Keys per `/library/metadata/<k1>,<k2>,…` request, for the same reason.
+const MULTI_KEY_BATCH: usize = 300;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SaveOutcome {
     Saved {
@@ -615,6 +618,16 @@ impl PlexClient {
         c.tracks.into_iter().next().map(|t| t.into_track()).context("no track found")
     }
 
+    /// Missing keys are skipped.
+    pub async fn tracks_by_keys(&self, keys: &[String]) -> Result<Vec<Track>> {
+        let mut tracks = Vec::with_capacity(keys.len());
+        for batch in keys.chunks(MULTI_KEY_BATCH) {
+            let c = self.get_xml(&format!("/library/metadata/{}", batch.join(","))).await?;
+            tracks.extend(c.into_tracks());
+        }
+        Ok(tracks)
+    }
+
     pub async fn artist(&self, rating_key: &str) -> Result<Artist> {
         let c = self.get_xml(&format!("/library/metadata/{rating_key}")).await?;
         c.directories.into_iter().next().map(|d| d.into_artist()).context("no artist found")
@@ -735,6 +748,30 @@ mod tests {
         assert!(!may_follow(&url("https://plex:32400/a"), &url("https://evil.example:32400/a")));
         assert!(!may_follow(&url("https://plex:32400/a"), &url("https://plex:8443/a")));
         assert!(!may_follow(&url("http://plex/a"), &url("http://plex:32400/a")));
+    }
+
+    #[tokio::test]
+    async fn tracks_by_keys_asks_in_batches() {
+        let (base, seen, _) = testing::serve_full(|line| {
+            let keys = line.split(' ').nth(1).unwrap().trim_start_matches("/library/metadata/");
+            let tracks: String = keys
+                .split(',')
+                .map(|k| {
+                    format!(
+                        "<Track ratingKey=\"{k}\" key=\"/library/metadata/{k}\" title=\"T{k}\"/>"
+                    )
+                })
+                .collect();
+            (200, format!("<MediaContainer>{tracks}</MediaContainer>"))
+        })
+        .await;
+        let client = PlexClient::new(&base, "faketoken-keys");
+        let keys: Vec<String> = (1..=MULTI_KEY_BATCH + 1).map(|k| k.to_string()).collect();
+
+        let tracks = client.tracks_by_keys(&keys).await.unwrap();
+        let got: Vec<String> = tracks.into_iter().map(|t| t.rating_key).collect();
+        assert_eq!(got, keys);
+        assert_eq!(seen.lock().unwrap().len(), 2);
     }
 }
 
