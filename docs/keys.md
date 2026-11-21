@@ -69,7 +69,7 @@ Set `ui.auto_follow = false` to disable pinning. In that case, `o` jumps to the 
 
 `J` and `K` are disabled while shuffle is on or the queue is filtered.
 
-Tracks that fail to play are skipped. After three consecutive failures, playback stops and displays the failed track. Press `>` to continue.
+Tracks that fail to play are skipped. After three consecutive failures, playback stops and displays the failed track. Press `>` to continue. shmc also plays the failed track again once Plex answers, so playback picks up after a dropped connection.
 
 ## Similar tracks and radio
 

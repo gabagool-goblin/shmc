@@ -34,7 +34,7 @@ The visualizer only runs while audio is playing and the Queue tab is visible. Th
 
 ## A track does not play
 
-shmc skips tracks mpv cannot play and stops after three consecutive failures. Check the second half of `shmc log` for mpv's error. If the server is unreachable, `shmc config --check` should report it.
+shmc skips tracks mpv cannot play and stops after three consecutive failures. It then plays the failed track again once Plex answers, and stops for good if that fails too. Check the second half of `shmc log` for mpv's error. If the server is unreachable, `shmc config --check` should report it.
 
 ## Keys do not match the config
 

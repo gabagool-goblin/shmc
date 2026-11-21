@@ -19,6 +19,8 @@ const SAVE_CHUNK: usize = 100;
 /// Keys per `/library/metadata/<k1>,<k2>,…` request, for the same reason.
 const MULTI_KEY_BATCH: usize = 300;
 
+const PING_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(3);
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SaveOutcome {
     Saved {
@@ -715,6 +717,16 @@ impl PlexClient {
     }
 
     /// Machine id and version, for `shmc config --check`.
+    /// One try, timed out fast: on a dead kept-alive connection a request hangs.
+    pub async fn ping(&self) -> bool {
+        let Ok(url) = self.url_for("/identity") else { return false };
+        self.request(reqwest::Method::GET, url.as_str(), "application/xml")
+            .timeout(PING_TIMEOUT)
+            .send()
+            .await
+            .is_ok_and(|resp| resp.status().is_success())
+    }
+
     pub async fn identity(&self) -> Result<(String, String)> {
         let id = self.identity_raw().await?;
         Ok((
@@ -748,6 +760,24 @@ mod tests {
         assert!(!may_follow(&url("https://plex:32400/a"), &url("https://evil.example:32400/a")));
         assert!(!may_follow(&url("https://plex:32400/a"), &url("https://plex:8443/a")));
         assert!(!may_follow(&url("http://plex/a"), &url("http://plex:32400/a")));
+    }
+
+    #[tokio::test]
+    async fn ping_gives_up_on_a_server_that_never_answers() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let base = format!("http://{}", listener.local_addr().unwrap());
+        tokio::spawn(async move {
+            let (_held, _) = listener.accept().await.unwrap();
+            std::future::pending::<()>().await;
+        });
+        let client = PlexClient::new(&base, "faketoken-ping");
+
+        let started = std::time::Instant::now();
+        assert!(!client.ping().await);
+        assert!(started.elapsed() < PING_TIMEOUT * 2, "{:?}", started.elapsed());
+
+        let (base, _, _) = testing::serve_full(|_| (200, "<MediaContainer/>".into())).await;
+        assert!(PlexClient::new(&base, "faketoken-ping").ping().await);
     }
 
     #[tokio::test]

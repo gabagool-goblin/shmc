@@ -213,6 +213,7 @@ impl App {
         }
         self.radio = None;
         self.restore.seek = None;
+        self.cancel_resume();
         self.shuffle_new_queue(&mut playable);
         let (playable, items) = self.playable(playable);
         self.queue.items = playable;
@@ -282,6 +283,7 @@ impl App {
         if idx >= self.queue.items.len() {
             return;
         }
+        self.cancel_resume();
         let _ = self.mpv.tx.send(MpvCmd::PlayIndex(idx));
         self.current = Some(idx);
         self.expect_pos = None;
@@ -651,6 +653,7 @@ impl App {
     pub fn clear_queue(&mut self) {
         self.radio = None;
         self.restore.unapplied = false;
+        self.cancel_resume();
         self.queue.items.clear();
         self.shuffle_snapshot = None;
         self.removed.clear();

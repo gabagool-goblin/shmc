@@ -531,6 +531,7 @@ impl App {
     }
 
     fn stop(&mut self) {
+        self.cancel_resume();
         // A replace still in flight would start playing over the stop.
         let cancelled = self.queue_seq.pending() || self.playlist_load.is_some();
         self.supersede_queue();
