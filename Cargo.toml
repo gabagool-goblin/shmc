@@ -2,7 +2,7 @@
 name = "shmc"
 version = "0.3.1"
 edition = "2021"
-rust-version = "1.88"
+rust-version = "1.90"
 description = "A terminal music player for Plex, inspired by rmpc"
 license = "BSD-3-Clause"
 repository = "https://github.com/gabagool-goblin/shmc"
@@ -10,9 +10,9 @@ publish = false
 
 [dependencies]
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time", "net", "process", "io-util", "fs", "signal"] }
-ratatui = "0.29"
-crossterm = "0.28"
-ratatui-image = "4"
+ratatui = "0.30"
+crossterm = "0.29"
+ratatui-image = { version = "11", default-features = false, features = ["image-defaults", "crossterm"] }
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
 quick-xml = { version = "0.42", features = ["serialize"] }
 serde = { version = "1", features = ["derive"] }

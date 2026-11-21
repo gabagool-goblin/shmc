@@ -6,8 +6,9 @@ use super::{draw_block, draw_divider};
 use crate::ui::app::App;
 use crate::ui::scroll::ScrollId;
 use crate::ui::scrollbar::{list_split, render_scrollbar};
-use crate::ui::theme;
+use crate::ui::{picker_cell, theme};
 use image::DynamicImage;
+use ratatui::buffer::CellDiffOption;
 use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::Modifier;
 use ratatui::text::{Line, Span};
@@ -26,7 +27,7 @@ pub(super) fn draw_queue_tab(f: &mut Frame, app: &mut App, area: Rect) -> bool {
         (None, inner)
     } else {
         let cols = if app.art_square && app.picker.is_some() {
-            let cell = app.picker.as_ref().map(|p| p.font_size()).unwrap_or((10, 20));
+            let cell = app.picker.as_ref().map(picker_cell).unwrap_or((10, 20));
             let img_h = inner.height - art_meta_rows(inner.height, app.art_metadata);
             let square = square_art_width(img_h, cell);
             let art_pct = app.art_pct.clamp(10, 90);
@@ -156,7 +157,7 @@ fn draw_art_image(f: &mut Frame, app: &mut App, content: Rect) {
     let rect = if covered {
         Some(content)
     } else {
-        art_rect(content, app.picker.as_ref().map(|p| p.font_size()))
+        art_rect(content, app.picker.as_ref().map(picker_cell))
     };
     let Some(rect) = rect else {
         placeholder(f, content, "No cover");
@@ -172,7 +173,7 @@ fn draw_art_image(f: &mut Frame, app: &mut App, content: Rect) {
         for y in rect.top()..rect.bottom() {
             for x in rect.left()..rect.right() {
                 if let Some(cell) = buf.cell_mut((x, y)) {
-                    cell.set_skip(true);
+                    cell.set_diff_option(CellDiffOption::Skip);
                 }
             }
         }
@@ -189,10 +190,9 @@ fn draw_art_image(f: &mut Frame, app: &mut App, content: Rect) {
 
     // ratatui-image pads a resized image at (0, 0), so centre it on a canvas first.
     if app.art.protocol.is_none() || app.art.prepared_rect != Some(rect) {
-        let picker = app.picker;
         let img = app.art.img.clone();
-        if let (Some(picker), Some(img)) = (picker, img) {
-            let cell = picker.font_size();
+        if let (Some(picker), Some(img)) = (app.picker.as_ref(), img) {
+            let cell = picker_cell(picker);
             if let Some(canvas) = centered_art_canvas(
                 img.as_ref(),
                 rect,

@@ -773,7 +773,7 @@ fn ui_loop(terminal: &mut ui::term::Term, started: &mut Started) -> Result<UiEnd
             last_slow_log = Some(last_draw);
             let px = match (app.art.prepared_rect, app.picker.as_ref()) {
                 (Some(r), Some(p)) => {
-                    let (cw, ch) = p.font_size();
+                    let (cw, ch) = ui::picker_cell(p);
                     format!(
                         "{}x{}",
                         u32::from(r.width) * u32::from(cw),

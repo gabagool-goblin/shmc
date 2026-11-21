@@ -82,8 +82,9 @@ async fn background_leaves_cover_painted_once() {
     let mut app = new_app().await;
     app.tab = Tab::Queue;
     app.art_enabled = true;
-    app.picker = Some(ratatui_image::picker::Picker::from_fontsize((10, 20)));
-    app.art.img = Some(Arc::new(DynamicImage::ImageRgba8(RgbaImage::new(8, 8))));
+    app.picker = Some(ratatui_image::picker::Picker::halfblocks());
+    let red = image::Rgba([255, 0, 0, 255]);
+    app.art.img = Some(Arc::new(DynamicImage::ImageRgba8(RgbaImage::from_pixel(8, 8, red))));
 
     // without a background
     let unpainted = {
@@ -105,7 +106,7 @@ async fn background_leaves_cover_painted_once() {
     assert!(
         (rect.top()..rect.bottom())
             .flat_map(|y| (rect.left()..rect.right()).map(move |x| (x, y)))
-            .any(|p| first.cell(p).is_some_and(|c| c.symbol() != " ")),
+            .any(|p| first.cell(p).is_some_and(|c| c.bg == Color::Rgb(255, 0, 0))),
         "the first frame carries the image"
     );
     // the letterbox must be opaque; the corner is padding

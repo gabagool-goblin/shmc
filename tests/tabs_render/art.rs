@@ -88,7 +88,7 @@ async fn app_showing_album_cover(
     let (mut app, mut plex) = new_app_with_plex().await;
     app.tab = Tab::Queue;
     app.art_enabled = true;
-    app.picker = Some(ratatui_image::picker::Picker::from_fontsize((10, 20)));
+    app.picker = Some(ratatui_image::picker::Picker::halfblocks());
     app.queue.items = (0..4).map(track).collect();
     app.queue.items[2].parent_rating_key = Some("al2".into());
     app.queue.items[3].parent_rating_key = None;
@@ -163,7 +163,7 @@ async fn new_cover_loads_once() {
 async fn square_art_pane_respects_the_percentage_cap() {
     let mut app = new_app().await;
     app.art_enabled = true;
-    app.picker = Some(ratatui_image::picker::Picker::from_fontsize((10, 20)));
+    app.picker = Some(ratatui_image::picker::Picker::halfblocks());
     app.art_square = true;
     app.art_metadata = true;
     let track0 = track(0);
