@@ -2,11 +2,13 @@
 
 use super::plex_worker::cached_features;
 use super::{App, Confirm, ListKind, ListRef, Msg, PlexCmd, SearchDetail, Tab};
+pub use crate::plex::radio::RadioSeed;
 use crate::plex::radio::{RadioQueue, ReadOn};
 use crate::plex::sonic::Features;
 use crate::plex::{HitKind, PlexClient, Track};
 use crate::ui::queue_seq::{QueueOutcome, QueueReplyGuard};
 use ratatui::widgets::TableState;
+use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc::UnboundedSender;
 
@@ -27,14 +29,8 @@ pub struct ActiveRadio {
     asked: Option<u64>,
     /// The playing track when a read failed; no new read until it changes.
     failed_at: Option<(usize, String)>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum RadioSeed {
-    Track(String),
-    Artist(String),
-    /// A library station's key.
-    Station(String),
+    /// Rating keys of the tracks the radio added.
+    added: HashSet<String>,
 }
 
 #[derive(Debug)]
@@ -112,16 +108,16 @@ pub(super) async fn start(
     if cached_features(client, features).await.is_some_and(|f| !f.radio) {
         return (label, RadioOutcome::NoRadio);
     }
-    let (station_key, label) = match seed {
-        RadioSeed::Track(key) => match crate::plex::radio::track_station_key(&key) {
+    let (station_key, label) = match &seed {
+        RadioSeed::Track(key) => match crate::plex::radio::track_station_key(key) {
             Ok(k) => (k, label),
             Err(e) => {
                 tracing::warn!("radio: {e:#}");
                 return (label, RadioOutcome::Empty);
             }
         },
-        RadioSeed::Station(key) => (key, label),
-        RadioSeed::Artist(key) => match client.artist_station(&key).await {
+        RadioSeed::Station(key) => (key.clone(), label),
+        RadioSeed::Artist(key) => match client.artist_station(key).await {
             Ok(Some(s)) => (s.key, if s.title.is_empty() { label } else { s.title }),
             Ok(None) => return (label, RadioOutcome::NoStation),
             Err(e) => {
@@ -133,7 +129,8 @@ pub(super) async fn start(
     let Some(machine_id) = env.machine_id(client).await else {
         return (label, RadioOutcome::Empty);
     };
-    let outcome = match client.radio_tracks(client_id, &machine_id, &station_key, WANT).await {
+    let outcome = match client.radio_tracks(client_id, &machine_id, &station_key, seed, WANT).await
+    {
         Ok((t, queue)) if !t.is_empty() => RadioOutcome::Tracks(t, queue),
         Ok(_) => RadioOutcome::Empty,
         Err(e) => {
@@ -147,17 +144,42 @@ pub(super) async fn start(
 /// Worker side: replies once with `QueueOutcome::RadioMore`.
 pub(super) async fn more(
     client: &PlexClient,
+    features: &Mutex<Option<Features>>,
     env: &RadioEnv,
     tx: UnboundedSender<Msg>,
     seq: u64,
     queue: RadioQueue,
+    skip: HashSet<String>,
 ) {
     let reply = QueueReplyGuard::new(tx, seq);
     let result = match env.client_id.as_deref() {
-        Some(client_id) => client.radio_read_on(client_id, &queue, MORE).await,
+        Some(client_id) => match client.radio_read_on(client_id, &queue, MORE, &skip).await {
+            ReadOn::Gone => restart(client, features, env, queue.seed.clone(), &skip).await,
+            other => other,
+        },
         None => ReadOn::Failed("no client id".into()),
     };
     reply.send(QueueOutcome::RadioMore { id: queue.id, result });
+}
+
+async fn restart(
+    client: &PlexClient,
+    features: &Mutex<Option<Features>>,
+    env: &RadioEnv,
+    seed: RadioSeed,
+    skip: &HashSet<String>,
+) -> ReadOn {
+    tracing::info!("radio: the play queue is gone, starting the station again");
+    match start(client, features, env, seed, String::new()).await.1 {
+        RadioOutcome::Tracks(tracks, queue) => {
+            let tracks = tracks.into_iter().filter(|t| !skip.contains(&t.rating_key)).collect();
+            ReadOn::Restarted(tracks, queue)
+        }
+        other => {
+            tracing::warn!("radio: starting the station again: {}", other.problem());
+            ReadOn::Gone
+        }
+    }
 }
 
 struct Seed {
@@ -265,7 +287,8 @@ impl App {
     }
 
     pub(super) fn begin_radio(&mut self, name: String, queue: RadioQueue) {
-        self.radio = Some(ActiveRadio { name, queue, asked: None, failed_at: None });
+        let added = self.queue.items.iter().map(|t| t.rating_key.clone()).collect();
+        self.radio = Some(ActiveRadio { name, queue, asked: None, failed_at: None, added });
     }
 
     /// Radio plays in its own order.
@@ -296,12 +319,12 @@ impl App {
         {
             return;
         }
-        let queue = radio.queue.clone();
+        let (queue, skip) = (radio.queue.clone(), radio.added.clone());
         let seq = self.issue_seq(false);
         if let Some(radio) = self.radio.as_mut() {
             radio.asked = Some(seq);
         }
-        let _ = self.plex.tx.send(PlexCmd::RadioMore { seq, queue });
+        let _ = self.plex.tx.send(PlexCmd::RadioMore { seq, queue, skip });
     }
 
     pub(super) fn apply_radio_more(&mut self, id: &str, result: ReadOn) {
@@ -311,15 +334,23 @@ impl App {
         match result {
             ReadOn::Tracks(tracks, last) => {
                 radio.queue.last = last;
+                radio.added.extend(tracks.iter().map(|t| t.rating_key.clone()));
+                self.append_playable(tracks);
+            }
+            ReadOn::Restarted(tracks, queue) => {
+                radio.queue = queue;
+                radio.added.extend(tracks.iter().map(|t| t.rating_key.clone()));
                 self.append_playable(tracks);
             }
             ReadOn::Exhausted => {
                 let name = std::mem::take(&mut radio.name);
                 self.radio = None;
+                tracing::info!("radio ended: the station has no more tracks");
                 self.transient(format!("{name} has no more tracks"));
             }
             ReadOn::Gone => {
                 self.radio = None;
+                tracing::info!("radio ended: the station no longer exists");
                 self.transient_err("radio ended: the station no longer exists".into());
             }
             ReadOn::Failed(e) => {
@@ -327,5 +358,74 @@ impl App {
                 radio.failed_at = playing;
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::plex::client::testing::serve_full;
+    use tokio::sync::mpsc::unbounded_channel;
+
+    const KEY: &str = "/library/sections/1/stations/8";
+
+    fn queue_xml(n: usize) -> String {
+        let tracks: String = (1..=n)
+            .map(|i| {
+                format!(
+                    "<Track ratingKey=\"{i}\" key=\"/library/metadata/{i}\" title=\"T{i}\" playQueueItemID=\"{i}\"><Media><Part id=\"{i}\" key=\"/library/parts/{i}/f.mp3\"/></Media></Track>"
+                )
+            })
+            .collect();
+        format!("<MediaContainer playQueueID=\"10\">{tracks}</MediaContainer>")
+    }
+
+    /// Play queue 9 is gone; `create` is the status of `POST /playQueues`.
+    async fn read_more(create: u16) -> (ReadOn, String, Vec<String>) {
+        let (base, seen, _) = serve_full(move |line| match line {
+            l if l.starts_with("GET / ") => {
+                (200, "<MediaContainer ownerFeatures=\"radio\"/>".into())
+            }
+            l if l.starts_with("GET /identity") => {
+                (200, "<MediaContainer machineIdentifier=\"mid1\"/>".into())
+            }
+            l if l.starts_with("POST /playQueues") => (create, queue_xml(5)),
+            l if l.starts_with("GET /playQueues/10") => (200, queue_xml(5)),
+            _ => (404, String::new()),
+        })
+        .await;
+        let client = PlexClient::new(&base, "faketoken-radio");
+        let env = RadioEnv::new(Some("cid1".into()));
+        let (tx, mut rx) = unbounded_channel();
+        let seed = RadioSeed::Station(KEY.into());
+        let queue = RadioQueue { id: "9".into(), last: "30".into(), seed };
+        let skip = ["1", "2"].into_iter().map(String::from).collect();
+        more(&client, &Mutex::new(None), &env, tx, 4, queue, skip).await;
+        let Ok(Msg::QueueReply { seq: 4, outcome: QueueOutcome::RadioMore { id, result } }) =
+            rx.try_recv()
+        else {
+            panic!("expected one RadioMore reply");
+        };
+        let lines = seen.lock().unwrap().clone();
+        (result, id, lines)
+    }
+
+    #[tokio::test]
+    async fn a_gone_play_queue_starts_the_station_again_without_repeats() {
+        let (result, id, lines) = read_more(200).await;
+        assert_eq!(id, "9");
+        let ReadOn::Restarted(tracks, queue) = result else { panic!("expected a restart") };
+        let keys: Vec<_> = tracks.iter().map(|t| t.rating_key.as_str()).collect();
+        assert_eq!(keys, ["3", "4", "5"]);
+        let seed = RadioSeed::Station(KEY.into());
+        assert_eq!(queue, RadioQueue { id: "10".into(), last: "5".into(), seed });
+        assert_eq!(lines.iter().filter(|l| l.starts_with("POST ")).count(), 1);
+    }
+
+    #[tokio::test]
+    async fn a_station_that_cannot_start_again_is_gone() {
+        let (result, _, lines) = read_more(404).await;
+        assert!(matches!(result, ReadOn::Gone), "{result:?}");
+        assert_eq!(lines.iter().filter(|l| l.starts_with("POST ")).count(), 1);
     }
 }

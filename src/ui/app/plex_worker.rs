@@ -87,6 +87,7 @@ pub enum PlexCmd {
     RadioMore {
         seq: u64,
         queue: crate::plex::radio::RadioQueue,
+        skip: std::collections::HashSet<String>,
     },
     /// Replies once with `Msg::StationsLoaded`, never `Msg::Error`.
     LoadStations,
@@ -299,8 +300,8 @@ pub fn spawn_plex_worker(
                     PlexCmd::StartRadio { key, seed, label } => {
                         radio::run(&client, &features, &radio_env, &tx, key, seed, label).await;
                     }
-                    PlexCmd::RadioMore { seq, queue } => {
-                        radio::more(&client, &radio_env, tx, seq, queue).await;
+                    PlexCmd::RadioMore { seq, queue, skip } => {
+                        radio::more(&client, &features, &radio_env, tx, seq, queue, skip).await;
                     }
                     PlexCmd::LoadStations => {
                         discover::load_stations(&client, &section, &features, &tx).await;

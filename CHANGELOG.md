@@ -4,6 +4,12 @@ All notable changes to shmc are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+### Fixed
+
+- Radio no longer ends after its first tracks when another station was previewed or started; shmc starts the station again.
+
 ## 0.3.0 — 2026-11-20
 
 ### Added

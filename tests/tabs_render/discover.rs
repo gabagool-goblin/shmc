@@ -3,7 +3,7 @@
 use super::queue_requests::mpv_matches_queue;
 use super::*;
 use shmc::config::RatingStyle;
-use shmc::plex::radio::{RadioQueue, Station};
+use shmc::plex::radio::{RadioQueue, RadioSeed, Station};
 use shmc::ui::app::{DiscoverCol, Preview, StationsOutcome};
 
 type Plex = tokio::sync::mpsc::UnboundedReceiver<PlexCmd>;
@@ -43,7 +43,8 @@ fn station_key(k: u32) -> String {
 
 fn previewed(app: &mut App, k: u32, n: usize) {
     let tracks = (0..n).map(track).collect();
-    let queue = RadioQueue { id: "9".into(), last: format!("{}", n.saturating_sub(1)) };
+    let seed = RadioSeed::Station(station_key(k));
+    let queue = RadioQueue { id: "9".into(), last: format!("{}", n.saturating_sub(1)), seed };
     app.handle_msg(Msg::StationPreview {
         key: station_key(k),
         preview: Preview::Ready(tracks, queue),
