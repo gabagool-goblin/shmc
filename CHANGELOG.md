@@ -4,6 +4,12 @@ All notable changes to shmc are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [semantic versioning](https://semver.org/).
 
+## Unreleased
+
+### Changed
+
+- Building from source needs Rust 1.90 or newer.
+
 ## 0.3.1 — 2026-11-21
 
 ### Fixed

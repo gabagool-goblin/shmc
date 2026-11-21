@@ -22,7 +22,7 @@ pub fn image_picker() -> Option<Picker> {
     match (Picker::from_query_stdio().ok(), physical_cell_size()) {
         (Some(queried), Some(cell)) => {
             let picker = picker_with(cell, queried.protocol_type());
-            if queried.font_size() != cell {
+            if picker_cell(&queried) != cell {
                 tracing::info!(
                     queried = ?queried.font_size(),
                     physical = ?cell,
@@ -33,20 +33,31 @@ pub fn image_picker() -> Option<Picker> {
         }
         (Some(queried), None) => Some(queried),
         // No query answer, but the tty knows its pixels.
-        (None, Some(cell)) => Some(Picker::from_fontsize(cell)),
+        (None, Some(cell)) => Some(picker_from_cell(cell)),
         (None, None) => None,
     }
 }
 
 fn picker_with(cell: (u16, u16), protocol: ProtocolType) -> Picker {
-    let mut picker = Picker::from_fontsize(cell);
+    let mut picker = picker_from_cell(cell);
     picker.set_protocol_type(protocol);
     picker
 }
 
+// Deprecated without a replacement: no other constructor takes a cell size.
+#[allow(deprecated)]
+fn picker_from_cell(cell: (u16, u16)) -> Picker {
+    Picker::from_fontsize(cell.into())
+}
+
+pub fn picker_cell(picker: &Picker) -> (u16, u16) {
+    let size = picker.font_size();
+    (size.width, size.height)
+}
+
 /// For a cell size measured after startup; `None` when nothing changed.
 pub(crate) fn picker_for_cell(old: &Picker, measured: Option<(u16, u16)>) -> Option<Picker> {
-    let cell = measured.filter(|&cell| cell != old.font_size())?;
+    let cell = measured.filter(|&cell| cell != picker_cell(old))?;
     Some(picker_with(cell, old.protocol_type()))
 }
 
@@ -76,13 +87,13 @@ mod tests {
 
     #[test]
     fn new_cell_size_rebuilds_picker_same_protocol() {
-        let mut old = Picker::from_fontsize((10, 20));
+        let mut old = picker_from_cell((10, 20));
         old.set_protocol_type(ProtocolType::Iterm2);
 
         assert!(picker_for_cell(&old, Some((10, 20))).is_none(), "unchanged");
         assert!(picker_for_cell(&old, None).is_none(), "nothing measured");
         let new = picker_for_cell(&old, Some((22, 46))).expect("changed");
-        assert_eq!(new.font_size(), (22, 46));
+        assert_eq!(picker_cell(&new), (22, 46));
         assert_eq!(new.protocol_type(), ProtocolType::Iterm2);
     }
 

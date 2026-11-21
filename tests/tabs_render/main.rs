@@ -3,6 +3,7 @@
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
 use image::{DynamicImage, RgbaImage};
 use ratatui::backend::TestBackend;
+use ratatui::buffer::CellDiffOption;
 use ratatui::Terminal;
 use shmc::config::{KeyTable, MpvConfig, UiConfig};
 use shmc::playback::{mpv, MpvEvent};
@@ -204,7 +205,7 @@ async fn app_with_cover() -> (TestApp, Terminal<TestBackend>) {
     let mut app = new_app().await;
     app.tab = Tab::Queue;
     app.art_enabled = true;
-    app.picker = Some(ratatui_image::picker::Picker::from_fontsize((10, 20)));
+    app.picker = Some(ratatui_image::picker::Picker::halfblocks());
     app.art.img = Some(Arc::new(DynamicImage::ImageRgba8(RgbaImage::new(8, 8))));
     let mut terminal = Terminal::new(TestBackend::new(80, 30)).unwrap();
     terminal.draw(|f| views::draw(f, &mut app)).unwrap();
@@ -308,7 +309,7 @@ fn grid(app: &mut App, w: u16, h: u16) -> Vec<Vec<String>> {
 
 fn queue_app_with_art(app: &mut App, art: bool) {
     app.art_enabled = art;
-    app.picker = art.then(|| ratatui_image::picker::Picker::from_fontsize((10, 20)));
+    app.picker = art.then(ratatui_image::picker::Picker::halfblocks);
     app.queue.items = (0..30).map(track).collect();
     app.queue.state.select(Some(2));
     app.current = Some(2);
@@ -336,7 +337,8 @@ fn cells_skipped(
             let buf = f.buffer_mut();
             for y in rect.top()..rect.bottom() {
                 for x in rect.left()..rect.right() {
-                    all_skipped &= buf.cell((x, y)).is_some_and(|c| c.skip);
+                    all_skipped &=
+                        buf.cell((x, y)).is_some_and(|c| c.diff_option == CellDiffOption::Skip);
                 }
             }
         })
