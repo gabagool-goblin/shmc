@@ -9,20 +9,32 @@ use std::io::Read;
 /// The most reads of a play queue after the one that creates it.
 const MAX_READS: usize = 8;
 
-/// A play queue and the `playQueueItemID` of the last track shmc kept from it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RadioSeed {
+    Track(String),
+    Artist(String),
+    /// A library station's key.
+    Station(String),
+}
+
+/// A play queue and the `playQueueItemID` of the last track shmc read from it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RadioQueue {
     pub id: String,
     pub last: String,
+    pub seed: RadioSeed,
 }
 
 #[derive(Debug)]
 pub enum ReadOn {
-    /// New tracks, and the id of the last one.
+    /// New tracks, and the id of the last item read.
     Tracks(Vec<Track>, String),
-    /// Nothing follows the last kept track.
+    /// Nothing follows the last item read.
     Exhausted,
+    /// Plex deletes a client's play queue when it makes another.
     Gone,
+    /// New tracks from a new play queue for the same seed.
+    Restarted(Vec<Track>, RadioQueue),
     Failed(String),
 }
 
@@ -107,6 +119,7 @@ impl PlexClient {
         client_id: &str,
         machine_id: &str,
         station_key: &str,
+        seed: RadioSeed,
         want: usize,
     ) -> Result<(Vec<Track>, RadioQueue)> {
         let mut url = self.url_for("/playQueues")?;
@@ -143,18 +156,27 @@ impl PlexClient {
         }
         items.truncate(want);
         let last = items.last().map(|(_, i)| i.clone()).context("the play queue is empty")?;
-        Ok((items.into_iter().map(|(t, _)| t).collect(), RadioQueue { id, last }))
+        Ok((items.into_iter().map(|(t, _)| t).collect(), RadioQueue { id, last, seed }))
     }
 
-    /// Reads on from `queue.last` until it has `want` tracks; a failure keeps what was read.
-    pub async fn radio_read_on(&self, client_id: &str, queue: &RadioQueue, want: usize) -> ReadOn {
+    /// Reads on until `want` tracks not in `skip`; a failure keeps what was read.
+    pub async fn radio_read_on(
+        &self,
+        client_id: &str,
+        queue: &RadioQueue,
+        want: usize,
+        skip: &HashSet<String>,
+    ) -> ReadOn {
         let mut last = queue.last.clone();
         let mut found: Vec<(Track, String)> = Vec::new();
         for _ in 0..MAX_READS {
             match self.items_after(client_id, &queue.id, &last).await {
-                Ok(next) if next.is_empty() => break,
-                Ok(next) => found.extend(next),
-                Err(e) if found.is_empty() => {
+                Ok(next) => {
+                    let Some((_, i)) = next.last() else { break };
+                    last = i.clone();
+                    found.extend(next.into_iter().filter(|(t, _)| !skip.contains(&t.rating_key)));
+                }
+                Err(e) if last == queue.last => {
                     return if e.is::<PlayQueueGone>() {
                         ReadOn::Gone
                     } else {
@@ -169,15 +191,15 @@ impl PlexClient {
             if found.len() >= want {
                 break;
             }
-            if let Some((_, i)) = found.last() {
-                last = i.clone();
-            }
         }
-        found.truncate(want);
-        match found.last().map(|(_, i)| i.clone()) {
-            Some(last) => ReadOn::Tracks(found.into_iter().map(|(t, _)| t).collect(), last),
-            None => ReadOn::Exhausted,
+        if found.len() > want {
+            found.truncate(want);
+            last = found[want - 1].1.clone();
         }
+        if last == queue.last {
+            return ReadOn::Exhausted;
+        }
+        ReadOn::Tracks(found.into_iter().map(|(t, _)| t).collect(), last)
     }
 
     async fn items_after(
@@ -240,6 +262,14 @@ mod tests {
         format!("<MediaContainer playQueueID=\"9\">{tracks}</MediaContainer>")
     }
 
+    fn seed() -> RadioSeed {
+        RadioSeed::Station("/s".into())
+    }
+
+    fn queue(last: &str) -> RadioQueue {
+        RadioQueue { id: "9".into(), last: last.into(), seed: seed() }
+    }
+
     fn query(line: &str, name: &str) -> String {
         let url = url::Url::parse(&format!("http://x{}", line.split(' ').nth(1).unwrap())).unwrap();
         url.query_pairs().find(|(k, _)| k == name).unwrap().1.into_owned()
@@ -263,8 +293,8 @@ mod tests {
         let (base, seen, full) = server(100).await;
         let client = PlexClient::new(&base, "faketoken-radio");
         let key = "/library/metadata/7/station/u-1?type=10";
-        let (tracks, queue) = client.radio_tracks("cid1", "mid1", key, 30).await.unwrap();
-        assert_eq!(queue, RadioQueue { id: "9".into(), last: "30".into() });
+        let (tracks, queue) = client.radio_tracks("cid1", "mid1", key, seed(), 30).await.unwrap();
+        assert_eq!(queue, RadioQueue { id: "9".into(), last: "30".into(), seed: seed() });
         let keys: Vec<_> = tracks.iter().map(|t| t.rating_key.clone()).collect();
         let expected: Vec<_> = (1..=30).map(|i| i.to_string()).collect();
         assert_eq!(keys, expected);
@@ -284,7 +314,8 @@ mod tests {
     async fn a_read_that_adds_nothing_ends_the_loop() {
         let (base, seen, _) = server(10).await;
         let client = PlexClient::new(&base, "faketoken-radio");
-        let (tracks, queue) = client.radio_tracks("cid1", "mid1", "/s?type=10", 30).await.unwrap();
+        let (tracks, queue) =
+            client.radio_tracks("cid1", "mid1", "/s?type=10", seed(), 30).await.unwrap();
         assert_eq!(queue.last, "10");
         assert_eq!(tracks.len(), 10);
         assert_eq!(seen.lock().unwrap().len(), 3);
@@ -294,7 +325,8 @@ mod tests {
     async fn a_station_with_more_than_wanted_keeps_only_wanted_and_its_last_item() {
         let (base, _, _) = server(100).await;
         let client = PlexClient::new(&base, "faketoken-radio");
-        let (tracks, queue) = client.radio_tracks("cid1", "mid1", "/s?type=10", 12).await.unwrap();
+        let (tracks, queue) =
+            client.radio_tracks("cid1", "mid1", "/s?type=10", seed(), 12).await.unwrap();
         assert_eq!(tracks.len(), 12);
         assert_eq!(queue.last, "12");
     }
@@ -303,8 +335,10 @@ mod tests {
     async fn reading_on_returns_only_items_after_the_last_and_stops_at_want() {
         let (base, seen, full) = server(100).await;
         let client = PlexClient::new(&base, "faketoken-radio");
-        let queue = RadioQueue { id: "9".into(), last: "30".into() };
-        let ReadOn::Tracks(tracks, last) = client.radio_read_on("cid1", &queue, 8).await else {
+        let queue = RadioQueue { id: "9".into(), last: "30".into(), seed: seed() };
+        let ReadOn::Tracks(tracks, last) =
+            client.radio_read_on("cid1", &queue, 8, &HashSet::new()).await
+        else {
             panic!("expected tracks");
         };
         let keys: Vec<_> = tracks.iter().map(|t| t.rating_key.clone()).collect();
@@ -320,23 +354,54 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn reading_on_skips_tracks_in_skip_but_reads_past_them() {
+        let (base, _, _) = server(100).await;
+        let client = PlexClient::new(&base, "faketoken-radio");
+        let skip: HashSet<String> = (31..=40).map(|i| i.to_string()).collect();
+        let ReadOn::Tracks(tracks, last) =
+            client.radio_read_on("cid1", &queue("30"), 3, &skip).await
+        else {
+            panic!("expected tracks");
+        };
+        let keys: Vec<_> = tracks.iter().map(|t| t.rating_key.clone()).collect();
+        assert_eq!(keys, ["41", "42", "43"]);
+        assert_eq!(last, "43");
+
+        let (base, _, _) = server(35).await;
+        let client = PlexClient::new(&base, "faketoken-radio");
+        let ReadOn::Tracks(tracks, last) =
+            client.radio_read_on("cid1", &queue("30"), 3, &skip).await
+        else {
+            panic!("expected an empty read that moves on");
+        };
+        assert!(tracks.is_empty());
+        assert_eq!(last, "35");
+    }
+
+    #[tokio::test]
     async fn reading_on_from_the_end_of_the_station_is_exhausted() {
         let (base, _, _) = server(10).await;
         let client = PlexClient::new(&base, "faketoken-radio");
-        let queue = RadioQueue { id: "9".into(), last: "10".into() };
-        assert!(matches!(client.radio_read_on("cid1", &queue, 20).await, ReadOn::Exhausted));
+        assert!(matches!(
+            client.radio_read_on("cid1", &queue("10"), 20, &HashSet::new()).await,
+            ReadOn::Exhausted
+        ));
     }
 
     #[tokio::test]
     async fn reading_on_a_dropped_play_queue_is_gone_and_a_lost_item_is_a_failure() {
         let (base, _, _) = serve_full(|_| (404, String::new())).await;
         let client = PlexClient::new(&base, "faketoken-radio");
-        let queue = RadioQueue { id: "9".into(), last: "10".into() };
-        assert!(matches!(client.radio_read_on("cid1", &queue, 20).await, ReadOn::Gone));
+        assert!(matches!(
+            client.radio_read_on("cid1", &queue("10"), 20, &HashSet::new()).await,
+            ReadOn::Gone
+        ));
         let (base, _, _) = server(10).await;
         let client = PlexClient::new(&base, "faketoken-radio");
-        let queue = RadioQueue { id: "9".into(), last: "99".into() };
-        assert!(matches!(client.radio_read_on("cid1", &queue, 20).await, ReadOn::Failed(_)));
+        assert!(matches!(
+            client.radio_read_on("cid1", &queue("99"), 20, &HashSet::new()).await,
+            ReadOn::Failed(_)
+        ));
     }
 
     #[test]

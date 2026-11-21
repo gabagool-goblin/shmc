@@ -4,6 +4,7 @@ use super::*;
 use shmc::plex::models::{Album, Artist, HitKind, SearchHit};
 use shmc::plex::radio::{RadioQueue, ReadOn};
 use shmc::ui::app::{BrowserCol, RadioOutcome, RadioSeed, SearchDetail};
+use std::collections::HashSet;
 
 type Plex = tokio::sync::mpsc::UnboundedReceiver<PlexCmd>;
 
@@ -38,6 +39,10 @@ async fn on_browser() -> (TestApp, Plex) {
     (app, plex)
 }
 
+fn seed() -> RadioSeed {
+    RadioSeed::Artist("ar1".into())
+}
+
 fn loaded(key: &str) -> Msg {
     loaded_n(key, 2)
 }
@@ -45,7 +50,7 @@ fn loaded(key: &str) -> Msg {
 /// A radio of `n` tracks, t10 on, from play queue 9.
 fn loaded_n(key: &str, n: usize) -> Msg {
     let tracks: Vec<_> = (10..10 + n).map(track).collect();
-    let queue = RadioQueue { id: "9".into(), last: format!("q{}", 9 + n) };
+    let queue = RadioQueue { id: "9".into(), last: format!("q{}", 9 + n), seed: seed() };
     Msg::RadioLoaded {
         key: key.into(),
         label: "Northwind Sounds Radio".into(),
@@ -149,11 +154,12 @@ async fn reply_for_a_request_no_longer_pending_is_ignored() {
     assert_eq!(app.tab, Tab::Browser);
 }
 
-fn reads(plex: &mut Plex) -> Vec<(u64, RadioQueue)> {
+/// `(seq, queue, skip)` of every read for more tracks.
+fn reads(plex: &mut Plex) -> Vec<(u64, RadioQueue, HashSet<String>)> {
     sent(plex)
         .into_iter()
         .filter_map(|c| match c {
-            PlexCmd::RadioMore { seq, queue } => Some((seq, queue)),
+            PlexCmd::RadioMore { seq, queue, skip } => Some((seq, queue, skip)),
             _ => None,
         })
         .collect()
@@ -222,7 +228,7 @@ async fn nearing_the_end_asks_for_more_once_while_the_read_is_in_flight() {
     let (mut app, mut plex) = radio_playing(8).await;
     let asked = reads(&mut plex);
     assert_eq!(asked.len(), 1);
-    assert_eq!(asked[0].1, RadioQueue { id: "9".into(), last: "q17".into() });
+    assert_eq!(asked[0].1, RadioQueue { id: "9".into(), last: "q17".into(), seed: seed() });
     app.handle_msg(Msg::Cava(Vec::new()));
     assert!(reads(&mut plex).is_empty(), "one read in flight");
 }
@@ -230,7 +236,7 @@ async fn nearing_the_end_asks_for_more_once_while_the_read_is_in_flight() {
 #[tokio::test]
 async fn the_reply_appends_to_the_queue_and_mpv_and_the_next_read_starts_after_it() {
     let (mut app, mut plex) = radio_playing(8).await;
-    let (seq, _) = reads(&mut plex).remove(0);
+    let (seq, ..) = reads(&mut plex).remove(0);
     let new: Vec<_> = (100..103).map(track).collect();
     app.handle_msg(more(seq, ReadOn::Tracks(new, "q102".into())));
     assert_eq!(queue_keys(&app).len(), 11);
@@ -243,9 +249,35 @@ async fn the_reply_appends_to_the_queue_and_mpv_and_the_next_read_starts_after_i
 }
 
 #[tokio::test]
+async fn each_read_skips_every_track_the_radio_added() {
+    let (mut app, mut plex) = radio_playing(8).await;
+    let (seq, _, skip) = reads(&mut plex).remove(0);
+    let first: HashSet<String> = (10..18).map(|i| format!("t{i}")).collect();
+    assert_eq!(skip, first);
+    app.handle_msg(more(seq, ReadOn::Tracks(vec![track(100)], "q100".into())));
+    let (_, _, skip) = reads(&mut plex).remove(0);
+    assert_eq!(skip.len(), 9);
+    assert!(skip.contains("t100"));
+}
+
+#[tokio::test]
+async fn a_restarted_station_appends_and_reads_on_from_its_new_play_queue() {
+    let (mut app, mut plex) = radio_playing(8).await;
+    let (seq, ..) = reads(&mut plex).remove(0);
+    let queue = RadioQueue { id: "12".into(), last: "q5".into(), seed: seed() };
+    app.handle_msg(more(seq, ReadOn::Restarted(vec![track(200), track(201)], queue.clone())));
+    assert_eq!(queue_keys(&app)[8..], ["t200", "t201"]);
+    assert!(app.radio.is_some());
+    assert!(super::queue_requests::mpv_matches_queue(&app).await);
+    let (_, next, skip) = reads(&mut plex).remove(0);
+    assert_eq!(next, queue);
+    assert!(skip.contains("t201"));
+}
+
+#[tokio::test]
 async fn a_replace_ends_the_radio_and_a_late_reply_changes_nothing() {
     let (mut app, mut plex) = radio_playing(8).await;
-    let (seq, _) = reads(&mut plex).remove(0);
+    let (seq, ..) = reads(&mut plex).remove(0);
     open_album(&mut app);
     app.handle_msg(enter());
     assert!(app.radio.is_none());
@@ -257,7 +289,7 @@ async fn a_replace_ends_the_radio_and_a_late_reply_changes_nothing() {
 #[tokio::test]
 async fn a_clear_ends_the_radio_and_a_late_reply_changes_nothing() {
     let (mut app, mut plex) = radio_playing(8).await;
-    let (seq, _) = reads(&mut plex).remove(0);
+    let (seq, ..) = reads(&mut plex).remove(0);
     app.clear_queue();
     assert!(app.radio.is_none());
     app.handle_msg(more(seq, ReadOn::Tracks(vec![track(100)], "q100".into())));
@@ -267,7 +299,7 @@ async fn a_clear_ends_the_radio_and_a_late_reply_changes_nothing() {
 #[tokio::test]
 async fn an_exhausted_station_ends_the_radio_with_its_name() {
     let (mut app, mut plex) = radio_playing(8).await;
-    let (seq, _) = reads(&mut plex).remove(0);
+    let (seq, ..) = reads(&mut plex).remove(0);
     app.handle_msg(more(seq, ReadOn::Exhausted));
     assert!(app.radio.is_none());
     assert_eq!(app.status, "Northwind Sounds Radio has no more tracks");
@@ -279,7 +311,7 @@ async fn an_exhausted_station_ends_the_radio_with_its_name() {
 #[tokio::test]
 async fn a_dropped_play_queue_ends_the_radio() {
     let (mut app, mut plex) = radio_playing(8).await;
-    let (seq, _) = reads(&mut plex).remove(0);
+    let (seq, ..) = reads(&mut plex).remove(0);
     app.handle_msg(more(seq, ReadOn::Gone));
     assert!(app.radio.is_none());
     assert_eq!(app.status, "radio ended: the station no longer exists");
@@ -288,7 +320,7 @@ async fn a_dropped_play_queue_ends_the_radio() {
 #[tokio::test]
 async fn a_failed_read_asks_again_only_once_the_playing_track_changes() {
     let (mut app, mut plex) = radio_playing(8).await;
-    let (seq, _) = reads(&mut plex).remove(0);
+    let (seq, ..) = reads(&mut plex).remove(0);
     app.handle_msg(more(seq, ReadOn::Failed("boom".into())));
     assert!(app.radio.is_some(), "the radio stays");
     assert!(!app.status.contains("boom"), "{}", app.status);
