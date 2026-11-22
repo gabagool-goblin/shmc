@@ -24,6 +24,8 @@ enum Fetch {
 
 #[derive(Default)]
 struct ListData {
+    /// Bumped on every reset, so a reply to an earlier load is dropped.
+    generation: u64,
     loaded: bool,
     fetch: Fetch,
     tracks: Vec<Track>,
@@ -37,14 +39,22 @@ struct ListData {
 
 #[derive(Default)]
 pub struct Library {
-    generation: u64,
     lists: [ListData; 3],
+}
+
+impl ListData {
+    fn reset(&mut self) {
+        *self = Self { generation: self.generation + 1, ..Default::default() };
+    }
 }
 
 impl Library {
     pub fn reset(&mut self) {
-        self.generation += 1;
-        self.lists = Default::default();
+        self.lists.iter_mut().for_each(ListData::reset);
+    }
+
+    pub fn reset_list(&mut self, list: LibraryList) {
+        self.lists[list.index()].reset();
     }
 
     pub fn message(&self, list: LibraryList) -> String {
@@ -88,9 +98,9 @@ impl App {
     }
 
     fn request_library(&mut self, list: LibraryList, start: usize) {
-        let lib = &mut self.discover.library;
-        lib.lists[list.index()].fetch = Fetch::Loading;
-        let cmd = DiscoverCmd::LoadLibrary { list, generation: lib.generation, start };
+        let data = &mut self.discover.library.lists[list.index()];
+        data.fetch = Fetch::Loading;
+        let cmd = DiscoverCmd::LoadLibrary { list, generation: data.generation, start };
         let _ = self.plex.tx.send(PlexCmd::Discover(cmd));
     }
 
@@ -149,10 +159,9 @@ impl App {
         start: usize,
         outcome: LibraryOutcome,
     ) {
-        let lib = &mut self.discover.library;
-        let data = &mut lib.lists[list.index()];
+        let data = &mut self.discover.library.lists[list.index()];
         let expected = if list == LibraryList::NeverPlayed { 0 } else { data.fetched };
-        if generation != lib.generation || start != expected || data.fetch != Fetch::Loading {
+        if generation != data.generation || start != expected || data.fetch != Fetch::Loading {
             return;
         }
         data.fetch = Fetch::Idle;
