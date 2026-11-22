@@ -187,7 +187,7 @@ impl App {
         match current {
             Some(c) => {
                 let _ = self.mpv.tx.send(MpvCmd::SetPause { paused: true });
-                self.play_queue_index(c);
+                self.start_queue_index(c);
                 self.paused = true;
                 self.position = position;
                 self.restore.seek = (position > 0.0).then_some((c, position));
