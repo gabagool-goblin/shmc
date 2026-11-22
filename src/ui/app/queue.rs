@@ -219,6 +219,7 @@ impl App {
         self.queue.items = playable;
         self.removed.clear();
         self.drop_visual(ListRef::Queue);
+        self.unpause();
         let _ = self.mpv.tx.send(MpvCmd::Play(items));
         self.current = Some(0);
         self.expect_pos = None;
@@ -280,6 +281,19 @@ impl App {
     }
 
     pub fn play_queue_index(&mut self, idx: usize) {
+        if idx >= self.queue.items.len() {
+            return;
+        }
+        self.unpause();
+        self.start_queue_index(idx);
+    }
+
+    fn unpause(&mut self) {
+        let _ = self.mpv.tx.send(MpvCmd::SetPause { paused: false });
+        self.paused = false;
+    }
+
+    pub(super) fn start_queue_index(&mut self, idx: usize) {
         if idx >= self.queue.items.len() {
             return;
         }

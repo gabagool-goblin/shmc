@@ -63,6 +63,25 @@ async fn restored_queue_comes_back_paused_where_it_was() {
 }
 
 #[tokio::test]
+async fn playing_after_a_paused_restore_unpauses() {
+    let (mut app, mut plex) = new_app_with_plex().await;
+    let sent = restore(&mut app, &mut plex, saved(&[1, 2], Some(0), 30.0), &[1, 2]);
+    assert!(!sent.iter().any(|c| matches!(c, MpvCmd::SetPause { paused: false })), "{sent:?}");
+
+    let (mpv_tx, mut mpv) = unbounded_channel();
+    app.mpv.tx = mpv_tx;
+    app.replace_queue_and_play((5..8).map(track).collect(), Confirm::Tracks);
+    app.play_queue_index(1);
+    let sent: Vec<MpvCmd> = std::iter::from_fn(|| mpv.try_recv().ok()).collect();
+    let unpaused = |c: &MpvCmd| matches!(c, MpvCmd::SetPause { paused: false });
+    let play = sent.iter().position(|c| matches!(c, MpvCmd::Play(_)));
+    let row = sent.iter().position(|c| matches!(c, MpvCmd::PlayIndex(1)));
+    assert!(sent[..play.unwrap()].iter().any(unpaused), "an album starts unpaused: {sent:?}");
+    assert!(sent[play.unwrap()..row.unwrap()].iter().any(unpaused), "so does a queue row");
+    assert!(!app.paused);
+}
+
+#[tokio::test]
 async fn missing_playing_track_hands_over_from_its_start() {
     let (mut app, mut plex) = new_app_with_plex().await;
     let sent = restore(&mut app, &mut plex, saved(&[1, 9, 2], Some(1), 42.0), &[1, 2]);
