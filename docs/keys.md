@@ -88,17 +88,20 @@ Results open in the Search tab, where the usual keys work. `Esc` goes back a ste
 
 ## Discover
 
-The Discover tab lists the library's radio stations (Plex Pass and `plex.allow_writes`). The highlighted station's first 30 tracks show on the right, and `Enter` plays them as a radio.
+The Discover tab lists Plex's shelves for the library, such as recently added albums, popular artists and recent playlists, and below them its radio stations (Plex Pass and `plex.allow_writes`). The highlighted shelf's items show on the right. The highlighted station's first 30 tracks show there instead, and `Enter` plays them as a radio.
+
+`Enter` on an album opens its tracks, on an artist their albums and on a playlist its first tracks. `Esc` goes back. `:refresh` loads the shelves again.
 
 | Key | Action |
 |---|---|
-| `Enter` | Play the station, or the track and the rest |
-| `h`, `l` | Focus the stations / the tracks |
-| `a` | Add the track to the queue |
-| `i` | Insert the track after the playing track |
+| `Enter` | Play the station, or the track and the rest; open an album, artist or playlist |
+| `h`, `l` | Focus the sections / the list |
+| `a` | Add the track, album, artist or playlist to the queue |
+| `i` | Insert it after the playing track |
 | `v` | Select a range of tracks |
 | `m`, `s` | Similar tracks, track radio |
 | `b` | Open the track in Browser |
+| `Esc` | Go back; clear the Sonic Adventure stops |
 
 ## Browser, Playlists and Search
 
@@ -140,6 +143,7 @@ Press `:` to open the command line.
 | `:sleep N`, `:sleep off` | Set sleep timer in minutes or cancel |
 | `:queue`, `:discover`, `:browser`, `:playlists`, `:search`, `:help` | Switch tabs |
 | `:playing` | Jump to playing track |
+| `:refresh` | Reload Discover's shelves |
 | `:clear` | Clear queue |
 | `:save NAME` | Save queue as a new Plex playlist |
 

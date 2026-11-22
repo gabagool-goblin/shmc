@@ -219,7 +219,7 @@ impl App {
             ListRef::BTracks => self.browser.tracks.items.get(real).map(Seed::track),
             ListRef::PlItems => self.playlists.tracks.items.get(real).map(Seed::track),
             ListRef::SearchDetail => self.search.detail.as_ref()?.tracks.get(real).map(Seed::track),
-            ListRef::DTracks => self.discover.tracks.get(real).map(Seed::track),
+            ListRef::DTracks => self.discover.tracks().get(real).map(Seed::track),
             ListRef::BArtists => {
                 self.browser.artists.items.get(real).map(|a| Seed::artist(&a.rating_key, &a.title))
             }

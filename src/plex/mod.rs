@@ -1,5 +1,6 @@
 pub mod client;
 pub mod client_id;
+pub mod discover;
 pub mod models;
 pub mod radio;
 pub mod report;

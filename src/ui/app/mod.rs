@@ -37,7 +37,8 @@ mod similar;
 
 pub use adventure::{Adventure, AdventureOutcome, Stop};
 pub use discover::{
-    DiscoverCmd, DiscoverCol, DiscoverMsg, DiscoverView, Preview, StationsLoad, StationsOutcome,
+    trail, DiscoverCmd, DiscoverCol, DiscoverLoad, DiscoverMsg, DiscoverView, ItemsPane, OpenKind,
+    Opened, Pane, Preview, Row, TracksPane, TracksSource,
 };
 pub use list::FilteredList;
 pub use list_request::{ListKind, ListRequest};
@@ -435,8 +436,9 @@ pub enum ListRef {
     PlItems,
     Search,
     SearchDetail,
-    DStations,
+    DSections,
     DTracks,
+    DItems,
     Help,
 }
 

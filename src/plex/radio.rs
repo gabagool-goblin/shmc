@@ -1,7 +1,7 @@
 //! Plex radio: artist and track stations and the play queues built from them.
 
 use super::client::{read_capped, redirect_error, PlexClient, MAX_XML_BYTES};
-use super::models::{MediaContainer, Track};
+use super::models::{MediaContainer, Track, WirePlaylist};
 use anyhow::{bail, Context, Result};
 use std::collections::HashSet;
 use std::io::Read;
@@ -55,20 +55,13 @@ pub struct Station {
     pub title: String,
 }
 
-/// The first station an artist lists.
-pub fn station_from(c: MediaContainer) -> Option<Station> {
-    let station =
-        c.directories.into_iter().find_map(|d| d.stations?.stations.into_iter().next())?;
-    Some(Station { key: station.key, title: station.title.unwrap_or_default() })
+pub(crate) fn station_of(p: WirePlaylist) -> Option<Station> {
+    Some(Station { key: p.key?, title: p.title.unwrap_or_default() })
 }
 
-/// The `station` hub's stations, in server order.
-pub fn stations_from(c: MediaContainer) -> Vec<Station> {
-    let hub = c.hubs.into_iter().find(|h| h.type_.as_deref() == Some("station"));
-    hub.into_iter()
-        .flat_map(|h| h.stations)
-        .map(|s| Station { key: s.key, title: s.title.unwrap_or_default() })
-        .collect()
+/// The first station an artist lists.
+pub fn station_from(c: MediaContainer) -> Option<Station> {
+    c.directories.into_iter().find_map(|d| d.stations?.stations.into_iter().find_map(station_of))
 }
 
 /// The play queue's id and its tracks in order, each with its `playQueueItemID`.
@@ -105,12 +98,6 @@ impl PlexClient {
     pub async fn artist_station(&self, key: &str) -> Result<Option<Station>> {
         let c = self.get_xml(&format!("/library/metadata/{key}?includeStations=1")).await?;
         Ok(station_from(c))
-    }
-
-    /// The library's radio stations (Plex Pass).
-    pub async fn library_stations(&self, section: &str) -> Result<Vec<Station>> {
-        let c = self.get_xml(&format!("/hubs/sections/{section}?includeStations=1")).await?;
-        Ok(stations_from(c))
     }
 
     /// The first `want` tracks of a new play queue; a failed read after the create keeps the rest.

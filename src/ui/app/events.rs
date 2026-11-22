@@ -345,7 +345,7 @@ impl App {
             }
         }
         self.preview_playlist();
-        self.follow_station();
+        self.follow_discover();
         self.follow_radio();
     }
 

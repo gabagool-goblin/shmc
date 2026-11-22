@@ -68,15 +68,7 @@ pub struct WireDirectory {
 #[derive(Debug, Clone, Default, Deserialize)]
 pub struct WireStations {
     #[serde(rename = "Playlist", default)]
-    pub stations: Vec<WireStation>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct WireStation {
-    #[serde(rename = "@key")]
-    pub key: String,
-    #[serde(rename = "@title", default)]
-    pub title: Option<String>,
+    pub stations: Vec<WirePlaylist>,
 }
 
 impl WireDirectory {
@@ -164,8 +156,11 @@ pub struct WireTrack {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct WirePlaylist {
-    #[serde(rename = "@ratingKey")]
-    pub rating_key: String,
+    /// A station has only a `key`; a playlist has both.
+    #[serde(rename = "@ratingKey", default)]
+    pub rating_key: Option<String>,
+    #[serde(rename = "@key", default)]
+    pub key: Option<String>,
     #[serde(rename = "@title", default)]
     pub title: Option<String>,
     /// "1" for smart playlists.
@@ -192,15 +187,16 @@ pub struct WirePlaylist {
 pub struct WireHub {
     #[serde(rename = "@type", default)]
     pub type_: Option<String>,
+    #[serde(rename = "@hubIdentifier", default)]
+    pub identifier: Option<String>,
     #[serde(rename = "@title", default)]
     pub title: Option<String>,
     #[serde(rename = "Directory", default)]
     pub directories: Vec<WireDirectory>,
     #[serde(rename = "Track", default)]
     pub tracks: Vec<WireTrack>,
-    /// The stations of a `station` hub.
     #[serde(rename = "Playlist", default)]
-    pub stations: Vec<WireStation>,
+    pub playlists: Vec<WirePlaylist>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -399,16 +395,16 @@ impl WireDirectory {
 }
 
 impl WirePlaylist {
-    pub fn into_playlist(self) -> Playlist {
-        Playlist {
-            rating_key: self.rating_key,
+    pub fn into_playlist(self) -> Option<Playlist> {
+        Some(Playlist {
+            rating_key: self.rating_key?,
             title: self.title.unwrap_or_default(),
             smart: self.smart.as_deref() == Some("1"),
             item_count: self.leaf_count,
             duration_ms: self.duration,
             thumb: self.thumb.or(self.composite),
             summary: self.summary,
-        }
+        })
     }
 }
 

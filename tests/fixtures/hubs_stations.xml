@@ -1,9 +1,0 @@
-<MediaContainer size="2" allowSync="0" librarySectionID="1">
-<Hub hubKey="/library/sections/1/albums" key="/hubs/sections/1/recent" title="Recently Added" type="album" hubIdentifier="music.recent.added" context="hub.music.recent.added" size="1" more="1" style="shelf" promoted="1"><Directory ratingKey="11" key="/library/metadata/11/children" type="album" title="Evening Satellite" parentTitle="Northwind Sounds"/></Hub>
-<Hub title="Stations" type="station" hubIdentifier="music.stations.1" context="hub.music.stations" size="4" more="0" style="grid">
-<Playlist key="/library/sections/1/stations/1" guid="tv.plex://station/library" type="playlist" title="Library Radio" smart="1" playlistType="audio" leafCount="0" icon="playlist://image.radio" radio="1"/>
-<Playlist key="/library/sections/1/stations/8" guid="tv.plex://station/deep-cuts" type="playlist" title="Deep Cuts Radio" smart="1" playlistType="audio" leafCount="0" icon="playlist://image.radio" radio="1"/>
-<Playlist key="/library/sections/1/stations/2" guid="tv.plex://station/history" type="playlist" title="Time Travel Radio" smart="1" playlistType="audio" leafCount="0" icon="playlist://image.radio" radio="1"/>
-<Playlist key="/library/sections/1/stations/3" guid="tv.plex://station/album" type="playlist" title="Random Album Radio" smart="1" playlistType="audio" leafCount="0" icon="playlist://image.radio" radio="1"/>
-</Hub>
-</MediaContainer>

@@ -1,4 +1,7 @@
-use super::{App, BrowserCol, ListRef, PendingGoto, PlaylistsCol, PlexCmd, SelState, Tab};
+use super::{
+    move_sel, App, BrowserCol, ListRef, Pane, PendingGoto, PlaylistsCol, PlexCmd, Row, SelState,
+    Tab,
+};
 use crate::ui::filter::{self, ListFilter};
 use crate::ui::keymap::{Act, KeyCtx};
 use crate::ui::scroll::{self, ScrollId};
@@ -13,8 +16,9 @@ fn scroll_id(l: ListRef) -> ScrollId {
         ListRef::PlItems => ScrollId::PlaylistItems,
         ListRef::Search => ScrollId::SearchResults,
         ListRef::SearchDetail => ScrollId::SearchDetail,
-        ListRef::DStations => ScrollId::DiscoverStations,
+        ListRef::DSections => ScrollId::DiscoverSections,
         ListRef::DTracks => ScrollId::DiscoverTracks,
+        ListRef::DItems => ScrollId::DiscoverItems,
         ListRef::Help => ScrollId::Help,
     }
 }
@@ -30,8 +34,9 @@ fn scope_label(l: ListRef) -> &'static str {
         ListRef::PlItems => "Playlist tracks",
         ListRef::Search => "Search",
         ListRef::SearchDetail => "Album",
-        ListRef::DStations => "Stations",
-        ListRef::DTracks => "Station tracks",
+        ListRef::DSections => "Discover",
+        ListRef::DTracks => "Tracks",
+        ListRef::DItems => "Items",
         ListRef::Help => "Help",
     }
 }
@@ -192,8 +197,9 @@ impl App {
             ListRef::PlItems => Some(&self.playlists.tracks.filter),
             ListRef::Search
             | ListRef::SearchDetail
-            | ListRef::DStations
+            | ListRef::DSections
             | ListRef::DTracks
+            | ListRef::DItems
             | ListRef::Help => None,
         }
     }
@@ -208,8 +214,9 @@ impl App {
             ListRef::PlItems => Some(&mut self.playlists.tracks.filter),
             ListRef::Search
             | ListRef::SearchDetail
-            | ListRef::DStations
+            | ListRef::DSections
             | ListRef::DTracks
+            | ListRef::DItems
             | ListRef::Help => None,
         }
     }
@@ -226,8 +233,12 @@ impl App {
             ListRef::SearchDetail => {
                 self.search.detail.as_ref().map(|d| d.tracks.len()).unwrap_or(0)
             }
-            ListRef::DStations => self.discover.stations.len(),
-            ListRef::DTracks => self.discover.tracks.len(),
+            ListRef::DSections => self.discover.rows.len(),
+            ListRef::DTracks => self.discover.tracks().len(),
+            ListRef::DItems => match &self.discover.pane {
+                Pane::Items(p) => p.items.len(),
+                _ => 0,
+            },
             ListRef::Help => self.keymap.help_lines().len(),
         }
     }
@@ -250,8 +261,15 @@ impl App {
             ListRef::PlItems => self.playlists.tracks.state.selected(),
             ListRef::Search => self.search.state.selected(),
             ListRef::SearchDetail => self.search.detail.as_ref().and_then(|d| d.state.selected()),
-            ListRef::DStations => self.discover.stations_state.selected(),
-            ListRef::DTracks => self.discover.tracks_state.selected(),
+            ListRef::DSections => self.discover.sections_state.selected(),
+            ListRef::DTracks => match &self.discover.pane {
+                Pane::Tracks(p) => p.state.selected(),
+                _ => None,
+            },
+            ListRef::DItems => match &self.discover.pane {
+                Pane::Items(p) => p.state.selected(),
+                _ => None,
+            },
             ListRef::Help => self.help_state.selected(),
         }
     }
@@ -288,8 +306,17 @@ impl App {
                     f(&mut d.state, vis);
                 }
             }
-            ListRef::DStations => f(&mut self.discover.stations_state, vis),
-            ListRef::DTracks => f(&mut self.discover.tracks_state, vis),
+            ListRef::DSections => f(&mut self.discover.sections_state, vis),
+            ListRef::DTracks => {
+                if let Pane::Tracks(p) = &mut self.discover.pane {
+                    f(&mut p.state, vis);
+                }
+            }
+            ListRef::DItems => {
+                if let Pane::Items(p) = &mut self.discover.pane {
+                    f(&mut p.state, vis);
+                }
+            }
             ListRef::Help => f(&mut self.help_state, vis),
         }
     }
@@ -333,6 +360,9 @@ impl App {
     pub(super) fn page(&mut self, dir: i32) {
         let l = self.active_list();
         let visible = self.scroll.visible(scroll_id(l)).max(1);
+        if l == ListRef::DSections {
+            return self.discover_page(dir, visible);
+        }
         let vis = self.vis_len(l);
         self.with_sel(|st, _| {
             if vis == 0 {
@@ -342,6 +372,22 @@ impl App {
             let cur = st.selected().unwrap_or(0);
             let next = scroll::page_jump(cur, visible, vis, dir);
             st.select(Some(next));
+        });
+    }
+
+    pub(super) fn step(&mut self, delta: i32) {
+        if self.active_list() == ListRef::DSections {
+            return self.discover_step(delta);
+        }
+        self.with_sel(|st, vis| move_sel(st, vis, delta));
+    }
+
+    pub(super) fn edge(&mut self, top: bool) {
+        if self.active_list() == ListRef::DSections {
+            return self.discover_edge(top);
+        }
+        self.with_sel(|st, vis| {
+            st.select((vis > 0).then(|| if top { 0 } else { vis - 1 }));
         });
     }
 
@@ -479,8 +525,16 @@ impl App {
                 .as_ref()
                 .and_then(|d| d.tracks.get(real))
                 .map(|t| t.title.as_str()),
-            ListRef::DStations => self.discover.stations.get(real).map(|s| s.title.as_str()),
-            ListRef::DTracks => self.discover.tracks.get(real).map(|t| t.title.as_str()),
+            ListRef::DSections => match self.discover.rows.get(real)? {
+                Row::Shelf(i) => self.discover.shelves.get(*i).map(|s| s.title.as_str()),
+                Row::Station(i) => self.discover.stations.get(*i).map(|s| s.title.as_str()),
+                Row::Heading(_) | Row::Blank => None,
+            },
+            ListRef::DTracks => self.discover.tracks().get(real).map(|t| t.title.as_str()),
+            ListRef::DItems => match &self.discover.pane {
+                Pane::Items(p) => p.items.title(real),
+                _ => None,
+            },
             ListRef::Help => None,
         }
     }
@@ -532,8 +586,9 @@ impl App {
                 }
             }
             ListRef::DTracks => {
-                if let Some(p) = self.discover.tracks.iter().position(|t| t.rating_key == key) {
-                    self.discover.tracks_state.select(Some(p));
+                let pos = self.discover.tracks().iter().position(|t| t.rating_key == key);
+                if let (Some(p), Pane::Tracks(pane)) = (pos, &mut self.discover.pane) {
+                    pane.state.select(Some(p));
                     if center {
                         self.scroll.center_once = Some(ScrollId::DiscoverTracks);
                     }
@@ -567,6 +622,9 @@ impl App {
 
     /// Esc / Backspace.
     pub(super) fn back(&mut self) {
+        if self.tab == Tab::Discover && self.discover_back() {
+            return;
+        }
         if self.clear_adventure() {
             return;
         }
@@ -674,8 +732,9 @@ impl App {
             }
             ListRef::Search
             | ListRef::SearchDetail
-            | ListRef::DStations
+            | ListRef::DSections
             | ListRef::DTracks
+            | ListRef::DItems
             | ListRef::Help => {}
         }
     }
