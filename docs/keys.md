@@ -88,20 +88,24 @@ Results open in the Search tab, where the usual keys work. `Esc` goes back a ste
 
 ## Discover
 
-The Discover tab lists Plex's shelves for the library, such as recently added albums, popular artists and recent playlists, and below them its radio stations (Plex Pass and `plex.allow_writes`). The highlighted shelf's items show on the right. The highlighted station's first 30 tracks show there instead, and `Enter` plays them as a radio.
+The Discover tab has three groups, and the highlighted entry shows on the right.
 
-`Enter` on an album opens its tracks, on an artist their albums and on a playlist its first tracks. `Esc` goes back. `:refresh` loads the shelves again.
+- Suggested: Plex's shelves for the library, such as Recently Added, More by an artist and Recent Playlists. Plex picks new ones each time; `:refresh` loads them again.
+- Stations: the library's radio stations (Plex Pass and `plex.allow_writes`). The first 30 tracks show on the right, and `Enter` plays them as a radio.
+- Library: Recently played, Top rated (four stars or more) and 100 random albums you have never played.
+
+`Enter` on an album opens its tracks, on an artist their albums and on a playlist its first tracks; `Esc` goes back. `Enter` on a track plays it and the rest of the rows loaded so far.
 
 | Key | Action |
 |---|---|
-| `Enter` | Play the station, or the track and the rest; open an album, artist or playlist |
-| `h`, `l` | Focus the sections / the list |
+| `Enter` | Play the track and the rest, open the album, artist or playlist, or start the station |
+| `h`, `l` | Focus the left or right side |
 | `a` | Add the track, album, artist or playlist to the queue |
-| `i` | Insert it after the playing track |
+| `i` | Insert the track, album, artist or playlist after the playing track |
 | `v` | Select a range of tracks |
 | `m`, `s` | Similar tracks, track radio |
 | `b` | Open the track in Browser |
-| `Esc` | Go back; clear the Sonic Adventure stops |
+| `Esc` | Go back, or clear the Sonic Adventure stops |
 
 ## Browser, Playlists and Search
 
