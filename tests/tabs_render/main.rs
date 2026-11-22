@@ -30,6 +30,7 @@ mod restore;
 mod resume;
 mod similar;
 mod theme;
+mod top;
 mod visual;
 
 fn track(i: usize) -> Track {
@@ -50,6 +51,7 @@ fn track(i: usize) -> Track {
         playlist_item_id: None,
         user_rating: None,
         last_viewed_at: None,
+        plays: None,
     }
 }
 

@@ -36,6 +36,7 @@ async fn background_fills_unstyled_cells_on_every_tab() {
             rating_key: format!("a{i}"),
             title: format!("Artist {i:02}"),
             thumb: None,
+            plays: None,
         })
         .collect();
     app.browser.artists.state.select(Some(3));

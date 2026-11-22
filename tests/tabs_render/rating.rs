@@ -95,7 +95,7 @@ async fn r_rates_a_browser_track_but_not_an_artist() {
     let (mut app, mut plex) = playing(RatingStyle::One).await;
     app.tab = Tab::Browser;
     app.browser.artists.items =
-        vec![Artist { rating_key: "a0".into(), title: "Alpha".into(), thumb: None }];
+        vec![Artist { rating_key: "a0".into(), title: "Alpha".into(), thumb: None, plays: None }];
     app.browser.artists.state.select(Some(0));
     app.browser.focus = BrowserCol::Artists;
     app.handle_msg(key('r'));

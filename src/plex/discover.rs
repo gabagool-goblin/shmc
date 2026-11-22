@@ -16,16 +16,39 @@ pub enum LibraryList {
     RecentlyPlayed,
     TopRated,
     NeverPlayed,
+    TopTracks,
+    TopAlbums,
+    TopArtists,
 }
 
 impl LibraryList {
-    pub const ALL: [LibraryList; 3] = [Self::RecentlyPlayed, Self::TopRated, Self::NeverPlayed];
+    pub const LIBRARY: [LibraryList; 3] = [Self::RecentlyPlayed, Self::TopRated, Self::NeverPlayed];
+    pub const TOP: [LibraryList; 3] = [Self::TopTracks, Self::TopAlbums, Self::TopArtists];
 
     pub fn title(self) -> &'static str {
         match self {
             Self::RecentlyPlayed => "Recently played",
             Self::TopRated => "Top rated",
             Self::NeverPlayed => "Never played",
+            Self::TopTracks => "Top tracks",
+            Self::TopAlbums => "Top albums",
+            Self::TopArtists => "Top artists",
+        }
+    }
+
+    pub fn is_top(self) -> bool {
+        Self::TOP.contains(&self)
+    }
+
+    pub fn paged(self) -> bool {
+        matches!(self, Self::RecentlyPlayed | Self::TopRated)
+    }
+
+    fn plex_type(self) -> u8 {
+        match self {
+            Self::NeverPlayed | Self::TopAlbums => 9,
+            Self::TopArtists => 8,
+            _ => 10,
         }
     }
 
@@ -38,6 +61,9 @@ impl LibraryList {
             Self::RecentlyPlayed => "type=10&lastViewedAt>>=1&sort=lastViewedAt:desc",
             Self::TopRated => "type=10&userRating>=8&sort=lastRatedAt:desc",
             Self::NeverPlayed => "type=9&lastViewedAt<<=1&sort=random",
+            Self::TopTracks => "type=10&viewCount>=1&sort=viewCount:desc",
+            Self::TopAlbums => "type=9&viewCount>=1&sort=viewCount:desc",
+            Self::TopArtists => "type=8&viewCount>=1&sort=viewCount:desc",
         }
     }
 }
@@ -48,6 +74,13 @@ pub struct TrackPage {
     pub tracks: Vec<Track>,
     pub rows: usize,
     pub total: Option<usize>,
+}
+
+#[derive(Debug)]
+pub enum TopRows {
+    Tracks(TrackPage),
+    Albums(Vec<Album>),
+    Artists(Vec<Artist>),
 }
 
 #[derive(Debug, Clone)]
@@ -160,7 +193,7 @@ impl PlexClient {
     /// Random per request, so one page and never more.
     pub async fn never_played(&self, section: &str) -> Result<Vec<Album>> {
         let c = self.library_page(section, LibraryList::NeverPlayed, 0).await?;
-        Ok(c.directories.into_iter().map(WireDirectory::into_album).collect())
+        Ok(albums_of(c))
     }
 
     async fn library_page(
@@ -175,6 +208,42 @@ impl PlexClient {
         ))
         .await
     }
+}
+
+impl PlexClient {
+    /// `span` is inclusive unix seconds; `None` is all time.
+    pub async fn top_list(
+        &self,
+        section: &str,
+        list: LibraryList,
+        span: Option<(i64, i64)>,
+    ) -> Result<TopRows> {
+        let c = match span {
+            Some((since, until)) => {
+                let type_ = list.plex_type();
+                self.get_xml(&format!(
+                    "/library/all/top?type={type_}&librarySectionID={section}&viewedAt>={since}&viewedAt<={until}&accountID=1&X-Plex-Container-Start=0&X-Plex-Container-Size={LIBRARY_PAGE}"
+                ))
+                .await?
+            }
+            None => self.library_page(section, list, 0).await?,
+        };
+        Ok(match list {
+            LibraryList::TopAlbums => TopRows::Albums(albums_of(c)),
+            LibraryList::TopArtists => TopRows::Artists(
+                c.directories.into_iter().map(WireDirectory::into_artist).collect(),
+            ),
+            _ => {
+                let total = c.total_size;
+                let tracks = c.into_tracks();
+                TopRows::Tracks(TrackPage { rows: tracks.len(), tracks, total })
+            }
+        })
+    }
+}
+
+fn albums_of(c: MediaContainer) -> Vec<Album> {
+    c.directories.into_iter().map(WireDirectory::into_album).collect()
 }
 
 #[cfg(test)]
@@ -228,5 +297,60 @@ mod tests {
                 assert!(line.contains(part), "{part} in {line}");
             }
         }
+    }
+
+    const TOP: &str = "<MediaContainer><Directory ratingKey=\"9\" key=\"/library/metadata/9\" type=\"album\" title=\"A\" parentTitle=\"B\" year=\"2020\" globalViewCount=\"12\" viewCount=\"30\"/><Directory ratingKey=\"8\" key=\"/library/metadata/8\" type=\"album\" title=\"C\" viewCount=\"4\"/></MediaContainer>";
+
+    async fn top_line(list: LibraryList, span: Option<(i64, i64)>) -> String {
+        let (base, seen, _) = serve_full(|_| (200, TOP.to_string())).await;
+        let client = PlexClient::new(&base, "faketoken-lists");
+        client.top_list("1", list, span).await.unwrap();
+        let lines = seen.lock().unwrap().clone();
+        lines[0].clone()
+    }
+
+    #[tokio::test]
+    async fn a_top_list_for_a_period_asks_for_its_bounds_and_one_page() {
+        let span = Some((1_761_955_200, 1_764_547_199));
+        for (list, type_) in [
+            (LibraryList::TopTracks, 10),
+            (LibraryList::TopAlbums, 9),
+            (LibraryList::TopArtists, 8),
+        ] {
+            let line = top_line(list, span).await;
+            assert!(line.starts_with("GET /library/all/top?"), "{line}");
+            for part in [
+                format!("type={type_}").as_str(),
+                "librarySectionID=1",
+                "viewedAt%3E=1761955200",
+                "viewedAt%3C=1764547199",
+                "accountID=1",
+                "Start=0",
+                "Size=100",
+            ] {
+                assert!(line.contains(part), "{part} in {line}");
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn a_top_list_for_all_time_sorts_the_section_by_play_count() {
+        let line = top_line(LibraryList::TopAlbums, None).await;
+        assert!(line.starts_with("GET /library/sections/1/all?"), "{line}");
+        for part in ["type=9", "viewCount%3E=1", "sort=viewCount:desc", "Start=0", "Size=100"] {
+            assert!(line.contains(part), "{part} in {line}");
+        }
+    }
+
+    #[tokio::test]
+    async fn plays_come_from_the_period_count_before_the_total_count() {
+        let (base, _, _) = serve_full(|_| (200, TOP.to_string())).await;
+        let client = PlexClient::new(&base, "faketoken-lists");
+        let TopRows::Albums(albums) =
+            client.top_list("1", LibraryList::TopAlbums, Some((0, 1))).await.unwrap()
+        else {
+            panic!("expected albums")
+        };
+        assert_eq!(albums.iter().map(|a| a.plays).collect::<Vec<_>>(), [Some(12), Some(4)]);
     }
 }

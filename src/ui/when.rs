@@ -11,21 +11,52 @@ pub struct Local {
     pub minute: u32,
 }
 
-const MONTHS: [&str; 12] =
+pub(crate) const MONTHS: [&str; 12] =
     ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-fn day_number(l: Local) -> i64 {
-    let y = l.year as i64 - (l.month <= 2) as i64;
+pub(crate) const MONTH_NAMES: [&str; 12] = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+];
+
+/// Days since 1970-01-01 of a proleptic Gregorian date.
+pub(crate) fn day_number(year: i32, month: u32, day: u32) -> i64 {
+    let y = year as i64 - (month <= 2) as i64;
     let era = y.div_euclid(400);
     let yoe = y.rem_euclid(400);
-    let mp = (l.month as i64 + 9) % 12;
-    let doy = (153 * mp + 2) / 5 + l.day as i64 - 1;
+    let mp = (month as i64 + 9) % 12;
+    let doy = (153 * mp + 2) / 5 + day as i64 - 1;
     let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
     era * 146_097 + doe - 719_468
 }
 
+/// The inverse of [`day_number`]: (year, month, day).
+pub(crate) fn date_of(days: i64) -> (i32, u32, u32) {
+    let z = days + 719_468;
+    let era = z.div_euclid(146_097);
+    let doe = z.rem_euclid(146_097);
+    let yoe = (doe - doe / 1_460 + doe / 36_524 - doe / 146_096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let day = (doy - (153 * mp + 2) / 5 + 1) as u32;
+    let month = if mp < 10 { mp + 3 } else { mp - 9 } as u32;
+    let year = (yoe + era * 400 + (month <= 2) as i64) as i32;
+    (year, month, day)
+}
+
 pub fn played_text(played: Local, now: Local) -> String {
-    let ago = day_number(now) - day_number(played);
+    let ago = day_number(now.year, now.month, now.day)
+        - day_number(played.year, played.month, played.day);
     if ago == 0 {
         format!("{:02}:{:02}", played.hour, played.minute)
     } else if ago == 1 {
@@ -56,9 +87,12 @@ pub fn local(unix: i64) -> Option<Local> {
     })
 }
 
+pub fn now_unix() -> i64 {
+    SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |d| d.as_secs() as i64)
+}
+
 pub fn played_at(unix: i64) -> String {
-    let now = SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |d| d.as_secs() as i64);
-    match (local(unix), local(now)) {
+    match (local(unix), local(now_unix())) {
         (Some(played), Some(now)) => played_text(played, now),
         _ => String::new(),
     }

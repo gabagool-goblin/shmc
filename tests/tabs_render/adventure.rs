@@ -122,6 +122,7 @@ async fn p_on_an_album_row_only_shows_a_hint() {
         artist: "Northwind Sounds".into(),
         year: None,
         thumb: None,
+        plays: None,
     }];
     app.browser.albums.state.select(Some(0));
     app.browser.focus = BrowserCol::Albums;

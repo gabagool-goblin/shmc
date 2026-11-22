@@ -10,7 +10,7 @@ use shmc::ui::app::{
     DiscoverCmd, DiscoverCol, DiscoverMsg, LibraryOutcome, OpenKind, Opened, Pane, Preview,
 };
 
-type Plex = tokio::sync::mpsc::UnboundedReceiver<PlexCmd>;
+pub(super) type Plex = tokio::sync::mpsc::UnboundedReceiver<PlexCmd>;
 
 const TITLES: [&str; 4] =
     ["Library Radio", "Deep Cuts Radio", "Time Travel Radio", "Random Album Radio"];
@@ -36,7 +36,7 @@ pub(super) fn loaded() -> Msg {
 }
 
 /// Discover opened and its stations listed, writes allowed.
-async fn on_discover() -> (TestApp, Plex) {
+pub(super) async fn on_discover() -> (TestApp, Plex) {
     let (mut app, mut plex) = new_app_with_plex().await;
     app.allow_writes = true;
     app.handle_msg(key('2'));
@@ -324,13 +324,14 @@ async fn v_selects_station_tracks_and_a_adds_the_range() {
     assert!(app.visual.is_none(), "leaving the tab ends the selection");
 }
 
-fn album(key: &str, title: &str, artist: &str, year: u32) -> Album {
+pub(super) fn album(key: &str, title: &str, artist: &str, year: u32) -> Album {
     Album {
         rating_key: key.into(),
         title: title.into(),
         artist: artist.into(),
         year: Some(year),
         thumb: None,
+        plays: None,
     }
 }
 
@@ -343,7 +344,12 @@ fn shelves() -> Vec<Shelf> {
     let artists = ["Mira Vale", "Northwind Sounds"]
         .iter()
         .enumerate()
-        .map(|(i, t)| Artist { rating_key: format!("r{i}"), title: t.to_string(), thumb: None })
+        .map(|(i, t)| Artist {
+            rating_key: format!("r{i}"),
+            title: t.to_string(),
+            thumb: None,
+            plays: None,
+        })
         .collect();
     let playlists =
         vec![listed_playlist("p1", "Morning Mix", 12), listed_playlist("p2", "Late", 3)];
@@ -367,7 +373,7 @@ fn cursor(app: &App) -> Option<usize> {
     app.discover.sections_state.selected()
 }
 
-fn open_requests(plex: &mut Plex) -> Vec<(String, bool)> {
+pub(super) fn open_requests(plex: &mut Plex) -> Vec<(String, bool)> {
     sent(plex)
         .into_iter()
         .filter_map(|c| match c {
@@ -379,7 +385,7 @@ fn open_requests(plex: &mut Plex) -> Vec<(String, bool)> {
         .collect()
 }
 
-fn album_tracks(n: usize) -> Opened {
+pub(super) fn album_tracks(n: usize) -> Opened {
     Opened::Tracks { tracks: (0..n).map(track).collect(), total: Some(n) }
 }
 
@@ -416,7 +422,7 @@ async fn the_cursor_skips_headings_and_blank_rows() {
     let (mut app, _plex) = on_shelves().await;
     assert_eq!(cursor(&app), Some(1), "the first shelf, not the heading");
     app.handle_msg(key('k'));
-    assert_eq!(cursor(&app), Some(14), "wraps to the last row");
+    assert_eq!(cursor(&app), Some(19), "wraps to the last row");
     app.handle_msg(key('j'));
     assert_eq!(cursor(&app), Some(1), "and back to the first shelf");
     for want in [2, 3, 6, 7] {
@@ -424,8 +430,8 @@ async fn the_cursor_skips_headings_and_blank_rows() {
         assert_eq!(cursor(&app), Some(want));
     }
     app.handle_msg(key('G'));
-    assert_eq!(cursor(&app), Some(14));
-    for want in [13, 12, 9, 8, 7, 6, 3] {
+    assert_eq!(cursor(&app), Some(19));
+    for want in [18, 17, 14, 13, 12, 9, 8, 7, 6, 3] {
         app.handle_msg(key('k'));
         assert_eq!(cursor(&app), Some(want));
     }
@@ -639,11 +645,11 @@ async fn the_artist_and_playlist_shelves_have_their_own_columns() {
     }
 }
 
-fn library_requests(plex: &mut Plex) -> Vec<(LibraryList, u64, usize)> {
+pub(super) fn library_requests(plex: &mut Plex) -> Vec<(LibraryList, u64, usize)> {
     sent(plex)
         .into_iter()
         .filter_map(|c| match c {
-            PlexCmd::Discover(DiscoverCmd::LoadLibrary { list, generation, start }) => {
+            PlexCmd::Discover(DiscoverCmd::LoadLibrary { list, generation, start, .. }) => {
                 Some((list, generation, start))
             }
             _ => None,
@@ -655,7 +661,7 @@ fn library_asks(plex: &mut Plex) -> Vec<(LibraryList, usize)> {
     library_requests(plex).into_iter().map(|(l, _, s)| (l, s)).collect()
 }
 
-fn page_of(
+pub(super) fn page_of(
     list: LibraryList,
     generation: u64,
     start: usize,
@@ -672,11 +678,11 @@ fn page_of(
     })
 }
 
-fn numbered(range: std::ops::Range<usize>) -> Vec<Track> {
+pub(super) fn numbered(range: std::ops::Range<usize>) -> Vec<Track> {
     range.map(track).collect()
 }
 
-async fn on_library(row: usize) -> (TestApp, Plex) {
+pub(super) async fn on_library(row: usize) -> (TestApp, Plex) {
     let (mut app, plex) = on_discover().await;
     app.discover.sections_state.select(Some(7 + row));
     app.handle_msg(Msg::Cava(Vec::new()));

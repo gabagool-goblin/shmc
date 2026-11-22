@@ -3,6 +3,7 @@ use crate::plex::discover::LibraryList;
 use crate::plex::discover::ShelfItems;
 use crate::ui::app::{App, Pane, TracksSource};
 use crate::ui::filter::ListFilter;
+use crate::ui::period::PeriodKind;
 use crate::ui::playlist_load::group;
 use crate::ui::scroll::ScrollId;
 use crate::ui::scrollbar::render_scrollbar;
@@ -14,7 +15,8 @@ use crate::ui::views::tables::{
 use crate::ui::views::widgets::cell;
 use crate::ui::when::played_at;
 use ratatui::layout::{Constraint, Layout, Rect};
-use ratatui::widgets::{Cell, Row, Table, TableState};
+use ratatui::text::{Line, Span};
+use ratatui::widgets::{Cell, Paragraph, Row, Table, TableState};
 use ratatui::Frame;
 
 /// Wide enough for "2025-11-20", the longest Played text.
@@ -23,17 +25,36 @@ const PLAYED_COL: u16 = 10;
 const PLAYED_MIN_PANE: u16 = 44;
 
 pub(super) fn draw_pane(f: &mut Frame, app: &mut App, pane: Rect) {
-    let parts = Layout::vertical([Constraint::Length(1), Constraint::Min(1)]).split(pane);
+    let period = app.discover.period_line();
+    let parts = Layout::vertical([
+        Constraint::Length(1),
+        Constraint::Length(period.is_some() as u16),
+        Constraint::Min(1),
+    ])
+    .split(pane);
     let (label, count) = match &app.discover.pane {
         Pane::Tracks(p) => (p.label(), counted(p.total, "track")),
         Pane::Items(p) => (p.label(), counted(p.items.len(), noun(&p.items))),
         Pane::Empty => return,
     };
     draw_list_label(f, parts[0], &label, &format!(" ({count})"));
-    match app.discover.pane {
-        Pane::Tracks(_) => draw_tracks(f, app, parts[1]),
-        _ => draw_items(f, app, parts[1]),
+    if let Some(kind) = period {
+        draw_period_line(f, parts[1], kind);
     }
+    match app.discover.pane {
+        Pane::Tracks(_) => draw_tracks(f, app, parts[2]),
+        _ => draw_items(f, app, parts[2]),
+    }
+}
+
+fn draw_period_line(f: &mut Frame, area: Rect, active: PeriodKind) {
+    let mut spans = vec![Span::raw("  ")];
+    for kind in PeriodKind::ALL {
+        let style = if kind == active { theme::accent() } else { theme::dim() };
+        spans.push(Span::styled(kind.name(), style));
+        spans.push(Span::raw("  "));
+    }
+    f.render_widget(Paragraph::new(Line::from(spans)), area);
 }
 
 fn noun(items: &ShelfItems) -> &'static str {
@@ -54,13 +75,18 @@ fn draw_tracks(f: &mut Frame, app: &mut App, area: Rect) {
     let num_w = None;
     let tc = TrackCols::plain(app.column_weights, TRACK_LEGACY);
     let longest = pane.tracks.iter().filter_map(|t| t.duration_ms).max();
-    let played = pane.source == TracksSource::Library(LibraryList::RecentlyPlayed)
-        && area.width >= PLAYED_MIN_PANE;
+    let widest_plays = pane.tracks.iter().filter_map(|t| t.plays).max().unwrap_or(0);
+    let extra = match pane.source {
+        TracksSource::Library(LibraryList::RecentlyPlayed) => Some(("Played", PLAYED_COL)),
+        TracksSource::Library(LibraryList::TopTracks) => Some(("Plays", plays_width(widest_plays))),
+        _ => None,
+    }
+    .filter(|_| area.width >= PLAYED_MIN_PANE);
     let mut cols = track_cols(num_w, len_col_width(longest), &tc);
     let mut headers = track_headers(num_w, &tc);
-    if played {
-        cols.insert(cols.len() - 1, Constraint::Length(PLAYED_COL));
-        headers.insert(headers.len() - 1, HeaderSpec::right("Played"));
+    if let Some((title, width)) = extra {
+        cols.insert(cols.len() - 1, Constraint::Length(width));
+        headers.insert(headers.len() - 1, HeaderSpec::right(title));
     }
     let frame = table_frame(f, area, total, &cols, Some(&headers), None);
     let cursor = pane.state.selected();
@@ -94,8 +120,11 @@ fn draw_tracks(f: &mut Frame, app: &mut App, area: Rect) {
                 "",
                 rating.as_deref(),
             );
-            if played {
-                let text = t.last_viewed_at.map(played_at).unwrap_or_default();
+            if extra.is_some() {
+                let text = match pane.source {
+                    TracksSource::Library(LibraryList::TopTracks) => count_text(t.plays),
+                    _ => t.last_viewed_at.map(played_at).unwrap_or_default(),
+                };
                 let style = if playing { base } else { theme::dim() };
                 let cell = Cell::from(ratatui::text::Line::from(text).right_aligned()).style(style);
                 cells.insert(cells.len() - 1, cell);
@@ -109,10 +138,18 @@ fn draw_tracks(f: &mut Frame, app: &mut App, area: Rect) {
     }
 }
 
+fn plays_width(widest: u64) -> u16 {
+    (group(widest as usize).chars().count() as u16).max(5)
+}
+
+fn count_text(plays: Option<u64>) -> String {
+    plays.map(|n| group(n as usize)).unwrap_or_default()
+}
+
 fn draw_items(f: &mut Frame, app: &mut App, area: Rect) {
     let Pane::Items(pane) = &app.discover.pane else { return };
     let total = pane.items.len();
-    let (cols, headers) = item_columns(&pane.items);
+    let (cols, headers) = item_columns(&pane.items, pane.plays);
     let frame = table_frame(f, area, total, &cols, Some(&headers), None);
     let cursor = pane.state.selected();
     let visible = frame.rows.height as usize;
@@ -126,18 +163,31 @@ fn draw_items(f: &mut Frame, app: &mut App, area: Rect) {
     let end = (offset + visible).min(total);
     let w = &frame.col_w;
     let text = theme::text();
+    let plays_cell = |plays: Option<u64>| {
+        Cell::from(Line::from(count_text(plays)).right_aligned()).style(theme::dim())
+    };
     let rows: Vec<Row> = (offset..end)
         .map(|i| match &pane.items {
             ShelfItems::Albums(v) => {
                 let a = &v[i];
                 let year = a.year.map(|y| y.to_string()).unwrap_or_default();
-                Row::new(vec![
+                let mut cells = vec![
                     cell(&a.title, w[0], "", text),
                     cell(&a.artist, w[1], "", theme::dim()),
                     Cell::from(ratatui::text::Line::from(year).right_aligned()).style(theme::dim()),
-                ])
+                ];
+                if pane.plays {
+                    cells.push(plays_cell(a.plays));
+                }
+                Row::new(cells)
             }
-            ShelfItems::Artists(v) => Row::new(vec![cell(&v[i].title, w[0], "", text)]),
+            ShelfItems::Artists(v) => {
+                let mut cells = vec![cell(&v[i].title, w[0], "", text)];
+                if pane.plays {
+                    cells.push(plays_cell(v[i].plays));
+                }
+                Row::new(cells)
+            }
             ShelfItems::Playlists(v) => {
                 let count = v[i].item_count.map(|n| n.to_string()).unwrap_or_default();
                 Row::new(vec![
@@ -154,8 +204,8 @@ fn draw_items(f: &mut Frame, app: &mut App, area: Rect) {
     }
 }
 
-fn item_columns(items: &ShelfItems) -> (Vec<Constraint>, Vec<HeaderSpec>) {
-    match items {
+fn item_columns(items: &ShelfItems, plays: bool) -> (Vec<Constraint>, Vec<HeaderSpec>) {
+    let (mut cols, mut headers) = match items {
         ShelfItems::Albums(_) => (
             vec![Constraint::Fill(3), Constraint::Fill(2), Constraint::Length(4)],
             vec![HeaderSpec::left("Album"), HeaderSpec::left("Artist"), HeaderSpec::right("Year")],
@@ -168,7 +218,17 @@ fn item_columns(items: &ShelfItems) -> (Vec<Constraint>, Vec<HeaderSpec>) {
                 vec![HeaderSpec::left("Playlist"), HeaderSpec::right("Tracks")],
             )
         }
+    };
+    if plays {
+        let widest = match items {
+            ShelfItems::Albums(v) => v.iter().filter_map(|a| a.plays).max(),
+            ShelfItems::Artists(v) => v.iter().filter_map(|a| a.plays).max(),
+            _ => None,
+        };
+        cols.push(Constraint::Length(plays_width(widest.unwrap_or(0))));
+        headers.push(HeaderSpec::right("Plays"));
     }
+    (cols, headers)
 }
 
 fn render_rows(

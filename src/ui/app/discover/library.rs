@@ -1,7 +1,9 @@
 use super::{DiscoverCmd, ItemsPane, Pane, Row, TracksPane, TracksSource};
-use crate::plex::discover::{LibraryList, ShelfItems, TrackPage};
-use crate::plex::{Album, PlexClient, Track};
+use crate::plex::discover::{LibraryList, ShelfItems, TopRows, TrackPage};
+use crate::plex::{Album, Artist, PlexClient, Track};
 use crate::ui::app::{App, Msg, PlexCmd};
+use crate::ui::period::Period;
+use crate::ui::when::now_unix;
 use std::collections::HashSet;
 use tokio::sync::mpsc::UnboundedSender;
 
@@ -11,7 +13,18 @@ const PREFETCH: usize = 20;
 pub enum LibraryOutcome {
     Tracks(TrackPage),
     Albums(Vec<Album>),
+    Artists(Vec<Artist>),
     Failed(String),
+}
+
+impl From<TopRows> for LibraryOutcome {
+    fn from(rows: TopRows) -> Self {
+        match rows {
+            TopRows::Tracks(page) => Self::Tracks(page),
+            TopRows::Albums(albums) => Self::Albums(albums),
+            TopRows::Artists(artists) => Self::Artists(artists),
+        }
+    }
 }
 
 #[derive(Default, PartialEq)]
@@ -30,6 +43,7 @@ struct ListData {
     fetch: Fetch,
     tracks: Vec<Track>,
     albums: Vec<Album>,
+    artists: Vec<Artist>,
     /// Server rows read so far: the next page's start.
     fetched: usize,
     total: usize,
@@ -39,7 +53,8 @@ struct ListData {
 
 #[derive(Default)]
 pub struct Library {
-    lists: [ListData; 3],
+    lists: [ListData; 6],
+    pub period: Period,
 }
 
 impl ListData {
@@ -73,9 +88,11 @@ pub(super) async fn load(
     list: LibraryList,
     generation: u64,
     start: usize,
+    span: Option<(i64, i64)>,
 ) {
     let result = match list {
         LibraryList::NeverPlayed => client.never_played(section).await.map(LibraryOutcome::Albums),
+        _ if list.is_top() => client.top_list(section, list, span).await.map(Into::into),
         _ => client.library_tracks(section, list, start).await.map(LibraryOutcome::Tracks),
     };
     let outcome = result.unwrap_or_else(|e| {
@@ -98,32 +115,48 @@ impl App {
     }
 
     fn request_library(&mut self, list: LibraryList, start: usize) {
-        let data = &mut self.discover.library.lists[list.index()];
+        let lib = &mut self.discover.library;
+        let span = if list.is_top() { lib.period.span(now_unix()) } else { None };
+        let data = &mut lib.lists[list.index()];
         data.fetch = Fetch::Loading;
-        let cmd = DiscoverCmd::LoadLibrary { list, generation: data.generation, start };
+        let cmd = DiscoverCmd::LoadLibrary { list, generation: data.generation, start, span };
         let _ = self.plex.tx.send(PlexCmd::Discover(cmd));
     }
 
     fn show_library(&mut self, list: LibraryList) {
-        let data = &self.discover.library.lists[list.index()];
+        let lib = &self.discover.library;
+        let data = &lib.lists[list.index()];
         if !data.loaded {
             self.discover.pane = Pane::Empty;
             return;
         }
-        self.discover.pane = if list == LibraryList::NeverPlayed {
-            let items = ShelfItems::Albums(data.albums.clone());
+        let title = if list.is_top() {
+            format!("{} · {}", list.title(), lib.period.label(now_unix()))
+        } else {
+            list.title().into()
+        };
+        let items = match list {
+            LibraryList::NeverPlayed | LibraryList::TopAlbums => {
+                Some(ShelfItems::Albums(data.albums.clone()))
+            }
+            LibraryList::TopArtists => Some(ShelfItems::Artists(data.artists.clone())),
+            _ => None,
+        };
+        self.discover.pane = if let Some(items) = items {
+            let plays = list.is_top();
             let mut pane = ItemsPane {
-                shelf: list.title().into(),
+                shelf: title,
                 name: String::new(),
                 items,
                 state: Default::default(),
+                plays,
             };
             pane.state.select((!pane.items.is_empty()).then_some(0));
             Pane::Items(pane)
         } else {
             let mut pane = TracksPane {
                 shelf: String::new(),
-                name: list.title().into(),
+                name: title,
                 tracks: data.tracks.clone(),
                 total: data.total,
                 state: Default::default(),
@@ -136,6 +169,9 @@ impl App {
 
     pub(super) fn page_library(&mut self) {
         let Some(Row::Library(list)) = self.discover.followed else { return };
+        if !list.paged() {
+            return;
+        }
         let Pane::Tracks(pane) = &self.discover.pane else { return };
         if pane.source != TracksSource::Library(list) {
             return;
@@ -160,7 +196,7 @@ impl App {
         outcome: LibraryOutcome,
     ) {
         let data = &mut self.discover.library.lists[list.index()];
-        let expected = if list == LibraryList::NeverPlayed { 0 } else { data.fetched };
+        let expected = if list.paged() { data.fetched } else { 0 };
         if generation != data.generation || start != expected || data.fetch != Fetch::Loading {
             return;
         }
@@ -175,6 +211,7 @@ impl App {
                 return;
             }
             LibraryOutcome::Albums(albums) => data.albums = albums,
+            LibraryOutcome::Artists(artists) => data.artists = artists,
             LibraryOutcome::Tracks(page) => {
                 data.fetched = start + page.rows;
                 data.total =
@@ -186,6 +223,9 @@ impl App {
                     }
                 }
                 data.tracks.extend(kept.iter().cloned());
+                if !list.paged() {
+                    data.total = data.tracks.len();
+                }
             }
         }
         data.loaded = true;

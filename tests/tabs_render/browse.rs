@@ -13,6 +13,7 @@ async fn enter_on_filtered_artist_opens_it() {
             rating_key: format!("a{i}"),
             title: format!("Northwind Sounds {i:02}"),
             thumb: None,
+            plays: None,
         })
         .collect();
 
@@ -57,7 +58,12 @@ async fn right_on_an_artist_opens_its_albums() {
     app.tab = Tab::Browser;
     app.browser.focus = BrowserCol::Artists;
     app.browser.artists.items = (0..3)
-        .map(|i| Artist { rating_key: format!("a{i}"), title: format!("Artist {i}"), thumb: None })
+        .map(|i| Artist {
+            rating_key: format!("a{i}"),
+            title: format!("Artist {i}"),
+            thumb: None,
+            plays: None,
+        })
         .collect();
     app.browser.artists.state.select(Some(0));
 
@@ -91,7 +97,12 @@ async fn right_on_an_artist_opens_its_albums() {
 async fn goto_artist_clears_the_artists_filter() {
     let mut app = new_app().await;
     app.browser.artists.items = (0..10)
-        .map(|i| Artist { rating_key: format!("a{i}"), title: format!("Artist {i}"), thumb: None })
+        .map(|i| Artist {
+            rating_key: format!("a{i}"),
+            title: format!("Artist {i}"),
+            thumb: None,
+            plays: None,
+        })
         .collect();
     let titles: Vec<String> = app.browser.artists.items.iter().map(|a| a.title.clone()).collect();
     app.browser.artists.filter.text = "Artist 1".into();
@@ -105,6 +116,7 @@ async fn goto_artist_clears_the_artists_filter() {
         rating_key: "a5".into(),
         title: "Artist 5".into(),
         thumb: None,
+        plays: None,
     }));
 
     assert!(app.browser.artists.filter.text.is_empty(), "the filter must not hide the target");
@@ -203,7 +215,7 @@ async fn unrelated_error_keeps_goto_jump() {
 }
 
 fn artist_ar1() -> Artist {
-    Artist { rating_key: "ar1".into(), title: "Northwind Sounds".into(), thumb: None }
+    Artist { rating_key: "ar1".into(), title: "Northwind Sounds".into(), thumb: None, plays: None }
 }
 
 /// Leaving the tab drops the jump, so a late reply does not pull the view back.
@@ -469,7 +481,7 @@ async fn enter_on_a_playlist_replaces_the_queue() {
 async fn add_on_artist_queues_its_tracks() {
     let (mut app, mut plex) = new_app_with_plex().await;
     app.browser.artists.items =
-        vec![Artist { rating_key: "ar1".into(), title: "Artist".into(), thumb: None }];
+        vec![Artist { rating_key: "ar1".into(), title: "Artist".into(), thumb: None, plays: None }];
     app.browser.artists.state.select(Some(0));
     app.browser.focus = BrowserCol::Artists;
     app.tab = Tab::Browser;
@@ -554,6 +566,7 @@ async fn browser_album_enter_replaces_queue_with_album() {
         artist: "Artist".into(),
         year: Some(2024),
         thumb: None,
+        plays: None,
     }];
     app.browser.albums.state.select(Some(0));
     app.browser.focus = BrowserCol::Albums;
@@ -706,6 +719,7 @@ async fn browser_album_right_drills_into_tracks() {
         artist: "Artist".into(),
         year: Some(2024),
         thumb: None,
+        plays: None,
     }];
     app.browser.albums.state.select(Some(0));
     app.browser.focus = BrowserCol::Albums;
@@ -768,8 +782,12 @@ async fn albums_loaded_applies_the_configured_order() {
 async fn browser_with_albums(albums: Vec<Album>) -> TestApp {
     let mut app = new_app().await;
     app.tab = Tab::Browser;
-    app.browser.artists.items =
-        vec![Artist { rating_key: "a0".into(), title: "Browsed Artist".into(), thumb: None }];
+    app.browser.artists.items = vec![Artist {
+        rating_key: "a0".into(),
+        title: "Browsed Artist".into(),
+        thumb: None,
+        plays: None,
+    }];
     app.browser.artists.state.select(Some(0));
     app.browser.albums_for = Some("a0".into());
     app.browser.albums.items = albums;
@@ -779,7 +797,14 @@ async fn browser_with_albums(albums: Vec<Album>) -> TestApp {
 }
 
 fn album_by(key: &str, title: &str, artist: &str, year: Option<u32>) -> Album {
-    Album { rating_key: key.into(), title: title.into(), artist: artist.into(), year, thumb: None }
+    Album {
+        rating_key: key.into(),
+        title: title.into(),
+        artist: artist.into(),
+        year,
+        thumb: None,
+        plays: None,
+    }
 }
 
 /// The rendered line holding `needle`.
