@@ -168,6 +168,9 @@ pub async fn collect(cfg: &Config, config_path: &Path, with_terminal: bool) -> R
     for problem in cfg.cava.problems() {
         b.setting_warn(problem);
     }
+    for problem in cfg.mpv.problems() {
+        b.setting_warn(problem);
+    }
     let modes: Vec<String> =
         cava::input_modes(&cfg.cava).into_iter().map(|(m, s)| format!("{m}/{s}")).collect();
     b.setting(format!("cava.path: {}", cfg.cava.path));
@@ -189,7 +192,15 @@ pub async fn collect(cfg: &Config, config_path: &Path, with_terminal: bool) -> R
         Err(e) => b.fail(format!("server unreachable or token rejected: {e:#}")),
     }
     match client.features().await {
-        Ok(f) => b.ok(features_line(f)),
+        Ok(f) => {
+            b.ok(features_line(f));
+            if cfg.mpv.leveling() != crate::playback::Leveling::Off && !f.loudness {
+                b.warn(
+                    "mpv.loudness_leveling is on, but the server has no loudness analysis \
+                     (Plex Pass); tracks play as they are",
+                );
+            }
+        }
         Err(e) => b.warn(format!("could not read the server's Plex Pass features: {e:#}")),
     }
     match client.music_sections().await {

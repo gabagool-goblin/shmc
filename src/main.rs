@@ -707,6 +707,7 @@ fn ui_loop(terminal: &mut ui::term::Term, started: &mut Started) -> Result<UiEnd
         &cfg.keys,
     );
     app.allow_writes = cfg.plex.allow_writes;
+    app.set_leveling(cfg.mpv.leveling(), cfg.mpv.preamp_db());
     app.reporter = started.reporter.as_ref().map(|r| r.sender());
     let queue_file = app.restore_saved_queue(cfg.ui.restore_queue);
 

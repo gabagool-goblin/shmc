@@ -540,6 +540,7 @@ async fn header_shows_file_audio_details() {
         bit_depth: Some(16),
         bitrate_kbps: Some(857),
         channels: Some(2),
+        ..AudioInfo::default()
     };
 
     let frame = render(&mut app, 120, 40);

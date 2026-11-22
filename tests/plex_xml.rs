@@ -39,6 +39,17 @@ fn parse_track_audio_stream_details() {
 }
 
 #[test]
+fn parse_track_loudness_analysis() {
+    let xml = r#"<MediaContainer><Track ratingKey="1" key="/library/metadata/1" title="x"><Media><Part id="1" key="/p"><Stream streamType="2" selected="1" samplingRate="44100" gain="-12.33" albumGain="-12.33" peak="0.998871" albumPeak="1.000000" loudness="-5.97" lra="2.42"/></Part></Media></Track></MediaContainer>"#;
+    let c: MediaContainer = quick_xml::de::from_str(xml).unwrap();
+    let l = c.tracks.into_iter().next().unwrap().into_track().audio.loudness;
+    assert_eq!(l.track_lufs, Some(-5.97));
+    assert_eq!(l.track_peak, Some(0.998871));
+    assert_eq!(l.album_gain, Some(-12.33));
+    assert_eq!(l.album_peak, Some(1.0));
+}
+
+#[test]
 fn track_artist_prefers_original_title() {
     let xml = r#"<MediaContainer>
 <Track ratingKey="1" key="/library/metadata/1" title="One" grandparentTitle="Album Artist" originalTitle="Track Artist"/>

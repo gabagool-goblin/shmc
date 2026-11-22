@@ -26,7 +26,7 @@ Compact layout with the `gruvbox-dark` theme and track details below the cover:
 - Play now, play next or add to the queue; select ranges and jump by letter.
 
 ### Queue and playback
-- Gapless playback through mpv.
+- Gapless playback through mpv, with optional loudness leveling from Plex's analysis.
 - Shuffle, repeat, single-track repeat and consume modes.
 - Reorder tracks, undo removals and save queues as Plex playlists.
 - Sleep timer and automatic skipping of failed tracks.

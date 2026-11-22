@@ -20,6 +20,7 @@ mod browse;
 mod discover;
 mod keys;
 mod layout;
+mod leveling;
 mod queue;
 mod queue_requests;
 mod radio;
@@ -145,7 +146,12 @@ async fn new_app_with_ui_and_keys(
     keys: &KeyTable,
 ) -> (TestApp, tokio::sync::mpsc::UnboundedReceiver<PlexCmd>) {
     let guard = TAB_TEST_LOCK.lock().await;
-    let cfg = MpvConfig { path: "mpv".into(), extra_args: vec!["--ao=null".into()], volume: 50.0 };
+    let cfg = MpvConfig {
+        path: "mpv".into(),
+        extra_args: vec!["--ao=null".into()],
+        volume: 50.0,
+        ..MpvConfig::default()
+    };
     let (mpv_handle, mpv_events) = mpv::spawn(&cfg).await.expect("spawn mpv");
     let (plex_tx, plex_rx) = unbounded_channel();
     let (msg_tx, _msg_rx) = unbounded_channel();

@@ -6,4 +6,6 @@ pub mod report;
 pub mod sonic;
 
 pub use client::{PlexClient, SaveOutcome};
-pub use models::{Album, Artist, AudioInfo, HitKind, Playlist, SearchHit, Section, Track};
+pub use models::{
+    Album, Artist, AudioInfo, HitKind, Loudness, Playlist, SearchHit, Section, Track,
+};

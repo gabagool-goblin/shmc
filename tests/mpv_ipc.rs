@@ -90,7 +90,12 @@ async fn wait_for_property(
 async fn mpv_plays_queue_and_reports_state() {
     let _guard = MPV_TEST_LOCK.lock().await;
 
-    let cfg = MpvConfig { path: "mpv".into(), extra_args: vec!["--ao=null".into()], volume: 50.0 };
+    let cfg = MpvConfig {
+        path: "mpv".into(),
+        extra_args: vec!["--ao=null".into()],
+        volume: 50.0,
+        ..MpvConfig::default()
+    };
     let (handle, mut events) = mpv::spawn(&cfg).await.expect("spawn mpv");
 
     match events.recv().await {
@@ -150,7 +155,12 @@ async fn mpv_plays_queue_and_reports_state() {
 async fn mpv_gapless_advances_through_queue() {
     let _guard = MPV_TEST_LOCK.lock().await;
 
-    let cfg = MpvConfig { path: "mpv".into(), extra_args: vec!["--ao=null".into()], volume: 50.0 };
+    let cfg = MpvConfig {
+        path: "mpv".into(),
+        extra_args: vec!["--ao=null".into()],
+        volume: 50.0,
+        ..MpvConfig::default()
+    };
     let (handle, mut events) = mpv::spawn(&cfg).await.expect("spawn mpv");
     let _ = events.recv().await; // Ready
 
@@ -189,7 +199,12 @@ async fn mpv_gapless_advances_through_queue() {
 async fn mpv_stop_keeps_the_queue_playable() {
     let _guard = MPV_TEST_LOCK.lock().await;
 
-    let cfg = MpvConfig { path: "mpv".into(), extra_args: vec!["--ao=null".into()], volume: 50.0 };
+    let cfg = MpvConfig {
+        path: "mpv".into(),
+        extra_args: vec!["--ao=null".into()],
+        volume: 50.0,
+        ..MpvConfig::default()
+    };
     let (handle, mut events) = mpv::spawn(&cfg).await.expect("spawn mpv");
 
     match events.recv().await {
@@ -280,7 +295,12 @@ async fn mpv_stop_keeps_the_queue_playable() {
 async fn insert_and_move_keep_playing_entry() {
     let _guard = MPV_TEST_LOCK.lock().await;
 
-    let cfg = MpvConfig { path: "mpv".into(), extra_args: vec!["--ao=null".into()], volume: 50.0 };
+    let cfg = MpvConfig {
+        path: "mpv".into(),
+        extra_args: vec!["--ao=null".into()],
+        volume: 50.0,
+        ..MpvConfig::default()
+    };
     let (handle, mut events) = mpv::spawn(&cfg).await.expect("spawn mpv");
     let _ = events.recv().await; // Ready
 
@@ -327,7 +347,12 @@ async fn insert_and_move_keep_playing_entry() {
 async fn mpv_answers_get_property_requests() {
     let _guard = MPV_TEST_LOCK.lock().await;
 
-    let cfg = MpvConfig { path: "mpv".into(), extra_args: vec!["--ao=null".into()], volume: 50.0 };
+    let cfg = MpvConfig {
+        path: "mpv".into(),
+        extra_args: vec!["--ao=null".into()],
+        volume: 50.0,
+        ..MpvConfig::default()
+    };
     let (handle, mut events) = mpv::spawn(&cfg).await.expect("spawn mpv");
     let _ = events.recv().await; // Ready
 
@@ -362,7 +387,12 @@ async fn media_keys_come_back_as_events() {
     use std::io::Write;
     let _guard = MPV_TEST_LOCK.lock().await;
 
-    let cfg = MpvConfig { path: "mpv".into(), extra_args: vec!["--ao=null".into()], volume: 50.0 };
+    let cfg = MpvConfig {
+        path: "mpv".into(),
+        extra_args: vec!["--ao=null".into()],
+        volume: 50.0,
+        ..MpvConfig::default()
+    };
     let (handle, mut events) = mpv::spawn(&cfg).await.expect("spawn mpv");
     // The section commands precede this request on shmc's socket.
     handle.get_property("pause").await.expect("get_property pause");
@@ -405,7 +435,12 @@ async fn media_keys_come_back_as_events() {
 async fn mpv_replaces_the_playing_queue() {
     let _guard = MPV_TEST_LOCK.lock().await;
 
-    let cfg = MpvConfig { path: "mpv".into(), extra_args: vec!["--ao=null".into()], volume: 50.0 };
+    let cfg = MpvConfig {
+        path: "mpv".into(),
+        extra_args: vec!["--ao=null".into()],
+        volume: 50.0,
+        ..MpvConfig::default()
+    };
     let (handle, mut events) = mpv::spawn(&cfg).await.expect("spawn mpv");
     let _ = events.recv().await; // Ready
 
@@ -486,7 +521,12 @@ async fn mpv_log_reaches_disk_redacted() {
     let token = format!("SECRETTOKEN{}", std::process::id());
     let log_path = shmc::config::log_dir().expect("log dir").join("mpv.log");
 
-    let cfg = MpvConfig { path: "mpv".into(), extra_args: vec!["--ao=null".into()], volume: 50.0 };
+    let cfg = MpvConfig {
+        path: "mpv".into(),
+        extra_args: vec!["--ao=null".into()],
+        volume: 50.0,
+        ..MpvConfig::default()
+    };
     let (handle, mut events) = mpv::spawn(&cfg).await.expect("spawn mpv");
     let _ = events.recv().await; // Ready
 
@@ -533,7 +573,12 @@ async fn mpv_log_reaches_disk_redacted() {
 async fn failed_mpv_start_leaves_no_log_pipe() {
     let _guard = MPV_TEST_LOCK.lock().await;
 
-    let cfg = MpvConfig { path: "/usr/bin/false".into(), extra_args: vec![], volume: 50.0 };
+    let cfg = MpvConfig {
+        path: "/usr/bin/false".into(),
+        extra_args: vec![],
+        volume: 50.0,
+        ..MpvConfig::default()
+    };
     let started = std::time::Instant::now();
     let result = mpv::spawn(&cfg).await;
     let took = started.elapsed();
@@ -556,7 +601,12 @@ async fn failed_mpv_start_leaves_no_log_pipe() {
 async fn mpv_socket_private_and_removed_on_exit() {
     let _guard = MPV_TEST_LOCK.lock().await;
 
-    let cfg = MpvConfig { path: "mpv".into(), extra_args: vec!["--ao=null".into()], volume: 50.0 };
+    let cfg = MpvConfig {
+        path: "mpv".into(),
+        extra_args: vec!["--ao=null".into()],
+        volume: 50.0,
+        ..MpvConfig::default()
+    };
     let (handle, mut events) = mpv::spawn(&cfg).await.expect("spawn mpv");
     let _ = events.recv().await; // Ready
 
@@ -585,7 +635,12 @@ async fn mpv_socket_private_and_removed_on_exit() {
 async fn dropping_the_mpv_handle_removes_its_socket() {
     let _guard = MPV_TEST_LOCK.lock().await;
 
-    let cfg = MpvConfig { path: "mpv".into(), extra_args: vec!["--ao=null".into()], volume: 50.0 };
+    let cfg = MpvConfig {
+        path: "mpv".into(),
+        extra_args: vec!["--ao=null".into()],
+        volume: 50.0,
+        ..MpvConfig::default()
+    };
     let (handle, mut events) = mpv::spawn(&cfg).await.expect("spawn mpv");
     let _ = events.recv().await; // Ready
     let sock = handle.socket_path().to_path_buf();
@@ -600,7 +655,12 @@ async fn dropping_the_mpv_handle_removes_its_socket() {
 async fn get_property_fails_after_mpv_exit() {
     let _guard = MPV_TEST_LOCK.lock().await;
 
-    let cfg = MpvConfig { path: "mpv".into(), extra_args: vec!["--ao=null".into()], volume: 50.0 };
+    let cfg = MpvConfig {
+        path: "mpv".into(),
+        extra_args: vec!["--ao=null".into()],
+        volume: 50.0,
+        ..MpvConfig::default()
+    };
     let (handle, mut events) = mpv::spawn(&cfg).await.expect("spawn mpv");
     let _ = events.recv().await; // Ready
     handle.shutdown().await;
@@ -625,7 +685,12 @@ async fn get_property_fails_after_mpv_exit() {
 async fn long_queue_start_does_not_deadlock() {
     let _guard = MPV_TEST_LOCK.lock().await;
 
-    let cfg = MpvConfig { path: "mpv".into(), extra_args: vec!["--ao=null".into()], volume: 50.0 };
+    let cfg = MpvConfig {
+        path: "mpv".into(),
+        extra_args: vec!["--ao=null".into()],
+        volume: 50.0,
+        ..MpvConfig::default()
+    };
     let (handle, mut events) = mpv::spawn(&cfg).await.expect("spawn mpv");
     let _ = events.recv().await; // Ready
 
@@ -680,7 +745,12 @@ async fn mpv_ignores_the_users_config_and_scripts() {
     // Every test that spawns mpv holds the lock, so nothing else reads the
     // environment meanwhile.
     std::env::set_var("MPV_HOME", &home);
-    let cfg = MpvConfig { path: "mpv".into(), extra_args: vec!["--ao=null".into()], volume: 50.0 };
+    let cfg = MpvConfig {
+        path: "mpv".into(),
+        extra_args: vec!["--ao=null".into()],
+        volume: 50.0,
+        ..MpvConfig::default()
+    };
     let spawned = mpv::spawn(&cfg).await;
     std::env::remove_var("MPV_HOME");
     let (handle, mut events) = spawned.expect("spawn mpv");
@@ -699,7 +769,12 @@ async fn mpv_ignores_the_users_config_and_scripts() {
 async fn media_title_is_the_queue_entry_title() {
     let _guard = MPV_TEST_LOCK.lock().await;
 
-    let cfg = MpvConfig { path: "mpv".into(), extra_args: vec!["--ao=null".into()], volume: 50.0 };
+    let cfg = MpvConfig {
+        path: "mpv".into(),
+        extra_args: vec!["--ao=null".into()],
+        volume: 50.0,
+        ..MpvConfig::default()
+    };
     let (handle, mut events) = mpv::spawn(&cfg).await.expect("spawn mpv");
     match events.recv().await {
         Some(MpvEvent::Ready) => {}
@@ -735,6 +810,7 @@ async fn cover_attaches_to_the_playing_file() {
         path: "mpv".into(),
         extra_args: vec!["--ao=null".into(), "--no-video".into(), "--audio-display=no".into()],
         volume: 50.0,
+        ..MpvConfig::default()
     };
     let (handle, mut events) = mpv::spawn(&cfg).await.expect("spawn mpv");
     let _ = events.recv().await; // Ready
@@ -791,6 +867,100 @@ async fn cover_attaches_to_the_playing_file() {
     tokio::time::sleep(std::time::Duration::from_millis(500)).await;
     let later = handle.get_property("time-pos").await.expect("time-pos").as_f64().unwrap();
     assert!(later > first, "time-pos did not advance: {first} -> {later}");
+
+    handle.shutdown().await;
+}
+
+fn part_file(dir: &std::path::Path, part: &str) -> String {
+    let dir = dir.join("library/parts").join(part).join("1");
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("file.wav");
+    let rate = 8000u32;
+    let samples: Vec<i16> = (0..rate).map(|i| ((i as f32 * 0.3).sin() * 3000.0) as i16).collect();
+    let data_len = (samples.len() * 2) as u32;
+    let mut wav = Vec::new();
+    wav.extend_from_slice(b"RIFF");
+    wav.extend_from_slice(&(36 + data_len).to_le_bytes());
+    wav.extend_from_slice(b"WAVEfmt ");
+    for v in [16u32, 1 | (1 << 16), rate, rate * 2, 2 | (16 << 16)] {
+        wav.extend_from_slice(&v.to_le_bytes());
+    }
+    wav.extend_from_slice(b"data");
+    wav.extend_from_slice(&data_len.to_le_bytes());
+    for s in samples {
+        wav.extend_from_slice(&s.to_le_bytes());
+    }
+    std::fs::write(&path, wav).unwrap();
+    path.display().to_string()
+}
+
+async fn spawn_leveling() -> (mpv::MpvHandle, tokio::sync::mpsc::UnboundedReceiver<MpvEvent>) {
+    let cfg = MpvConfig {
+        extra_args: vec!["--ao=null".into()],
+        loudness_leveling: "track".into(),
+        ..MpvConfig::default()
+    };
+    let (handle, mut events) = mpv::spawn(&cfg).await.expect("spawn mpv");
+    let mut seen = Seen::default();
+    let ready = tokio::time::timeout(std::time::Duration::from_secs(10), async {
+        while let Some(ev) = events.recv().await {
+            seen.push(&ev);
+            if let MpvEvent::Property { name, value: Some(v) } = &ev {
+                if name == mpv::LEVELING_READY && v == true {
+                    return;
+                }
+            }
+        }
+    })
+    .await;
+    assert!(ready.is_ok(), "the leveling script never reported in; {}", seen.tail());
+    (handle, events)
+}
+
+async fn gain_once_loaded(
+    handle: &mpv::MpvHandle,
+    events: &mut tokio::sync::mpsc::UnboundedReceiver<MpvEvent>,
+) -> f64 {
+    let mut seen = Seen::default();
+    tokio::time::timeout(std::time::Duration::from_secs(10), async {
+        while let Some(ev) = events.recv().await {
+            seen.push(&ev);
+            if matches!(ev, MpvEvent::FileLoaded) {
+                return;
+            }
+        }
+    })
+    .await
+    .unwrap_or_else(|_| panic!("no FileLoaded; {}", seen.tail()));
+    handle.get_property("volume-gain").await.expect("volume-gain").as_f64().expect("a number")
+}
+
+#[tokio::test]
+async fn leveling_script_applies_the_published_gain() {
+    let _guard = MPV_TEST_LOCK.lock().await;
+    let dir = tempfile::tempdir().unwrap();
+    let (handle, mut events) = spawn_leveling().await;
+
+    handle.tx.send(MpvCmd::SetGain { part: "11".into(), db: -6.5 }).unwrap();
+    handle.tx.send(MpvCmd::Play(vec![item(part_file(dir.path(), "11"))])).unwrap();
+    assert_eq!(gain_once_loaded(&handle, &mut events).await, -6.5);
+
+    handle.shutdown().await;
+}
+
+#[tokio::test]
+async fn leveling_script_waits_for_a_gain_still_on_its_way() {
+    let _guard = MPV_TEST_LOCK.lock().await;
+    let dir = tempfile::tempdir().unwrap();
+    let (handle, mut events) = spawn_leveling().await;
+
+    handle.tx.send(MpvCmd::Play(vec![item(part_file(dir.path(), "22"))])).unwrap();
+    tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+    handle.tx.send(MpvCmd::SetGain { part: "22".into(), db: -3.0 }).unwrap();
+    assert_eq!(gain_once_loaded(&handle, &mut events).await, -3.0);
+
+    handle.tx.send(MpvCmd::Play(vec![item(part_file(dir.path(), "33"))])).unwrap();
+    assert_eq!(gain_once_loaded(&handle, &mut events).await, 0.0, "no gain: plays as it is");
 
     handle.shutdown().await;
 }
