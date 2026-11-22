@@ -16,6 +16,10 @@ All notable changes to shmc are documented here. The format follows
 
 - Building from source needs Rust 1.90 or newer.
 
+### Fixed
+
+- A redirect to a deeply nested `blob:` URL can no longer crash shmc.
+
 ## 0.3.1 — 2026-11-21
 
 ### Fixed
