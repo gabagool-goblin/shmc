@@ -11,7 +11,7 @@ All notable changes to shmc are documented here. The format follows
 - The queue is kept across restarts and comes back paused where it was, with its shuffle, repeat, single and consume modes (`ui.restore_queue`).
 - When a dropped connection stops playback, shmc plays the failed track again once Plex answers.
 - Loudness leveling from Plex's analysis, by track or by album (`mpv.loudness_leveling`, Plex Pass).
-- Discover lists Plex's shelves (recently added albums, popular artists, recent playlists) above the stations; `Enter` opens an album, artist or playlist in place, `Esc` goes back and `:refresh` reloads them.
+- Discover lists Plex's shelves above the stations, and Recently played, Top rated and Never played below them. Albums, artists and playlists open in place, `Esc` goes back, and `:refresh` loads new shelves.
 
 ### Changed
 
