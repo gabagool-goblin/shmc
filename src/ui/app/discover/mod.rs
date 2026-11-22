@@ -260,7 +260,7 @@ mod tests {
     use crate::plex::client::testing::serve_full;
     use tokio::sync::mpsc::unbounded_channel;
 
-    const STATIONS: &str = include_str!("../../../tests/fixtures/hubs_stations.xml");
+    const STATIONS: &str = include_str!("../../../../tests/fixtures/hubs_stations.xml");
 
     fn queue_xml(n: usize) -> String {
         let tracks: String = (1..=n)
