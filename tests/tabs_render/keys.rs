@@ -332,6 +332,7 @@ async fn gg_runs_what_it_is_bound_to() {
             rating_key: format!("a{i}"),
             title: format!("Artist {i:02}"),
             thumb: None,
+            plays: None,
         })
         .collect();
     app.browser.artists.state.select(Some(0));
@@ -433,6 +434,7 @@ async fn g_letter_jumps_to_first_matching_title() {
             rating_key: format!("a{i}"),
             title: (*title).into(),
             thumb: None,
+            plays: None,
         })
         .collect();
     app.browser.artists.state.select(Some(0));

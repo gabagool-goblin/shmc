@@ -26,6 +26,7 @@ pub struct ItemsPane {
     pub name: String,
     pub items: ShelfItems,
     pub state: TableState,
+    pub plays: bool,
 }
 
 #[derive(Default)]

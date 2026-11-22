@@ -57,6 +57,11 @@ pub struct WireDirectory {
     pub year: Option<u32>,
     #[serde(rename = "@duration", default, deserialize_with = "lenient")]
     pub duration: Option<u64>,
+    #[serde(rename = "@viewCount", default, deserialize_with = "lenient")]
+    pub view_count: Option<u64>,
+    /// On `/library/all/top` rows: plays in the asked period.
+    #[serde(rename = "@globalViewCount", default, deserialize_with = "lenient")]
+    pub global_view_count: Option<u64>,
     /// On `/nearest` rows: how far the row is from the seed.
     #[serde(rename = "@distance", default, deserialize_with = "lenient")]
     pub distance: Option<f64>,
@@ -147,6 +152,11 @@ pub struct WireTrack {
     /// Unix seconds; absent when never played.
     #[serde(rename = "@lastViewedAt", default, deserialize_with = "lenient")]
     pub last_viewed_at: Option<i64>,
+    #[serde(rename = "@viewCount", default, deserialize_with = "lenient")]
+    pub view_count: Option<u64>,
+    /// On `/library/all/top` rows: plays in the asked period.
+    #[serde(rename = "@globalViewCount", default, deserialize_with = "lenient")]
+    pub global_view_count: Option<u64>,
     /// `/nearest` rows only: a float such as "0.0412", 0 for identical.
     #[serde(rename = "@distance", default, deserialize_with = "lenient")]
     pub distance: Option<f64>,
@@ -270,6 +280,7 @@ pub struct Artist {
     pub rating_key: String,
     pub title: String,
     pub thumb: Option<String>,
+    pub plays: Option<u64>,
 }
 
 #[derive(Debug, Clone)]
@@ -279,6 +290,7 @@ pub struct Album {
     pub artist: String,
     pub year: Option<u32>,
     pub thumb: Option<String>,
+    pub plays: Option<u64>,
 }
 
 /// Bulk XML has codec, bitrate and channels from `<Media>`; the sample rate and
@@ -327,6 +339,7 @@ pub struct Track {
     /// Plex's 0 to 10, a star is 2; None when unrated.
     pub user_rating: Option<u8>,
     pub last_viewed_at: Option<i64>,
+    pub plays: Option<u64>,
 }
 
 impl Track {
@@ -384,6 +397,7 @@ impl WireDirectory {
             rating_key: self.rating_key.unwrap_or(self.key),
             title: self.title.unwrap_or_default(),
             thumb: self.thumb,
+            plays: self.global_view_count.or(self.view_count),
         }
     }
 
@@ -394,6 +408,7 @@ impl WireDirectory {
             artist: self.grandparent_title.or(self.parent_title).unwrap_or_default(),
             year: self.year,
             thumb: self.thumb,
+            plays: self.global_view_count.or(self.view_count),
         }
     }
 }
@@ -470,6 +485,7 @@ impl WireTrack {
                 .map(|r| r.round().clamp(0.0, 10.0) as u8)
                 .filter(|&r| r > 0),
             last_viewed_at: self.last_viewed_at,
+            plays: self.global_view_count.or(self.view_count),
         }
     }
 }
@@ -545,6 +561,7 @@ mod tests {
             playlist_item_id: None,
             user_rating: None,
             last_viewed_at: None,
+            plays: None,
         }
     }
 

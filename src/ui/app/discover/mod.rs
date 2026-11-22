@@ -7,6 +7,7 @@ mod open;
 mod pane;
 mod sections;
 mod stations;
+mod top;
 
 use super::radio::RadioEnv;
 use super::{App, ListRef, Msg, PlexCmd};
@@ -74,7 +75,7 @@ pub enum DiscoverCmd {
     Load,
     PreviewStation { key: String, title: String },
     Open { key: String, what: OpenKind },
-    LoadLibrary { list: LibraryList, generation: u64, start: usize },
+    LoadLibrary { list: LibraryList, generation: u64, start: usize, span: Option<(i64, i64)> },
 }
 
 struct PendingOpen {
@@ -135,8 +136,8 @@ pub(super) async fn run(
             stations::preview_station(client, features, env, tx, key, title).await;
         }
         DiscoverCmd::Open { key, what } => open::open(client, section, tx, key, what).await,
-        DiscoverCmd::LoadLibrary { list, generation, start } => {
-            library::load(client, section, tx, list, generation, start).await;
+        DiscoverCmd::LoadLibrary { list, generation, start, span } => {
+            library::load(client, section, tx, list, generation, start, span).await;
         }
     }
 }

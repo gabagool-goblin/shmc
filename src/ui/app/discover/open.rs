@@ -89,6 +89,7 @@ impl App {
                     name,
                     items: ShelfItems::Albums(albums),
                     state: Default::default(),
+                    plays: false,
                 };
                 pane.state.select((!pane.items.is_empty()).then_some(0));
                 Pane::Items(pane)

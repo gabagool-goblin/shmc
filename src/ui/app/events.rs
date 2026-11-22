@@ -599,6 +599,7 @@ mod tests {
             playlist_item_id: None,
             user_rating: None,
             last_viewed_at: None,
+            plays: None,
         }
     }
 

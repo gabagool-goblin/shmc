@@ -3,6 +3,7 @@ pub mod config_screen;
 pub mod filter;
 pub mod icons;
 pub mod keymap;
+pub mod period;
 pub mod playlist_load;
 pub mod queue_seq;
 pub mod scroll;

@@ -42,6 +42,7 @@ async fn all_tabs_render_at_several_sizes() {
             rating_key: format!("a{i}"),
             title: format!("Northwind Sounds {i:02}"),
             thumb: None,
+            plays: None,
         })
         .collect();
     app.browser.artists.state.select(Some(3));
@@ -52,6 +53,7 @@ async fn all_tabs_render_at_several_sizes() {
             artist: "Northwind Sounds".into(),
             year: Some(2019),
             thumb: None,
+            plays: None,
         })
         .collect();
     app.browser.albums.state.select(Some(2));
@@ -310,11 +312,13 @@ async fn browser_cuts_long_artist_name() {
         artist: "Northwind Sounds".into(),
         year: Some(2019),
         thumb: None,
+        plays: None,
     }];
     app.browser.artists.items = vec![Artist {
         rating_key: "a0".into(),
         title: "A Very Long Artist Name That Will Not Fit In One Column At All".into(),
         thumb: None,
+        plays: None,
     }];
     app.browser.artists.state.select(Some(0));
     app.browser.albums.state.select(Some(0));

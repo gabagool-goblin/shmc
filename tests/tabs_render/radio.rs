@@ -23,8 +23,12 @@ fn requests(plex: &mut Plex) -> Vec<(String, RadioSeed, String)> {
 async fn on_browser() -> (TestApp, Plex) {
     let (mut app, plex) = new_app_with_plex().await;
     app.allow_writes = true;
-    app.browser.artists.items =
-        vec![Artist { rating_key: "ar1".into(), title: "Northwind Sounds".into(), thumb: None }];
+    app.browser.artists.items = vec![Artist {
+        rating_key: "ar1".into(),
+        title: "Northwind Sounds".into(),
+        thumb: None,
+        plays: None,
+    }];
     app.browser.artists.state.select(Some(0));
     app.browser.albums.items = vec![Album {
         rating_key: "al1".into(),
@@ -32,6 +36,7 @@ async fn on_browser() -> (TestApp, Plex) {
         artist: "Northwind Sounds".into(),
         year: None,
         thumb: None,
+        plays: None,
     }];
     app.browser.albums.state.select(Some(0));
     app.browser.focus = BrowserCol::Artists;

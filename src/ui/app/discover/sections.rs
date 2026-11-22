@@ -53,7 +53,10 @@ pub(super) fn build_rows(shelves: usize, stations: usize) -> Vec<Row> {
         rows.push(Row::Blank);
     }
     rows.push(Row::Heading("Library"));
-    rows.extend(LibraryList::ALL.map(Row::Library));
+    rows.extend(LibraryList::LIBRARY.map(Row::Library));
+    rows.push(Row::Blank);
+    rows.push(Row::Heading("Top"));
+    rows.extend(LibraryList::TOP.map(Row::Library));
     rows
 }
 
@@ -156,6 +159,7 @@ impl App {
             name: String::new(),
             items: shelf.items.clone(),
             state: Default::default(),
+            plays: false,
         };
         pane.state.select(Some(0));
         self.discover.pane = Pane::Items(pane);
