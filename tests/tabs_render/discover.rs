@@ -4,7 +4,7 @@ use super::queue_requests::mpv_matches_queue;
 use super::*;
 use shmc::config::RatingStyle;
 use shmc::plex::radio::{RadioQueue, RadioSeed, Station};
-use shmc::ui::app::{DiscoverCol, Preview, StationsOutcome};
+use shmc::ui::app::{DiscoverCmd, DiscoverCol, DiscoverMsg, Preview, StationsOutcome};
 
 type Plex = tokio::sync::mpsc::UnboundedReceiver<PlexCmd>;
 
@@ -24,7 +24,7 @@ fn stations() -> Vec<Station> {
 }
 
 fn loaded() -> Msg {
-    Msg::StationsLoaded(StationsOutcome::Stations(stations()))
+    Msg::Discover(DiscoverMsg::StationsLoaded(StationsOutcome::Stations(stations())))
 }
 
 /// Discover opened and its stations listed, writes allowed.
@@ -45,24 +45,24 @@ fn previewed(app: &mut App, k: u32, n: usize) {
     let tracks = (0..n).map(track).collect();
     let seed = RadioSeed::Station(station_key(k));
     let queue = RadioQueue { id: "9".into(), last: format!("{}", n.saturating_sub(1)), seed };
-    app.handle_msg(Msg::StationPreview {
+    app.handle_msg(Msg::Discover(DiscoverMsg::StationPreview {
         key: station_key(k),
         preview: Preview::Ready(tracks, queue),
-    });
+    }));
 }
 
 fn previews_asked(plex: &mut Plex) -> Vec<String> {
     sent(plex)
         .into_iter()
         .filter_map(|c| match c {
-            PlexCmd::PreviewStation { key, .. } => Some(key),
+            PlexCmd::Discover(DiscoverCmd::PreviewStation { key, .. }) => Some(key),
             _ => None,
         })
         .collect()
 }
 
 fn load_requests(plex: &mut Plex) -> usize {
-    sent(plex).iter().filter(|c| matches!(c, PlexCmd::LoadStations)).count()
+    sent(plex).iter().filter(|c| matches!(c, PlexCmd::Discover(DiscoverCmd::LoadStations))).count()
 }
 
 #[tokio::test]
@@ -182,7 +182,10 @@ async fn a_failed_preview_shows_its_reason_and_keeps_the_queue() {
     let (mut app, _plex) = on_discover().await;
     app.queue.items = (50..53).map(track).collect();
     let failed = Preview::Failed("the station returned no tracks".into());
-    app.handle_msg(Msg::StationPreview { key: station_key(1), preview: failed });
+    app.handle_msg(Msg::Discover(DiscoverMsg::StationPreview {
+        key: station_key(1),
+        preview: failed,
+    }));
     assert!(render(&mut app, 120, 32).contains("the station returned no tracks"));
     app.handle_msg(enter());
     assert!(app.status.contains("the station returned no tracks"), "{}", app.status);
@@ -239,7 +242,7 @@ async fn without_plex_pass_radio_the_right_side_says_so() {
     let (mut app, _plex) = new_app_with_plex().await;
     app.handle_msg(key('2'));
     assert!(render(&mut app, 120, 32).contains("loading stations…"));
-    app.handle_msg(Msg::StationsLoaded(StationsOutcome::NoRadio));
+    app.handle_msg(Msg::Discover(DiscoverMsg::StationsLoaded(StationsOutcome::NoRadio)));
     let screen = render(&mut app, 120, 32);
     assert!(screen.contains("Stations need Plex Pass radio"), "{screen}");
     assert!(app.discover.stations.is_empty());
@@ -249,7 +252,7 @@ async fn without_plex_pass_radio_the_right_side_says_so() {
 async fn a_failed_load_says_so() {
     let (mut app, _plex) = new_app_with_plex().await;
     app.handle_msg(key('2'));
-    app.handle_msg(Msg::StationsLoaded(StationsOutcome::Failed));
+    app.handle_msg(Msg::Discover(DiscoverMsg::StationsLoaded(StationsOutcome::Failed)));
     assert!(render(&mut app, 120, 32).contains("could not load stations"));
 }
 

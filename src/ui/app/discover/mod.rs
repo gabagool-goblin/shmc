@@ -2,12 +2,16 @@
 
 mod stations;
 
-use super::{App, Confirm, ListRef, PlexCmd, QueueAction};
+use super::radio::RadioEnv;
+use super::{App, Confirm, ListRef, Msg, PlexCmd, QueueAction};
 use crate::plex::radio::{RadioQueue, Station};
-use crate::plex::Track;
+use crate::plex::sonic::Features;
+use crate::plex::{PlexClient, Track};
 use ratatui::widgets::{ListState, TableState};
-pub(in crate::ui::app) use stations::{load_stations, preview_station};
+use stations::{load_stations, preview_station};
 use std::collections::{HashMap, HashSet};
+use std::sync::Mutex;
+use tokio::sync::mpsc::UnboundedSender;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum DiscoverCol {
@@ -40,6 +44,19 @@ pub enum Preview {
     Failed(String),
 }
 
+#[derive(Debug)]
+pub enum DiscoverMsg {
+    StationsLoaded(StationsOutcome),
+    StationPreview { key: String, preview: Preview },
+}
+
+/// Each command replies once with a `Msg::Discover`, never `Msg::Error`.
+#[derive(Debug)]
+pub enum DiscoverCmd {
+    LoadStations,
+    PreviewStation { key: String, title: String },
+}
+
 #[derive(Default)]
 pub struct DiscoverView {
     pub stations: Vec<Station>,
@@ -66,7 +83,30 @@ impl DiscoverView {
     }
 }
 
+pub(super) async fn run(
+    client: &PlexClient,
+    section: &str,
+    features: &Mutex<Option<Features>>,
+    env: &RadioEnv,
+    tx: &UnboundedSender<Msg>,
+    cmd: DiscoverCmd,
+) {
+    match cmd {
+        DiscoverCmd::LoadStations => load_stations(client, section, features, tx).await,
+        DiscoverCmd::PreviewStation { key, title } => {
+            preview_station(client, features, env, tx, key, title).await;
+        }
+    }
+}
+
 impl App {
+    pub(super) fn discover_msg(&mut self, msg: DiscoverMsg) {
+        match msg {
+            DiscoverMsg::StationsLoaded(outcome) => self.stations_loaded(outcome),
+            DiscoverMsg::StationPreview { key, preview } => self.station_preview(key, preview),
+        }
+    }
+
     pub(super) fn discover_list(&self) -> ListRef {
         match self.discover.focus {
             DiscoverCol::Stations => ListRef::DStations,
@@ -79,7 +119,7 @@ impl App {
             return;
         }
         self.discover.load = StationsLoad::Loading;
-        let _ = self.plex.tx.send(PlexCmd::LoadStations);
+        let _ = self.plex.tx.send(PlexCmd::Discover(DiscoverCmd::LoadStations));
     }
 
     pub(super) fn stations_loaded(&mut self, outcome: StationsOutcome) {

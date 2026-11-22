@@ -36,7 +36,9 @@ mod shuffle;
 mod similar;
 
 pub use adventure::{Adventure, AdventureOutcome, Stop};
-pub use discover::{DiscoverCol, DiscoverView, Preview, StationsLoad, StationsOutcome};
+pub use discover::{
+    DiscoverCmd, DiscoverCol, DiscoverMsg, DiscoverView, Preview, StationsLoad, StationsOutcome,
+};
 pub use list::FilteredList;
 pub use list_request::{ListKind, ListRequest};
 pub use plex_worker::{spawn_plex_worker, PlexCmd, PlexHandle};
@@ -185,11 +187,7 @@ pub enum Msg {
         key: String,
         outcome: AdventureOutcome,
     },
-    StationsLoaded(StationsOutcome),
-    StationPreview {
-        key: String,
-        preview: Preview,
-    },
+    Discover(DiscoverMsg),
     PlaylistsLoaded(Vec<crate::plex::Playlist>),
     PlaylistSaved(crate::plex::SaveOutcome),
     PlaylistItemsLoaded {

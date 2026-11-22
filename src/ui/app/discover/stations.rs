@@ -1,4 +1,4 @@
-use super::{DiscoverCol, Preview, StationsLoad, StationsOutcome};
+use super::{DiscoverCmd, DiscoverCol, DiscoverMsg, Preview, StationsLoad, StationsOutcome};
 use crate::plex::radio::Station;
 use crate::plex::sonic::Features;
 use crate::plex::PlexClient;
@@ -26,7 +26,7 @@ pub(in crate::ui::app) async fn load_stations(
             }
         }
     };
-    let _ = tx.send(Msg::StationsLoaded(outcome));
+    let _ = tx.send(Msg::Discover(DiscoverMsg::StationsLoaded(outcome)));
 }
 
 /// Worker side: replies once with `Msg::StationPreview`.
@@ -44,7 +44,7 @@ pub(in crate::ui::app) async fn preview_station(
         RadioOutcome::NoStation => Preview::Failed(RadioOutcome::Empty.problem().into()),
         other => Preview::Failed(other.problem().into()),
     };
-    let _ = tx.send(Msg::StationPreview { key, preview });
+    let _ = tx.send(Msg::Discover(DiscoverMsg::StationPreview { key, preview }));
 }
 
 impl App {
@@ -71,10 +71,10 @@ impl App {
         self.discover.shown = Some(station.key.clone());
         if !self.discover.previews.contains_key(&station.key) {
             self.discover.previews.insert(station.key.clone(), Preview::Loading);
-            let _ = self
-                .plex
-                .tx
-                .send(PlexCmd::PreviewStation { key: station.key, title: station.title });
+            let _ = self.plex.tx.send(PlexCmd::Discover(DiscoverCmd::PreviewStation {
+                key: station.key,
+                title: station.title,
+            }));
         }
         self.show_preview();
     }
@@ -187,8 +187,8 @@ mod tests {
         let (tx, mut rx) = unbounded_channel();
         load_stations(&client, "1", &Mutex::new(None), &tx).await;
         match rx.try_recv().unwrap() {
-            Msg::StationsLoaded(StationsOutcome::Stations(s)) => Some(s),
-            Msg::StationsLoaded(_) => None,
+            Msg::Discover(DiscoverMsg::StationsLoaded(StationsOutcome::Stations(s))) => Some(s),
+            Msg::Discover(DiscoverMsg::StationsLoaded(_)) => None,
             _ => panic!("expected StationsLoaded"),
         }
     }
@@ -219,7 +219,8 @@ mod tests {
     #[tokio::test]
     async fn a_preview_reads_the_station_key_as_is_and_replies_once() {
         let (msgs, seen) = previewed(Some("cid1"), 30).await;
-        let [Msg::StationPreview { key, preview: Preview::Ready(tracks, _) }] = msgs.as_slice()
+        let [Msg::Discover(DiscoverMsg::StationPreview { key, preview: Preview::Ready(tracks, _) })] =
+            msgs.as_slice()
         else {
             panic!("expected one ready preview");
         };
@@ -235,7 +236,9 @@ mod tests {
             (None, "radio is off: cannot store the client id"),
         ] {
             let (msgs, _) = previewed(client_id, 0).await;
-            let [Msg::StationPreview { preview: Preview::Failed(msg), .. }] = msgs.as_slice()
+            let [Msg::Discover(DiscoverMsg::StationPreview {
+                preview: Preview::Failed(msg), ..
+            })] = msgs.as_slice()
             else {
                 panic!("expected one failed preview");
             };

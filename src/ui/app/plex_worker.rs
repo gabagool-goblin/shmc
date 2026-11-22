@@ -1,5 +1,5 @@
 use super::adventure::{self, Stop};
-use super::discover;
+use super::discover::{self, DiscoverCmd};
 use super::radio::{self, RadioEnv, RadioSeed};
 use super::similar::{SimilarKind, SimilarOutcome};
 use crate::plex::sonic::Features;
@@ -89,13 +89,7 @@ pub enum PlexCmd {
         queue: crate::plex::radio::RadioQueue,
         skip: std::collections::HashSet<String>,
     },
-    /// Replies once with `Msg::StationsLoaded`, never `Msg::Error`.
-    LoadStations,
-    /// Replies once with `Msg::StationPreview`, never `Msg::Error`.
-    PreviewStation {
-        key: String,
-        title: String,
-    },
+    Discover(DiscoverCmd),
     LoadThumb {
         path: String,
     },
@@ -329,12 +323,8 @@ pub fn spawn_plex_worker(
                     PlexCmd::RadioMore { seq, queue, skip } => {
                         radio::more(&client, &features, &radio_env, tx, seq, queue, skip).await;
                     }
-                    PlexCmd::LoadStations => {
-                        discover::load_stations(&client, &section, &features, &tx).await;
-                    }
-                    PlexCmd::PreviewStation { key, title } => {
-                        discover::preview_station(&client, &features, &radio_env, &tx, key, title)
-                            .await;
+                    PlexCmd::Discover(cmd) => {
+                        discover::run(&client, &section, &features, &radio_env, &tx, cmd).await;
                     }
                     PlexCmd::LoadThumb { path } => {
                         match load_thumb(&client, &path, art_cache_mb, art_max_size_px).await {
