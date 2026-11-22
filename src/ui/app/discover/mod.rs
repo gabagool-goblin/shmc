@@ -1,7 +1,8 @@
-//! The Discover tab: Plex's shelves and the library's radio stations.
+//! The Discover tab: Plex's shelves, the library's radio stations and its lists.
 
 mod actions;
 mod hubs;
+mod library;
 mod open;
 mod pane;
 mod sections;
@@ -9,10 +10,11 @@ mod stations;
 
 use super::radio::RadioEnv;
 use super::{App, ListRef, Msg, PlexCmd};
-use crate::plex::discover::{DiscoverHubs, Shelf};
+use crate::plex::discover::{DiscoverHubs, LibraryList, Shelf};
 use crate::plex::radio::Station;
 use crate::plex::sonic::Features;
 use crate::plex::{Album, PlexClient, Track};
+pub use library::{Library, LibraryOutcome};
 pub use pane::{trail, ItemsPane, Pane, TracksPane, TracksSource};
 use ratatui::widgets::ListState;
 pub use sections::Row;
@@ -59,10 +61,11 @@ pub enum Opened {
 
 #[derive(Debug)]
 pub enum DiscoverMsg {
-    Loaded { hubs: DiscoverHubs, radio: bool },
+    Loaded(DiscoverHubs),
     LoadFailed,
     StationPreview { key: String, preview: Preview },
     Opened { key: String, outcome: Opened },
+    Library { list: LibraryList, generation: u64, start: usize, outcome: LibraryOutcome },
 }
 
 /// Each command replies once with a `Msg::Discover`, never `Msg::Error`.
@@ -71,6 +74,7 @@ pub enum DiscoverCmd {
     Load,
     PreviewStation { key: String, title: String },
     Open { key: String, what: OpenKind },
+    LoadLibrary { list: LibraryList, generation: u64, start: usize },
 }
 
 struct PendingOpen {
@@ -83,13 +87,13 @@ struct PendingOpen {
 #[derive(Default)]
 pub struct DiscoverView {
     pub load: DiscoverLoad,
-    pub radio: bool,
     pub shelves: Vec<Shelf>,
     pub stations: Vec<Station>,
     pub rows: Vec<Row>,
     pub sections_state: ListState,
     pub focus: DiscoverCol,
     pub pane: Pane,
+    pub library: Library,
     back: Vec<Pane>,
     pending: Option<PendingOpen>,
     followed: Option<Row>,
@@ -131,16 +135,28 @@ pub(super) async fn run(
             stations::preview_station(client, features, env, tx, key, title).await;
         }
         DiscoverCmd::Open { key, what } => open::open(client, section, tx, key, what).await,
+        DiscoverCmd::LoadLibrary { list, generation, start } => {
+            library::load(client, section, tx, list, generation, start).await;
+        }
     }
 }
 
 impl App {
     pub(super) fn discover_msg(&mut self, msg: DiscoverMsg) {
         match msg {
-            DiscoverMsg::Loaded { hubs, radio } => self.discover_loaded(hubs, radio),
-            DiscoverMsg::LoadFailed => self.discover.load = DiscoverLoad::Failed,
+            DiscoverMsg::Loaded(hubs) => self.discover_loaded(hubs),
+            DiscoverMsg::LoadFailed => {
+                if self.discover.rows.is_empty() {
+                    self.discover_loaded(DiscoverHubs::default());
+                }
+                self.discover.load = DiscoverLoad::Failed;
+                self.transient_err("could not load Discover".into());
+            }
             DiscoverMsg::StationPreview { key, preview } => self.station_preview(key, preview),
             DiscoverMsg::Opened { key, outcome } => self.discover_opened(key, outcome),
+            DiscoverMsg::Library { list, generation, start, outcome } => {
+                self.library_loaded(list, generation, start, outcome);
+            }
         }
     }
 

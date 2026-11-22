@@ -37,7 +37,7 @@ impl PlaylistLoad {
 }
 
 /// 24627 -> "24 627"
-fn group(n: usize) -> String {
+pub fn group(n: usize) -> String {
     let digits = n.to_string();
     let mut out = String::new();
     for (i, c) in digits.chars().enumerate() {

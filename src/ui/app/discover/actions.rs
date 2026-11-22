@@ -16,7 +16,7 @@ impl App {
         let Pane::Tracks(pane) = &self.discover.pane else { return };
         match &pane.source {
             TracksSource::Station(_) => self.play_station_from(),
-            TracksSource::Album => {
+            TracksSource::Album | TracksSource::Library(_) => {
                 let confirm = Confirm::FromList { name: pane.name.clone() };
                 let tracks = pane.tracks[real..].to_vec();
                 self.queue_local(tracks, confirm, QueueAction::Replace);

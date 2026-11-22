@@ -38,22 +38,25 @@ fn right_message(app: &App) -> String {
     if d.rows.is_empty() {
         return match d.load {
             DiscoverLoad::NotLoaded | DiscoverLoad::Loading => "loading Discover…".into(),
-            DiscoverLoad::Failed => "could not load Discover".into(),
-            DiscoverLoad::Loaded if !d.radio => "Stations need Plex Pass radio".into(),
-            DiscoverLoad::Loaded => "nothing to show".into(),
+            _ => "could not load Discover".into(),
         };
     }
     let selected = d.sections_state.selected().and_then(|i| d.rows.get(i));
-    let Some(Row::Station(i)) = selected else { return String::new() };
-    if !app.allow_writes {
-        return "Starting a station needs plex.allow_writes".into();
-    }
-    if let Some(crate::ui::app::Preview::Failed(msg)) = d.shown_preview() {
-        return msg.clone();
-    }
-    match d.stations.get(*i) {
-        Some(station) => format!("loading {}…", clean(&station.title)),
-        None => String::new(),
+    match selected {
+        Some(Row::Library(list)) => d.library.message(*list),
+        Some(Row::Station(i)) => {
+            if !app.allow_writes {
+                return "Starting a station needs plex.allow_writes".into();
+            }
+            if let Some(crate::ui::app::Preview::Failed(msg)) = d.shown_preview() {
+                return msg.clone();
+            }
+            match d.stations.get(*i) {
+                Some(station) => format!("loading {}…", clean(&station.title)),
+                None => String::new(),
+            }
+        }
+        _ => String::new(),
     }
 }
 
@@ -69,6 +72,7 @@ fn draw_sections(f: &mut Frame, app: &mut App, pane: Rect) {
             Row::Blank => Line::default(),
             Row::Shelf(n) => text_row(&d.shelves[n].title, content.width),
             Row::Station(n) => text_row(&d.stations[n].title, content.width),
+            Row::Library(list) => text_row(list.title(), content.width),
         };
         items.push(ListItem::new(line));
     });

@@ -49,6 +49,7 @@ fn track(i: usize) -> Track {
         audio: AudioInfo::default(),
         playlist_item_id: None,
         user_rating: None,
+        last_viewed_at: None,
     }
 }
 

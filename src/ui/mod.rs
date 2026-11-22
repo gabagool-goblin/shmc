@@ -12,6 +12,7 @@ pub mod text_input;
 pub mod theme;
 pub mod themes;
 pub mod views;
+pub mod when;
 
 pub use app::{App, Msg};
 

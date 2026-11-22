@@ -1,10 +1,12 @@
-use crate::plex::discover::ShelfItems;
+use crate::plex::discover::{LibraryList, ShelfItems};
 use crate::plex::radio::RadioQueue;
 use crate::plex::Track;
 use ratatui::widgets::TableState;
 
+#[derive(PartialEq, Eq)]
 pub enum TracksSource {
     Station(RadioQueue),
+    Library(LibraryList),
     Album,
     Playlist { key: String },
 }

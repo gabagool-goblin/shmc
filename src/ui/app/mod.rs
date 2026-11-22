@@ -37,8 +37,8 @@ mod similar;
 
 pub use adventure::{Adventure, AdventureOutcome, Stop};
 pub use discover::{
-    trail, DiscoverCmd, DiscoverCol, DiscoverLoad, DiscoverMsg, DiscoverView, ItemsPane, OpenKind,
-    Opened, Pane, Preview, Row, TracksPane, TracksSource,
+    trail, DiscoverCmd, DiscoverCol, DiscoverLoad, DiscoverMsg, DiscoverView, ItemsPane,
+    LibraryOutcome, OpenKind, Opened, Pane, Preview, Row, TracksPane, TracksSource,
 };
 pub use list::FilteredList;
 pub use list_request::{ListKind, ListRequest};
