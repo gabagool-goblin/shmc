@@ -44,6 +44,7 @@ fn right_message(app: &App) -> String {
     let selected = d.sections_state.selected().and_then(|i| d.rows.get(i));
     match selected {
         Some(Row::Library(list)) => d.library.message(*list),
+        Some(Row::BestOf) => d.best_of.message(),
         Some(Row::Station(i)) => {
             if !app.allow_writes {
                 return "Starting a station needs plex.allow_writes".into();
@@ -73,6 +74,7 @@ fn draw_sections(f: &mut Frame, app: &mut App, pane: Rect) {
             Row::Shelf(n) => text_row(&d.shelves[n].title, content.width),
             Row::Station(n) => text_row(&d.stations[n].title, content.width),
             Row::Library(list) => text_row(list.title(), content.width),
+            Row::BestOf => text_row("Best of", content.width),
         };
         items.push(ListItem::new(line));
     });

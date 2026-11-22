@@ -1,6 +1,7 @@
 //! The Discover tab: Plex's shelves, the library's radio stations and its lists.
 
 mod actions;
+mod best_of;
 mod hubs;
 mod library;
 mod open;
@@ -11,10 +12,11 @@ mod top;
 
 use super::radio::RadioEnv;
 use super::{App, ListRef, Msg, PlexCmd};
-use crate::plex::discover::{DiscoverHubs, LibraryList, Shelf};
+use crate::plex::discover::{BestOf, DiscoverHubs, LibraryList, Shelf};
 use crate::plex::radio::Station;
 use crate::plex::sonic::Features;
 use crate::plex::{Album, PlexClient, Track};
+pub use best_of::Choices;
 pub use library::{Library, LibraryOutcome};
 pub use pane::{trail, ItemsPane, Pane, TracksPane, TracksSource};
 use ratatui::widgets::ListState;
@@ -51,6 +53,7 @@ pub enum OpenKind {
     Album,
     Artist,
     Playlist { size: usize },
+    BestOf(BestOf),
 }
 
 #[derive(Debug)]
@@ -67,6 +70,7 @@ pub enum DiscoverMsg {
     StationPreview { key: String, preview: Preview },
     Opened { key: String, outcome: Opened },
     Library { list: LibraryList, generation: u64, start: usize, outcome: LibraryOutcome },
+    BestOf { generation: u64, outcome: Result<(Vec<u32>, Vec<u32>), String> },
 }
 
 /// Each command replies once with a `Msg::Discover`, never `Msg::Error`.
@@ -76,6 +80,7 @@ pub enum DiscoverCmd {
     PreviewStation { key: String, title: String },
     Open { key: String, what: OpenKind },
     LoadLibrary { list: LibraryList, generation: u64, start: usize, span: Option<(i64, i64)> },
+    LoadBestOf { generation: u64 },
 }
 
 struct PendingOpen {
@@ -95,6 +100,7 @@ pub struct DiscoverView {
     pub focus: DiscoverCol,
     pub pane: Pane,
     pub library: Library,
+    pub best_of: Choices,
     back: Vec<Pane>,
     pending: Option<PendingOpen>,
     followed: Option<Row>,
@@ -139,6 +145,9 @@ pub(super) async fn run(
         DiscoverCmd::LoadLibrary { list, generation, start, span } => {
             library::load(client, section, tx, list, generation, start, span).await;
         }
+        DiscoverCmd::LoadBestOf { generation } => {
+            best_of::load(client, section, tx, generation).await;
+        }
     }
 }
 
@@ -158,6 +167,7 @@ impl App {
             DiscoverMsg::Library { list, generation, start, outcome } => {
                 self.library_loaded(list, generation, start, outcome);
             }
+            DiscoverMsg::BestOf { generation, outcome } => self.best_of_loaded(generation, outcome),
         }
     }
 

@@ -83,6 +83,29 @@ pub enum TopRows {
     Artists(Vec<Artist>),
 }
 
+/// `Decade` holds the decade's first year.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BestOf {
+    Year(u32),
+    Decade(u32),
+}
+
+impl BestOf {
+    pub fn label(self) -> String {
+        match self {
+            Self::Year(y) => y.to_string(),
+            Self::Decade(d) => format!("{d}s"),
+        }
+    }
+
+    fn filter(self) -> String {
+        match self {
+            Self::Year(y) => format!("year={y}"),
+            Self::Decade(d) => format!("decade={d}"),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Shelf {
     pub title: String,
@@ -94,6 +117,7 @@ pub enum ShelfItems {
     Albums(Vec<Album>),
     Artists(Vec<Artist>),
     Playlists(Vec<Playlist>),
+    BestOf(Vec<BestOf>),
 }
 
 impl ShelfItems {
@@ -102,6 +126,7 @@ impl ShelfItems {
             Self::Albums(v) => v.len(),
             Self::Artists(v) => v.len(),
             Self::Playlists(v) => v.len(),
+            Self::BestOf(v) => v.len(),
         }
     }
 
@@ -110,6 +135,7 @@ impl ShelfItems {
             Self::Albums(v) => v.get(i).map(|a| a.title.as_str()),
             Self::Artists(v) => v.get(i).map(|a| a.title.as_str()),
             Self::Playlists(v) => v.get(i).map(|p| p.title.as_str()),
+            Self::BestOf(_) => None,
         }
     }
 
@@ -240,6 +266,30 @@ impl PlexClient {
             }
         })
     }
+
+    /// The years and the decades that have albums, newest first.
+    pub async fn best_of_choices(&self, section: &str) -> Result<(Vec<u32>, Vec<u32>)> {
+        Ok((self.best_of_keys(section, "year").await?, self.best_of_keys(section, "decade").await?))
+    }
+
+    async fn best_of_keys(&self, section: &str, kind: &str) -> Result<Vec<u32>> {
+        let c = self
+            .get_xml(&format!(
+                "/library/sections/{section}/{kind}?type=9&X-Plex-Container-Start=0&X-Plex-Container-Size={LIBRARY_PAGE}"
+            ))
+            .await?;
+        Ok(c.directories.iter().filter_map(|d| d.key.parse().ok()).collect())
+    }
+
+    pub async fn best_of_albums(&self, section: &str, what: BestOf) -> Result<Vec<Album>> {
+        let filter = what.filter();
+        let c = self
+            .get_xml(&format!(
+                "/library/sections/{section}/all?type=9&{filter}&viewCount>=1&sort=viewCount:desc&X-Plex-Container-Start=0&X-Plex-Container-Size={LIBRARY_PAGE}"
+            ))
+            .await?;
+        Ok(albums_of(c))
+    }
 }
 
 fn albums_of(c: MediaContainer) -> Vec<Album> {
@@ -301,12 +351,19 @@ mod tests {
 
     const TOP: &str = "<MediaContainer><Directory ratingKey=\"9\" key=\"/library/metadata/9\" type=\"album\" title=\"A\" parentTitle=\"B\" year=\"2020\" globalViewCount=\"12\" viewCount=\"30\"/><Directory ratingKey=\"8\" key=\"/library/metadata/8\" type=\"album\" title=\"C\" viewCount=\"4\"/></MediaContainer>";
 
-    async fn top_line(list: LibraryList, span: Option<(i64, i64)>) -> String {
+    async fn top_line_of<F, Fut, T>(call: F) -> String
+    where
+        F: FnOnce(PlexClient) -> Fut,
+        Fut: std::future::Future<Output = Result<T>>,
+    {
         let (base, seen, _) = serve_full(|_| (200, TOP.to_string())).await;
-        let client = PlexClient::new(&base, "faketoken-lists");
-        client.top_list("1", list, span).await.unwrap();
+        call(PlexClient::new(&base, "faketoken-lists")).await.unwrap();
         let lines = seen.lock().unwrap().clone();
         lines[0].clone()
+    }
+
+    async fn top_line(list: LibraryList, span: Option<(i64, i64)>) -> String {
+        top_line_of(|client| async move { client.top_list("1", list, span).await }).await
     }
 
     #[tokio::test]
@@ -352,5 +409,42 @@ mod tests {
             panic!("expected albums")
         };
         assert_eq!(albums.iter().map(|a| a.plays).collect::<Vec<_>>(), [Some(12), Some(4)]);
+    }
+
+    #[tokio::test]
+    async fn best_of_choices_read_the_years_and_decades_from_their_keys() {
+        let (base, seen, _) = serve_full(|line| {
+            let body = if line.contains("/year?") {
+                "<MediaContainer><Directory title=\"2026\" key=\"2026\"/><Directory title=\"2025\" key=\"2025\"/></MediaContainer>"
+            } else {
+                "<MediaContainer><Directory title=\"2020s\" key=\"2020\"/><Directory title=\"2010s\" key=\"2010\"/></MediaContainer>"
+            };
+            (200, body.to_string())
+        })
+        .await;
+        let client = PlexClient::new(&base, "faketoken-lists");
+        let (years, decades) = client.best_of_choices("1").await.unwrap();
+        assert_eq!((years, decades), (vec![2026, 2025], vec![2020, 2010]));
+        let lines = seen.lock().unwrap().clone();
+        assert!(lines.iter().any(|l| l.starts_with("GET /library/sections/1/year?type=9")));
+        assert!(lines.iter().any(|l| l.starts_with("GET /library/sections/1/decade?type=9")));
+    }
+
+    #[tokio::test]
+    async fn best_of_albums_filter_by_year_or_decade_and_sort_by_play_count() {
+        for (what, filter, label) in [
+            (BestOf::Year(2025), "year=2025", "2025"),
+            (BestOf::Decade(2020), "decade=2020", "2020s"),
+        ] {
+            let line =
+                top_line_of(|client| async move { client.best_of_albums("1", what).await }).await;
+            assert!(line.starts_with("GET /library/sections/1/all?"), "{line}");
+            for part in
+                ["type=9", filter, "viewCount%3E=1", "sort=viewCount:desc", "Start=0", "Size=100"]
+            {
+                assert!(line.contains(part), "{part} in {line}");
+            }
+            assert_eq!(what.label(), label);
+        }
     }
 }
