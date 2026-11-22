@@ -1,5 +1,5 @@
-use super::{DiscoverCol, DiscoverLoad, ItemsPane, Pane};
-use crate::plex::discover::DiscoverHubs;
+use super::{DiscoverCol, DiscoverLoad, DiscoverView, ItemsPane, Pane};
+use crate::plex::discover::{DiscoverHubs, LibraryList};
 use crate::ui::app::{App, ListRef, Tab};
 use crate::ui::scroll;
 
@@ -9,11 +9,30 @@ pub enum Row {
     Blank,
     Shelf(usize),
     Station(usize),
+    Library(LibraryList),
 }
 
 impl Row {
     pub fn selectable(self) -> bool {
-        matches!(self, Row::Shelf(_) | Row::Station(_))
+        matches!(self, Row::Shelf(_) | Row::Station(_) | Row::Library(_))
+    }
+}
+
+#[derive(PartialEq)]
+enum RowId {
+    Shelf(String),
+    Station(String),
+    Library(LibraryList),
+}
+
+impl DiscoverView {
+    fn row_id(&self, row: Row) -> Option<RowId> {
+        Some(match row {
+            Row::Shelf(i) => RowId::Shelf(self.shelves.get(i)?.title.clone()),
+            Row::Station(i) => RowId::Station(self.stations.get(i)?.key.clone()),
+            Row::Library(list) => RowId::Library(list),
+            Row::Heading(_) | Row::Blank => return None,
+        })
     }
 }
 
@@ -30,18 +49,28 @@ pub(super) fn build_rows(shelves: usize, stations: usize) -> Vec<Row> {
         rows.push(Row::Heading("Stations"));
         rows.extend((0..stations).map(Row::Station));
     }
+    if !rows.is_empty() {
+        rows.push(Row::Blank);
+    }
+    rows.push(Row::Heading("Library"));
+    rows.extend(LibraryList::ALL.map(Row::Library));
     rows
 }
 
 impl App {
-    pub(super) fn discover_loaded(&mut self, hubs: DiscoverHubs, radio: bool) {
+    pub(super) fn discover_loaded(&mut self, hubs: DiscoverHubs) {
         self.drop_visual(ListRef::DTracks);
+        let was = self.highlighted_row().and_then(|r| self.discover.row_id(r));
         let d = &mut self.discover;
+        if !d.rows.is_empty() {
+            d.library.reset();
+        }
         d.rows = build_rows(hubs.shelves.len(), hubs.stations.len());
         d.shelves = hubs.shelves;
         d.stations = hubs.stations;
-        d.radio = radio;
-        d.sections_state.select(d.rows.iter().position(|r| r.selectable()));
+        let kept =
+            was.and_then(|id| d.rows.iter().position(|&r| d.row_id(r).as_ref() == Some(&id)));
+        d.sections_state.select(kept.or_else(|| d.rows.iter().position(|r| r.selectable())));
         d.load = DiscoverLoad::Loaded;
         d.followed = None;
         d.pane = Pane::Empty;
@@ -105,7 +134,7 @@ impl App {
         }
         let Some(row) = self.highlighted_row() else { return };
         if self.discover.followed == Some(row) {
-            return;
+            return self.page_library();
         }
         self.discover.followed = Some(row);
         self.discover.back.clear();
@@ -114,6 +143,7 @@ impl App {
         match row {
             Row::Shelf(i) => self.show_shelf(i),
             Row::Station(i) => self.follow_station(i),
+            Row::Library(list) => self.follow_library(list),
             Row::Heading(_) | Row::Blank => self.discover.pane = Pane::Empty,
         }
         self.settle_focus();

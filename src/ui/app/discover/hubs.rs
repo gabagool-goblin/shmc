@@ -18,7 +18,7 @@ pub(super) async fn load(
             if !radio {
                 hubs.stations.clear();
             }
-            DiscoverMsg::Loaded { hubs, radio }
+            DiscoverMsg::Loaded(hubs)
         }
         Err(e) => {
             tracing::warn!("loading Discover: {e:#}");
@@ -60,8 +60,7 @@ mod tests {
     #[tokio::test]
     async fn one_request_brings_shelves_and_stations() {
         let (msg, seen) = loaded("radio").await;
-        let DiscoverMsg::Loaded { hubs, radio } = msg else { panic!("expected Loaded") };
-        assert!(radio);
+        let DiscoverMsg::Loaded(hubs) = msg else { panic!("expected Loaded") };
         assert_eq!(hubs.stations.len(), 4);
         assert_eq!(hubs.shelves.len(), 3);
         assert!(matches!(hubs.shelves[2].items, ShelfItems::Playlists(_)));
@@ -91,8 +90,7 @@ mod tests {
     #[tokio::test]
     async fn without_radio_the_shelves_stay_and_the_stations_go() {
         let (msg, _) = loaded("music-analysis").await;
-        let DiscoverMsg::Loaded { hubs, radio } = msg else { panic!("expected Loaded") };
-        assert!(!radio);
+        let DiscoverMsg::Loaded(hubs) = msg else { panic!("expected Loaded") };
         assert!(hubs.stations.is_empty());
         assert_eq!(hubs.shelves.len(), 3);
     }

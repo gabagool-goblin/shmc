@@ -144,6 +144,9 @@ pub struct WireTrack {
     /// A float such as "6.0"; absent when unrated.
     #[serde(rename = "@userRating", default, deserialize_with = "lenient")]
     pub user_rating: Option<f64>,
+    /// Unix seconds; absent when never played.
+    #[serde(rename = "@lastViewedAt", default, deserialize_with = "lenient")]
+    pub last_viewed_at: Option<i64>,
     /// `/nearest` rows only: a float such as "0.0412", 0 for identical.
     #[serde(rename = "@distance", default, deserialize_with = "lenient")]
     pub distance: Option<f64>,
@@ -323,6 +326,7 @@ pub struct Track {
     pub playlist_item_id: Option<String>,
     /// Plex's 0 to 10, a star is 2; None when unrated.
     pub user_rating: Option<u8>,
+    pub last_viewed_at: Option<i64>,
 }
 
 impl Track {
@@ -465,6 +469,7 @@ impl WireTrack {
                 .user_rating
                 .map(|r| r.round().clamp(0.0, 10.0) as u8)
                 .filter(|&r| r > 0),
+            last_viewed_at: self.last_viewed_at,
         }
     }
 }
@@ -539,6 +544,7 @@ mod tests {
             audio: AudioInfo::default(),
             playlist_item_id: None,
             user_rating: None,
+            last_viewed_at: None,
         }
     }
 

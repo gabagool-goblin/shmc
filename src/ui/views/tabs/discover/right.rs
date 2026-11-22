@@ -1,7 +1,9 @@
 use super::super::draw_list_label;
+use crate::plex::discover::LibraryList;
 use crate::plex::discover::ShelfItems;
-use crate::ui::app::{App, Pane};
+use crate::ui::app::{App, Pane, TracksSource};
 use crate::ui::filter::ListFilter;
+use crate::ui::playlist_load::group;
 use crate::ui::scroll::ScrollId;
 use crate::ui::scrollbar::render_scrollbar;
 use crate::ui::theme;
@@ -10,9 +12,15 @@ use crate::ui::views::tables::{
     HeaderSpec, TrackCols, TRACK_LEGACY,
 };
 use crate::ui::views::widgets::cell;
+use crate::ui::when::played_at;
 use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::widgets::{Cell, Row, Table, TableState};
 use ratatui::Frame;
+
+/// Wide enough for "2025-11-20", the longest Played text.
+const PLAYED_COL: u16 = 10;
+
+const PLAYED_MIN_PANE: u16 = 44;
 
 pub(super) fn draw_pane(f: &mut Frame, app: &mut App, pane: Rect) {
     let parts = Layout::vertical([Constraint::Length(1), Constraint::Min(1)]).split(pane);
@@ -37,7 +45,7 @@ fn noun(items: &ShelfItems) -> &'static str {
 }
 
 fn counted(n: usize, noun: &str) -> String {
-    format!("{n} {noun}{}", if n == 1 { "" } else { "s" })
+    format!("{} {noun}{}", group(n), if n == 1 { "" } else { "s" })
 }
 
 fn draw_tracks(f: &mut Frame, app: &mut App, area: Rect) {
@@ -46,8 +54,14 @@ fn draw_tracks(f: &mut Frame, app: &mut App, area: Rect) {
     let num_w = None;
     let tc = TrackCols::plain(app.column_weights, TRACK_LEGACY);
     let longest = pane.tracks.iter().filter_map(|t| t.duration_ms).max();
-    let cols = track_cols(num_w, len_col_width(longest), &tc);
-    let headers = track_headers(num_w, &tc);
+    let played = pane.source == TracksSource::Library(LibraryList::RecentlyPlayed)
+        && area.width >= PLAYED_MIN_PANE;
+    let mut cols = track_cols(num_w, len_col_width(longest), &tc);
+    let mut headers = track_headers(num_w, &tc);
+    if played {
+        cols.insert(cols.len() - 1, Constraint::Length(PLAYED_COL));
+        headers.insert(headers.len() - 1, HeaderSpec::right("Played"));
+    }
     let frame = table_frame(f, area, total, &cols, Some(&headers), None);
     let cursor = pane.state.selected();
     let visible = frame.rows.height as usize;
@@ -69,7 +83,7 @@ fn draw_tracks(f: &mut Frame, app: &mut App, area: Rect) {
         app.visual_range(),
         |t, real, base, playing| {
             let rating = app.rating_text(&t.rating_key, t.user_rating);
-            plain_track_cells(
+            let mut cells = plain_track_cells(
                 t,
                 real,
                 base,
@@ -79,7 +93,14 @@ fn draw_tracks(f: &mut Frame, app: &mut App, area: Rect) {
                 &tc,
                 "",
                 rating.as_deref(),
-            )
+            );
+            if played {
+                let text = t.last_viewed_at.map(played_at).unwrap_or_default();
+                let style = if playing { base } else { theme::dim() };
+                let cell = Cell::from(ratatui::text::Line::from(text).right_aligned()).style(style);
+                cells.insert(cells.len() - 1, cell);
+            }
+            cells
         },
     );
     render_rows(f, frame.rows, &frame.col_w, rows, cursor, offset);
