@@ -33,11 +33,12 @@ pub(super) fn draw_pane(f: &mut Frame, app: &mut App, pane: Rect) {
     ])
     .split(pane);
     let (label, count) = match &app.discover.pane {
-        Pane::Tracks(p) => (p.label(), counted(p.total, "track")),
-        Pane::Items(p) => (p.label(), counted(p.items.len(), noun(&p.items))),
+        Pane::Tracks(p) => (p.label(), Some(counted(p.total, "track"))),
+        Pane::Items(p) => (p.label(), noun(&p.items).map(|n| counted(p.items.len(), n))),
         Pane::Empty => return,
     };
-    draw_list_label(f, parts[0], &label, &format!(" ({count})"));
+    let count = count.map(|c| format!(" ({c})")).unwrap_or_default();
+    draw_list_label(f, parts[0], &label, &count);
     if let Some(kind) = period {
         draw_period_line(f, parts[1], kind);
     }
@@ -57,11 +58,12 @@ fn draw_period_line(f: &mut Frame, area: Rect, active: PeriodKind) {
     f.render_widget(Paragraph::new(Line::from(spans)), area);
 }
 
-fn noun(items: &ShelfItems) -> &'static str {
+fn noun(items: &ShelfItems) -> Option<&'static str> {
     match items {
-        ShelfItems::Albums(_) => "album",
-        ShelfItems::Artists(_) => "artist",
-        ShelfItems::Playlists(_) => "playlist",
+        ShelfItems::Albums(_) => Some("album"),
+        ShelfItems::Artists(_) => Some("artist"),
+        ShelfItems::Playlists(_) => Some("playlist"),
+        ShelfItems::BestOf(_) => None,
     }
 }
 
@@ -188,6 +190,7 @@ fn draw_items(f: &mut Frame, app: &mut App, area: Rect) {
                 }
                 Row::new(cells)
             }
+            ShelfItems::BestOf(v) => Row::new(vec![cell(&v[i].label(), w[0], "", text)]),
             ShelfItems::Playlists(v) => {
                 let count = v[i].item_count.map(|n| n.to_string()).unwrap_or_default();
                 Row::new(vec![
@@ -211,6 +214,7 @@ fn item_columns(items: &ShelfItems, plays: bool) -> (Vec<Constraint>, Vec<Header
             vec![HeaderSpec::left("Album"), HeaderSpec::left("Artist"), HeaderSpec::right("Year")],
         ),
         ShelfItems::Artists(_) => (vec![Constraint::Fill(1)], vec![HeaderSpec::left("Artist")]),
+        ShelfItems::BestOf(_) => (vec![Constraint::Fill(1)], vec![HeaderSpec::left("Released")]),
         ShelfItems::Playlists(v) => {
             let widest = v.iter().filter_map(|p| p.item_count).max().unwrap_or(0).to_string().len();
             (

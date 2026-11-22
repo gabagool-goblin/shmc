@@ -16,6 +16,7 @@ use tokio::sync::mpsc::unbounded_channel;
 
 mod adventure;
 mod art;
+mod best_of;
 mod browse;
 mod discover;
 mod keys;

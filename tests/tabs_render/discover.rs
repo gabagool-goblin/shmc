@@ -422,7 +422,7 @@ async fn the_cursor_skips_headings_and_blank_rows() {
     let (mut app, _plex) = on_shelves().await;
     assert_eq!(cursor(&app), Some(1), "the first shelf, not the heading");
     app.handle_msg(key('k'));
-    assert_eq!(cursor(&app), Some(19), "wraps to the last row");
+    assert_eq!(cursor(&app), Some(20), "wraps to the last row");
     app.handle_msg(key('j'));
     assert_eq!(cursor(&app), Some(1), "and back to the first shelf");
     for want in [2, 3, 6, 7] {
@@ -430,8 +430,8 @@ async fn the_cursor_skips_headings_and_blank_rows() {
         assert_eq!(cursor(&app), Some(want));
     }
     app.handle_msg(key('G'));
-    assert_eq!(cursor(&app), Some(19));
-    for want in [18, 17, 14, 13, 12, 9, 8, 7, 6, 3] {
+    assert_eq!(cursor(&app), Some(20));
+    for want in [19, 18, 17, 14, 13, 12, 9, 8, 7, 6, 3] {
         app.handle_msg(key('k'));
         assert_eq!(cursor(&app), Some(want));
     }

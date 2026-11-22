@@ -529,6 +529,7 @@ impl App {
                 Row::Shelf(i) => self.discover.shelves.get(*i).map(|s| s.title.as_str()),
                 Row::Station(i) => self.discover.stations.get(*i).map(|s| s.title.as_str()),
                 Row::Library(list) => Some(list.title()),
+                Row::BestOf => Some("Best of"),
                 Row::Heading(_) | Row::Blank => None,
             },
             ListRef::DTracks => self.discover.tracks().get(real).map(|t| t.title.as_str()),

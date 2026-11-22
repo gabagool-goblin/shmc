@@ -10,11 +10,12 @@ pub enum Row {
     Shelf(usize),
     Station(usize),
     Library(LibraryList),
+    BestOf,
 }
 
 impl Row {
     pub fn selectable(self) -> bool {
-        matches!(self, Row::Shelf(_) | Row::Station(_) | Row::Library(_))
+        matches!(self, Row::Shelf(_) | Row::Station(_) | Row::Library(_) | Row::BestOf)
     }
 }
 
@@ -23,6 +24,7 @@ enum RowId {
     Shelf(String),
     Station(String),
     Library(LibraryList),
+    BestOf,
 }
 
 impl DiscoverView {
@@ -31,6 +33,7 @@ impl DiscoverView {
             Row::Shelf(i) => RowId::Shelf(self.shelves.get(i)?.title.clone()),
             Row::Station(i) => RowId::Station(self.stations.get(i)?.key.clone()),
             Row::Library(list) => RowId::Library(list),
+            Row::BestOf => RowId::BestOf,
             Row::Heading(_) | Row::Blank => return None,
         })
     }
@@ -57,6 +60,7 @@ pub(super) fn build_rows(shelves: usize, stations: usize) -> Vec<Row> {
     rows.push(Row::Blank);
     rows.push(Row::Heading("Top"));
     rows.extend(LibraryList::TOP.map(Row::Library));
+    rows.push(Row::BestOf);
     rows
 }
 
@@ -67,6 +71,7 @@ impl App {
         let d = &mut self.discover;
         if !d.rows.is_empty() {
             d.library.reset();
+            d.best_of.reset();
         }
         d.rows = build_rows(hubs.shelves.len(), hubs.stations.len());
         d.shelves = hubs.shelves;
@@ -147,6 +152,7 @@ impl App {
             Row::Shelf(i) => self.show_shelf(i),
             Row::Station(i) => self.follow_station(i),
             Row::Library(list) => self.follow_library(list),
+            Row::BestOf => self.follow_best_of(),
             Row::Heading(_) | Row::Blank => self.discover.pane = Pane::Empty,
         }
         self.settle_focus();

@@ -23,6 +23,11 @@ pub(super) async fn open(
             .await
             .map(Opened::Albums)
             .map_err(|e| format!("loading albums: {e:#}")),
+        OpenKind::BestOf(what) => client
+            .best_of_albums(section, what)
+            .await
+            .map(Opened::Albums)
+            .map_err(|e| format!("loading albums: {e:#}")),
         OpenKind::Playlist { size } => client
             .playlist_page(&key, 0, size)
             .await
@@ -44,6 +49,10 @@ impl App {
             }),
             ShelfItems::Artists(v) => v.get(real).map(|a| {
                 (a.rating_key.clone(), a.title.clone(), OpenKind::Artist, "loading albums…")
+            }),
+            ShelfItems::BestOf(v) => v.get(real).map(|b| {
+                let label = b.label();
+                (label.clone(), label, OpenKind::BestOf(*b), "loading albums…")
             }),
             ShelfItems::Playlists(v) => v.get(real).map(|p| {
                 let what = OpenKind::Playlist { size };
@@ -83,13 +92,16 @@ impl App {
                 Pane::Tracks(pane)
             }
             Opened::Albums(mut albums) => {
-                sort_albums(&mut albums, &self.album_sort);
+                let best_of = matches!(what, OpenKind::BestOf(_));
+                if !best_of {
+                    sort_albums(&mut albums, &self.album_sort);
+                }
                 let mut pane = ItemsPane {
                     shelf,
                     name,
                     items: ShelfItems::Albums(albums),
                     state: Default::default(),
-                    plays: false,
+                    plays: best_of,
                 };
                 pane.state.select((!pane.items.is_empty()).then_some(0));
                 Pane::Items(pane)

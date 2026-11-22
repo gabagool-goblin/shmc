@@ -67,6 +67,7 @@ impl App {
                 let (key, count) = (p.rating_key.clone(), p.item_count);
                 self.queue_playlist(key, confirm, action, count, None);
             }
+            ShelfItems::BestOf(_) => {}
         }
     }
 }
