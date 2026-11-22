@@ -1,7 +1,7 @@
 use super::*;
 use shmc::plex::models::Artist;
 use shmc::plex::models::{HitKind, SearchHit};
-use shmc::ui::app::{BrowserCol, DiscoverCol, SearchDetail};
+use shmc::ui::app::{BrowserCol, Pane, SearchDetail};
 
 fn key_table(text: &str) -> KeyTable {
     toml::from_str::<shmc::config::Config>(text).unwrap().keys
@@ -558,12 +558,14 @@ async fn o_finds_the_playing_track_in_discover_and_search() {
     let mut app = new_app().await;
     app.queue.items = vec![track(5)];
     app.current = Some(0);
-    app.discover.tracks = (0..8).map(track).collect();
-    app.discover.tracks_state.select(Some(0));
-    app.discover.focus = DiscoverCol::Tracks;
-    app.tab = Tab::Discover;
+    app.allow_writes = true;
+    app.handle_msg(key('2'));
+    app.handle_msg(super::discover::loaded());
+    super::discover::previewed(&mut app, 1, 8);
+    app.handle_msg(key('l'));
     app.handle_msg(key('o'));
-    assert_eq!(app.discover.tracks_state.selected(), Some(5));
+    let Pane::Tracks(pane) = &app.discover.pane else { panic!("the station's tracks") };
+    assert_eq!(pane.state.selected(), Some(5));
 
     let mut state = ratatui::widgets::TableState::default();
     state.select(Some(0));

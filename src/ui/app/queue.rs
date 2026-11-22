@@ -440,7 +440,7 @@ impl App {
                 (&self.playlists.tracks.items, Some(&self.playlists.tracks.filter))
             }
             (ListRef::SearchDetail, Some(d)) => (&d.tracks, None),
-            (ListRef::DTracks, _) => (&self.discover.tracks, None),
+            (ListRef::DTracks, _) => (self.discover.tracks(), None),
             _ => return,
         };
         let tracks: Vec<Track> = (lo..=hi)

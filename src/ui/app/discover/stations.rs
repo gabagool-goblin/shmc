@@ -1,36 +1,13 @@
-use super::{DiscoverCmd, DiscoverCol, DiscoverMsg, Preview, StationsLoad, StationsOutcome};
+use super::{DiscoverCmd, DiscoverMsg, Pane, Preview, Row, TracksPane, TracksSource};
 use crate::plex::radio::Station;
 use crate::plex::sonic::Features;
 use crate::plex::PlexClient;
-use crate::ui::app::plex_worker::cached_features;
 use crate::ui::app::radio::{self, RadioEnv, RadioOutcome, RadioSeed};
-use crate::ui::app::{App, ListRef, Msg, PlexCmd, Tab};
+use crate::ui::app::{App, ListRef, Msg, PlexCmd};
 use std::sync::Mutex;
 use tokio::sync::mpsc::UnboundedSender;
 
-/// Worker side: replies once with `Msg::StationsLoaded`.
-pub(in crate::ui::app) async fn load_stations(
-    client: &PlexClient,
-    section: &str,
-    features: &Mutex<Option<Features>>,
-    tx: &UnboundedSender<Msg>,
-) {
-    let outcome = if cached_features(client, features).await.is_some_and(|f| !f.radio) {
-        StationsOutcome::NoRadio
-    } else {
-        match client.library_stations(section).await {
-            Ok(stations) => StationsOutcome::Stations(stations),
-            Err(e) => {
-                tracing::warn!("loading stations: {e:#}");
-                StationsOutcome::Failed
-            }
-        }
-    };
-    let _ = tx.send(Msg::Discover(DiscoverMsg::StationsLoaded(outcome)));
-}
-
-/// Worker side: replies once with `Msg::StationPreview`.
-pub(in crate::ui::app) async fn preview_station(
+pub(super) async fn preview_station(
     client: &PlexClient,
     features: &Mutex<Option<Features>>,
     env: &RadioEnv,
@@ -48,27 +25,22 @@ pub(in crate::ui::app) async fn preview_station(
 }
 
 impl App {
-    fn highlighted_station(&self) -> Option<Station> {
-        let real = self.real_at(ListRef::DStations)?;
-        self.discover.stations.get(real).cloned()
+    pub(super) fn highlighted_station(&self) -> Option<Station> {
+        match self.highlighted_row()? {
+            Row::Station(i) => self.discover.stations.get(i).cloned(),
+            _ => None,
+        }
     }
 
-    /// Runs after every message; acts only when the highlighted station changed.
-    pub(in crate::ui::app) fn follow_station(&mut self) {
-        if self.tab != Tab::Discover
-            || self.discover.load != StationsLoad::Loaded
-            || !self.allow_writes
-        {
-            return;
-        }
-        let Some(station) = self.highlighted_station() else { return };
-        if self.discover.shown.as_deref() == Some(station.key.as_str()) {
+    pub(super) fn follow_station(&mut self, i: usize) {
+        self.discover.pane = Pane::Empty;
+        let Some(station) = self.discover.stations.get(i).cloned() else { return };
+        if !self.allow_writes {
             return;
         }
         if self.discover.played.remove(&station.key) {
             self.discover.previews.remove(&station.key);
         }
-        self.discover.shown = Some(station.key.clone());
         if !self.discover.previews.contains_key(&station.key) {
             self.discover.previews.insert(station.key.clone(), Preview::Loading);
             let _ = self.plex.tx.send(PlexCmd::Discover(DiscoverCmd::PreviewStation {
@@ -81,31 +53,35 @@ impl App {
 
     pub(in crate::ui::app) fn station_preview(&mut self, key: String, preview: Preview) {
         self.discover.previews.insert(key.clone(), preview);
-        if self.discover.shown.as_deref() == Some(key.as_str()) {
+        let followed = match self.discover.followed {
+            Some(Row::Station(i)) => self.discover.stations.get(i).map(|s| s.key.as_str()),
+            _ => None,
+        };
+        if followed == Some(key.as_str()) {
             self.show_preview();
         }
     }
 
     fn show_preview(&mut self) {
         self.drop_visual(ListRef::DTracks);
-        let title = self.discover.shown.as_ref().and_then(|key| {
-            self.discover.stations.iter().find(|s| &s.key == key).map(|s| s.title.clone())
-        });
-        match self.discover.shown_preview().cloned() {
+        let Some(Row::Station(i)) = self.discover.followed else { return };
+        let Some(station) = self.discover.stations.get(i) else { return };
+        self.discover.pane = match self.discover.shown_preview().cloned() {
             Some(Preview::Ready(tracks, queue)) => {
-                self.discover.tracks_state.select((!tracks.is_empty()).then_some(0));
-                self.discover.tracks = tracks;
-                self.discover.radio = Some(queue);
-                self.discover.label = title;
+                let mut pane = TracksPane {
+                    shelf: String::new(),
+                    name: station.title.clone(),
+                    total: tracks.len(),
+                    tracks,
+                    state: Default::default(),
+                    source: TracksSource::Station(queue),
+                };
+                pane.state.select((!pane.tracks.is_empty()).then_some(0));
+                Pane::Tracks(pane)
             }
-            _ => {
-                self.discover.tracks.clear();
-                self.discover.radio = None;
-                self.discover.tracks_state.select(None);
-                self.discover.label = None;
-                self.discover.focus = DiscoverCol::Stations;
-            }
-        }
+            _ => Pane::Empty,
+        };
+        self.settle_focus();
     }
 
     pub(in crate::ui::app) fn start_station(&mut self) {
@@ -127,13 +103,14 @@ impl App {
         }
     }
 
-    pub(in crate::ui::app) fn play_discover_from(&mut self) {
+    pub(super) fn play_station_from(&mut self) {
         let Some(real) = self.real_at(ListRef::DTracks) else { return };
-        let Some(name) = self.discover.label.clone() else { return };
-        let Some(queue) = self.discover.radio.clone() else { return };
-        let tracks = self.discover.tracks[real..].to_vec();
-        if let Some(key) = self.discover.shown.clone() {
-            self.discover.played.insert(key);
+        let Pane::Tracks(pane) = &self.discover.pane else { return };
+        let TracksSource::Station(queue) = &pane.source else { return };
+        let (name, queue, tracks) =
+            (pane.name.clone(), queue.clone(), pane.tracks[real..].to_vec());
+        if let Some(station) = self.highlighted_station() {
+            self.discover.played.insert(station.key);
         }
         self.play_radio(tracks, name, queue);
     }
@@ -144,8 +121,6 @@ mod tests {
     use super::*;
     use crate::plex::client::testing::serve_full;
     use tokio::sync::mpsc::unbounded_channel;
-
-    const STATIONS: &str = include_str!("../../../../tests/fixtures/hubs_stations.xml");
 
     fn queue_xml(n: usize) -> String {
         let tracks: String = (1..=n)
@@ -158,7 +133,6 @@ mod tests {
         format!("<MediaContainer playQueueID=\"9\">{tracks}</MediaContainer>")
     }
 
-    /// A server with radio, one station hub and a play queue of `n` tracks.
     async fn server(
         features: &'static str,
         n: usize,
@@ -168,8 +142,6 @@ mod tests {
                 format!("<MediaContainer ownerFeatures=\"{features}\"/>")
             } else if line.starts_with("GET /identity") {
                 "<MediaContainer machineIdentifier=\"mid1\"/>".into()
-            } else if line.starts_with("GET /hubs/sections/1?includeStations=1") {
-                STATIONS.into()
             } else if line.starts_with("POST /playQueues") {
                 queue_xml(n)
             } else {
@@ -179,26 +151,6 @@ mod tests {
         })
         .await;
         (base, seen)
-    }
-
-    async fn listed(features: &'static str) -> Option<Vec<Station>> {
-        let (base, _) = server(features, 0).await;
-        let client = PlexClient::new(&base, "faketoken-stations");
-        let (tx, mut rx) = unbounded_channel();
-        load_stations(&client, "1", &Mutex::new(None), &tx).await;
-        match rx.try_recv().unwrap() {
-            Msg::Discover(DiscoverMsg::StationsLoaded(StationsOutcome::Stations(s))) => Some(s),
-            Msg::Discover(DiscoverMsg::StationsLoaded(_)) => None,
-            _ => panic!("expected StationsLoaded"),
-        }
-    }
-
-    #[tokio::test]
-    async fn stations_load_from_the_section_hub_only_with_radio() {
-        let stations = listed("radio").await.expect("stations");
-        assert_eq!(stations.len(), 4);
-        assert_eq!(stations[1].title, "Deep Cuts Radio");
-        assert!(listed("music-analysis").await.is_none(), "no radio, no stations");
     }
 
     async fn previewed(client_id: Option<&str>, n: usize) -> (Vec<Msg>, Vec<String>) {

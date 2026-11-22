@@ -199,7 +199,8 @@ struct Id {
 
 fn playlist_reply(c: MediaContainer) -> Result<(String, Option<usize>)> {
     let p = c.playlists.into_iter().next().context("Plex's reply has no playlist")?;
-    Ok((p.rating_key, p.leaf_count.map(|n| n as usize)))
+    let id = p.rating_key.context("Plex's playlist has no id")?;
+    Ok((id, p.leaf_count.map(|n| n as usize)))
 }
 
 /// Without a playlist id nothing is known to exist.
@@ -643,7 +644,7 @@ impl PlexClient {
             .playlists
             .into_iter()
             .filter(|p| matches!(p.playlist_type.as_deref(), None | Some("audio")))
-            .map(|p| p.into_playlist())
+            .filter_map(|p| p.into_playlist())
             .collect();
         list.sort_by_key(|a| a.title.to_lowercase());
         Ok(list)

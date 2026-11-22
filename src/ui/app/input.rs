@@ -24,6 +24,7 @@ enum Command<'a> {
     Consume,
     Reshuffle,
     Playing,
+    Refresh,
     Sleep(&'a str),
     BadSleep,
     Tab(Tab),
@@ -60,6 +61,7 @@ fn parse_command(raw: &str) -> Command<'_> {
         ["consume"] => Command::Consume,
         ["reshuffle"] => Command::Reshuffle,
         ["playing"] => Command::Playing,
+        ["refresh"] => Command::Refresh,
         ["sleep"] => Command::Sleep(""),
         ["sleep", arg] => Command::Sleep(arg),
         ["sleep", ..] => Command::BadSleep,
@@ -522,6 +524,7 @@ impl App {
                     self.transient("nothing playing".into());
                 }
             }
+            Command::Refresh => self.refresh_discover(),
             Command::Tab(Tab::Search) => self.exec(Act::StartSearch),
             Command::Tab(t) => self.goto_tab(t),
             Command::Unknown(raw) => {
@@ -606,11 +609,11 @@ impl App {
 
             Act::MoveUp => {
                 self.pause_queue_follow();
-                self.with_sel(|st, vis| move_sel(st, vis, -1));
+                self.step(-1);
             }
             Act::MoveDown => {
                 self.pause_queue_follow();
-                self.with_sel(|st, vis| move_sel(st, vis, 1));
+                self.step(1);
             }
             Act::PageUp => {
                 self.pause_queue_follow();
@@ -622,15 +625,11 @@ impl App {
             }
             Act::Top => {
                 self.pause_queue_follow();
-                self.with_sel(|st, vis| {
-                    st.select(if vis == 0 { None } else { Some(0) });
-                });
+                self.edge(true);
             }
             Act::Bottom => {
                 self.pause_queue_follow();
-                self.with_sel(|st, vis| {
-                    st.select(if vis == 0 { None } else { Some(vis - 1) });
-                });
+                self.edge(false);
             }
 
             Act::ColumnLeft => self.column_left(),
@@ -794,6 +793,7 @@ mod tests {
         assert_eq!(parse_command("consume"), Command::Consume);
         assert_eq!(parse_command("reshuffle"), Command::Reshuffle);
         assert_eq!(parse_command("playing"), Command::Playing);
+        assert_eq!(parse_command("refresh"), Command::Refresh);
         assert_eq!(parse_command("sleep"), Command::Sleep(""));
         assert_eq!(parse_command("sleep 30"), Command::Sleep("30"));
         assert_eq!(parse_command("sleep off"), Command::Sleep("off"));

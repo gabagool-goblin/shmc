@@ -1,0 +1,28 @@
+<MediaContainer size="8" allowSync="0" librarySectionID="1">
+<Hub hubKey="/library/sections/1/albums" key="/hubs/sections/1/recent" title="Recently Added" type="album" hubIdentifier="music.recent.added" context="hub.music.recent.added" size="2" more="1" style="shelf" promoted="1">
+<Directory ratingKey="11" key="/library/metadata/11/children" type="album" title="Evening Satellite" parentTitle="Northwind Sounds" year="2019" thumb="/library/metadata/11/thumb/1"/>
+<Directory ratingKey="12" key="/library/metadata/12/children" type="album" title="Paper Lanterns" parentTitle="Mira Vale" year="2021" thumb="/library/metadata/12/thumb/1"/>
+</Hub>
+<Hub title="Recently Played" type="album" hubIdentifier="music.recent.played.1" size="1" more="1" style="shelf">
+<Directory ratingKey="13" key="/library/metadata/13/children" type="album" title="Hidden Tide" parentTitle="Northwind Sounds" year="2015"/>
+</Hub>
+<Hub title="Popular Artists" type="artist" hubIdentifier="music.popular.artists" size="2" more="0" style="shelf">
+<Directory ratingKey="21" key="/library/metadata/21/children" type="artist" title="Mira Vale" thumb="/library/metadata/21/thumb/1"/>
+<Directory ratingKey="22" key="/library/metadata/22/children" type="artist" title="Northwind Sounds"/>
+</Hub>
+<Hub title="Rediscover" type="album" hubIdentifier="music.rediscover" size="0" more="0" style="shelf"/>
+<Hub title="Music Videos" type="clip" hubIdentifier="music.videos.1" size="1" more="0" style="shelf">
+<Video ratingKey="31" key="/library/metadata/31" type="clip" title="Clip One"/>
+</Hub>
+<Hub title="Recent Playlists" type="playlist" hubIdentifier="recent.library.playlists.1" size="2" more="0" style="shelf">
+<Playlist ratingKey="41" key="/playlists/41/items" type="playlist" title="Morning Mix" smart="0" playlistType="audio" leafCount="12" duration="2400000" composite="/playlists/41/composite/1"/>
+<Playlist ratingKey="42" key="/playlists/42/items" type="playlist" title="Smart Favourites" smart="1" playlistType="audio" leafCount="30" duration="7200000"/>
+</Hub>
+<Hub title="Stations" type="station" hubIdentifier="music.stations.1" context="hub.music.stations" size="4" more="0" style="grid">
+<Playlist key="/library/sections/1/stations/1" guid="tv.plex://station/library" type="playlist" title="Library Radio" smart="1" playlistType="audio" leafCount="0" icon="playlist://image.radio" radio="1"/>
+<Playlist key="/library/sections/1/stations/8" guid="tv.plex://station/deep-cuts" type="playlist" title="Deep Cuts Radio" smart="1" playlistType="audio" leafCount="0" icon="playlist://image.radio" radio="1"/>
+<Playlist key="/library/sections/1/stations/2" guid="tv.plex://station/history" type="playlist" title="Time Travel Radio" smart="1" playlistType="audio" leafCount="0" icon="playlist://image.radio" radio="1"/>
+<Playlist key="/library/sections/1/stations/3" guid="tv.plex://station/album" type="playlist" title="Random Album Radio" smart="1" playlistType="audio" leafCount="0" icon="playlist://image.radio" radio="1"/>
+</Hub>
+<Hub title="On Tour" type="artist" hubIdentifier="music.touring.1" size="1" more="0"><Directory ratingKey="23" key="/library/metadata/23/children" type="artist" title="Touring Act"/></Hub>
+</MediaContainer>

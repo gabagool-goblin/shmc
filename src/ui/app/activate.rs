@@ -2,6 +2,7 @@ use super::{
     App, BrowserCol, Confirm, ListKind, ListRef, Msg, PendingPlaylist, PlaylistsCol, PlexCmd,
     QueueAction, Tab,
 };
+use crate::plex::Track;
 use crate::ui::keymap::{Act, KeyCtx};
 use crate::ui::playlist_load::PlaylistLoad;
 use std::sync::atomic::AtomicBool;
@@ -88,7 +89,7 @@ impl App {
     }
 
     /// `count` is what would be queued: the remainder when starting mid-list.
-    fn queue_playlist(
+    pub(super) fn queue_playlist(
         &mut self,
         key: String,
         confirm: Confirm,
@@ -120,6 +121,46 @@ impl App {
             return;
         }
         self.send_resolve_playlist(key, confirm, action, start, count);
+    }
+
+    /// `real` is the track's position in the playlist.
+    pub(super) fn queue_playlist_track(
+        &mut self,
+        key: String,
+        name: String,
+        total: Option<u32>,
+        real: usize,
+        t: &Track,
+        action: QueueAction,
+    ) {
+        if action == QueueAction::PlayNext {
+            let confirm = Confirm::Track { title: t.title.clone() };
+            return self.queue_local(vec![t.clone()], confirm, action);
+        }
+        let remainder = total.map(|n| n.saturating_sub(real as u32));
+        let start = Some(crate::plex::client::entry_key(t));
+        self.queue_playlist(key, Confirm::FromList { name }, action, remainder, start);
+    }
+
+    pub(super) fn resolve_album(&mut self, key: String, name: String, action: QueueAction) {
+        let confirm = Confirm::Album { name };
+        let seq = self.issue_seq(action == QueueAction::Replace);
+        let _ = self.plex.tx.send(PlexCmd::ResolveAlbum { seq, key, confirm, action });
+        let status =
+            if action == QueueAction::PlayNext { "inserting album…" } else { "loading album…" };
+        self.transient(status.into());
+    }
+
+    pub(super) fn resolve_artist(&mut self, key: String, name: String, action: QueueAction) {
+        let confirm = Confirm::Artist { name };
+        let seq = self.issue_seq(action == QueueAction::Replace);
+        let _ = self.plex.tx.send(PlexCmd::ResolveArtistTracks { seq, key, confirm, action });
+        let status = if action == QueueAction::PlayNext {
+            "inserting artist…"
+        } else {
+            "loading artist…"
+        };
+        self.transient(status.into());
     }
 
     /// A replace streams unless shuffle is on, which needs the whole list.
@@ -162,6 +203,16 @@ impl App {
         );
     }
 
+    fn queue_playlist_item(&mut self, action: QueueAction) {
+        let Some(real) = self.real_at(ListRef::PlItems) else { return };
+        let Some(t) = self.playlists.tracks.items.get(real).cloned() else { return };
+        let Some(key) = self.playlists.tracks_for.clone() else { return };
+        let row = self.playlists.list.items.iter().find(|p| p.rating_key == key);
+        let name = row.map(|p| p.title.clone()).unwrap_or_else(|| "playlist".into());
+        let total = row.and_then(|p| p.item_count);
+        self.queue_playlist_track(key, name, total, real, &t, action);
+    }
+
     /// Enter. Albums drill with Right/l so Enter can play at once.
     pub(super) fn activate(&mut self) {
         match self.active_list() {
@@ -181,16 +232,8 @@ impl App {
             ListRef::BAlbums => {
                 let Some(real) = self.real_at(ListRef::BAlbums) else { return };
                 let Some(al) = self.browser.albums.items.get(real) else { return };
-                let confirm = Confirm::Album { name: al.title.clone() };
-                let key = al.rating_key.clone();
-                let seq = self.issue_seq(true);
-                let _ = self.plex.tx.send(PlexCmd::ResolveAlbum {
-                    seq,
-                    key,
-                    confirm,
-                    action: QueueAction::Replace,
-                });
-                self.transient("loading album…".into());
+                let (key, name) = (al.rating_key.clone(), al.title.clone());
+                self.resolve_album(key, name, QueueAction::Replace);
             }
             ListRef::BTracks => {
                 let Some(real) = self.real_at(ListRef::BTracks) else { return };
@@ -207,24 +250,7 @@ impl App {
                 let count = pl.item_count;
                 self.queue_playlist(key, confirm, QueueAction::Replace, count, None);
             }
-            ListRef::PlItems => {
-                let Some(real) = self.real_at(ListRef::PlItems) else { return };
-                let Some(t) = self.playlists.tracks.items.get(real).cloned() else { return };
-                let Some(key) = self.playlists.tracks_for.clone() else { return };
-                let row = self.playlists.list.items.iter().find(|p| p.rating_key == key);
-                let name = row.map(|p| p.title.clone()).unwrap_or_else(|| "playlist".into());
-                // the preview is the first page, so its index is the playlist's
-                let remainder =
-                    row.and_then(|p| p.item_count).map(|total| total.saturating_sub(real as u32));
-                let confirm = Confirm::FromList { name };
-                self.queue_playlist(
-                    key,
-                    confirm,
-                    QueueAction::Replace,
-                    remainder,
-                    Some(crate::plex::client::entry_key(&t)),
-                );
-            }
+            ListRef::PlItems => self.queue_playlist_item(QueueAction::Replace),
             ListRef::Search => {
                 let Some(i) = self.search.state.selected() else { return };
                 let Some(hit) = self.search.hits.get(i).cloned() else { return };
@@ -268,8 +294,9 @@ impl App {
                 let confirm = Confirm::FromList { name: d.label.clone() };
                 self.queue_local(tracks, confirm, QueueAction::Replace);
             }
-            ListRef::DStations => self.start_station(),
-            ListRef::DTracks => self.play_discover_from(),
+            ListRef::DSections => self.activate_section(),
+            ListRef::DTracks => self.activate_discover_track(),
+            ListRef::DItems => self.open_item(),
             ListRef::Help => {}
         }
     }
@@ -279,35 +306,14 @@ impl App {
             ListRef::BArtists => {
                 let Some(real) = self.real_at(ListRef::BArtists) else { return };
                 let Some(a) = self.browser.artists.items.get(real) else { return };
-                let confirm = Confirm::Artist { name: a.title.clone() };
-                let key = a.rating_key.clone();
-                let seq = self.issue_seq(action == QueueAction::Replace);
-                let _ =
-                    self.plex.tx.send(PlexCmd::ResolveArtistTracks { seq, key, confirm, action });
-                self.transient(
-                    match action {
-                        QueueAction::Append => "loading artist…",
-                        QueueAction::Replace => "loading artist…",
-                        QueueAction::PlayNext => "inserting artist…",
-                    }
-                    .into(),
-                );
+                let (key, name) = (a.rating_key.clone(), a.title.clone());
+                self.resolve_artist(key, name, action);
             }
             ListRef::BAlbums => {
                 let Some(real) = self.real_at(ListRef::BAlbums) else { return };
                 let Some(al) = self.browser.albums.items.get(real) else { return };
-                let confirm = Confirm::Album { name: al.title.clone() };
-                let key = al.rating_key.clone();
-                let seq = self.issue_seq(action == QueueAction::Replace);
-                let _ = self.plex.tx.send(PlexCmd::ResolveAlbum { seq, key, confirm, action });
-                self.transient(
-                    match action {
-                        QueueAction::Append => "loading album…",
-                        QueueAction::Replace => "loading album…",
-                        QueueAction::PlayNext => "inserting album…",
-                    }
-                    .into(),
-                );
+                let (key, name) = (al.rating_key.clone(), al.title.clone());
+                self.resolve_album(key, name, action);
             }
             ListRef::BTracks => {
                 let Some(real) = self.real_at(ListRef::BTracks) else { return };
@@ -323,29 +329,7 @@ impl App {
                 let count = pl.item_count;
                 self.queue_playlist(key, confirm, action, count, None);
             }
-            ListRef::PlItems => {
-                let Some(real) = self.real_at(ListRef::PlItems) else { return };
-                let Some(t) = self.playlists.tracks.items.get(real).cloned() else { return };
-                if action == QueueAction::PlayNext {
-                    let confirm = Confirm::Track { title: t.title.clone() };
-                    self.queue_local(vec![t], confirm, QueueAction::PlayNext);
-                } else {
-                    let Some(key) = self.playlists.tracks_for.clone() else { return };
-                    let row = self.playlists.list.items.iter().find(|p| p.rating_key == key);
-                    let name = row.map(|p| p.title.clone()).unwrap_or_else(|| "playlist".into());
-                    // `real` is the position in the playlist (first-page preview)
-                    let remainder = row
-                        .and_then(|p| p.item_count)
-                        .map(|total| total.saturating_sub(real as u32));
-                    self.queue_playlist(
-                        key,
-                        Confirm::FromList { name },
-                        action,
-                        remainder,
-                        Some(crate::plex::client::entry_key(&t)),
-                    );
-                }
-            }
+            ListRef::PlItems => self.queue_playlist_item(action),
             ListRef::Search => {
                 let Some(i) = self.search.state.selected() else { return };
                 let Some(hit) = self.search.hits.get(i).cloned() else { return };
@@ -397,7 +381,8 @@ impl App {
                 self.queue_local(vec![t], confirm, action);
             }
             ListRef::DTracks => self.add_discover_track(action),
-            ListRef::Queue | ListRef::DStations | ListRef::Help => {}
+            ListRef::DItems => self.add_discover_item(action),
+            ListRef::Queue | ListRef::DSections | ListRef::Help => {}
         }
     }
 }

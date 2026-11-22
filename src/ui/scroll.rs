@@ -68,8 +68,9 @@ pub enum ScrollId {
     PlaylistItems,
     SearchResults,
     SearchDetail,
-    DiscoverStations,
+    DiscoverSections,
     DiscoverTracks,
+    DiscoverItems,
     Help,
     /// The config screen's three panes.
     ConfigSettings,

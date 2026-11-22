@@ -133,7 +133,7 @@ fn parse_playlists_fixture() {
     let c: MediaContainer =
         quick_xml::de::from_str(include_str!("fixtures/playlists.xml")).unwrap();
     assert_eq!(c.playlists.len(), 25);
-    let list: Vec<_> = c.playlists.into_iter().map(|p| p.into_playlist()).collect();
+    let list: Vec<_> = c.playlists.into_iter().filter_map(|p| p.into_playlist()).collect();
 
     let first = &list[0];
     assert_eq!(first.rating_key, "1276");
@@ -358,18 +358,40 @@ fn parse_play_queue_fixture() {
     );
 }
 
-#[test]
-fn station_hub_lists_the_stations_in_order_and_skips_other_hubs() {
+fn discover_hubs() -> shmc::plex::discover::DiscoverHubs {
     let c: MediaContainer =
-        quick_xml::de::from_str(include_str!("fixtures/hubs_stations.xml")).unwrap();
+        quick_xml::de::from_str(include_str!("fixtures/hubs_discover.xml")).unwrap();
+    shmc::plex::discover::hubs_from(c)
+}
+
+#[test]
+fn discover_keeps_the_shelves_in_server_order_and_skips_the_rest() {
+    use shmc::plex::discover::ShelfItems;
+    let hubs = discover_hubs();
+    let titles: Vec<_> = hubs.shelves.iter().map(|s| s.title.as_str()).collect();
+    assert_eq!(titles, ["Recently Added", "Popular Artists", "Recent Playlists"]);
+    let ShelfItems::Albums(albums) = &hubs.shelves[0].items else { panic!("albums first") };
+    assert_eq!(albums[1].title, "Paper Lanterns");
+    assert_eq!((albums[1].artist.as_str(), albums[1].year), ("Mira Vale", Some(2021)));
+    let ShelfItems::Artists(artists) = &hubs.shelves[1].items else { panic!("artists second") };
+    assert_eq!(artists.len(), 2);
+}
+
+#[test]
+fn a_playlist_hub_row_is_a_playlist_and_a_station_hub_row_a_station() {
+    use shmc::plex::discover::ShelfItems;
+    let hubs = discover_hubs();
+    let ShelfItems::Playlists(lists) = &hubs.shelves[2].items else { panic!("playlists last") };
+    let got: Vec<_> =
+        lists.iter().map(|p| (p.rating_key.as_str(), p.item_count, p.smart)).collect();
+    assert_eq!(got, [("41", Some(12), false), ("42", Some(30), true)]);
     let stations: Vec<_> =
-        shmc::plex::radio::stations_from(c).into_iter().map(|s| (s.key, s.title)).collect();
+        hubs.stations.iter().map(|s| (s.key.as_str(), s.title.as_str())).collect();
     let want = [
         ("/library/sections/1/stations/1", "Library Radio"),
         ("/library/sections/1/stations/8", "Deep Cuts Radio"),
         ("/library/sections/1/stations/2", "Time Travel Radio"),
         ("/library/sections/1/stations/3", "Random Album Radio"),
     ];
-    let want: Vec<_> = want.iter().map(|(k, t)| (k.to_string(), t.to_string())).collect();
     assert_eq!(stations, want);
 }
