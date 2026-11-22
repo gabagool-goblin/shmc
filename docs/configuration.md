@@ -65,6 +65,8 @@ report_playback = false       # Send plays to Plex: play counts, last played
 path = "mpv"                  # Executable path or name on $PATH
 volume = 100                  # Startup volume, 0-100
 extra_args = []               # e.g. ["--ao=pulse", "--replaygain=album"]
+loudness_leveling = "off"     # off, track or album
+leveling_preamp = 0           # dB added to the leveling gain, -15 to 15
 
 [album_art]
 backend = "auto"              # auto, kitty, iterm2, sixel, halfblocks or none
@@ -133,6 +135,8 @@ With `allow_writes = true`, shmc can rate tracks and start radio, which creates 
 shmc starts mpv with `--no-config`, so your `mpv.conf` and scripts aren't loaded. Pass options through `mpv.extra_args` instead.
 
 `--log-file` is ignored in `extra_args` because mpv logs stream URLs containing your Plex token.
+
+`loudness_leveling` evens out loudness with Plex's own analysis, which needs Plex Pass. `track` brings every track to the same level; `album` moves each album as a whole, so its quiet and loud songs keep their difference. The gain never lifts a track's peak past full scale, and tracks Plex hasn't analysed play as they are. It needs mpv 0.37 or newer built with Lua: shmc gives mpv a small script of its own for it, while your mpv scripts stay off. `--replaygain`, which reads tags in the files, still works through `extra_args`.
 
 ### Album art and visualizer
 

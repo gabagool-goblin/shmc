@@ -20,6 +20,7 @@ mod adventure;
 mod discover;
 mod events;
 mod input;
+mod leveling;
 mod list;
 mod list_request;
 mod nav;
@@ -516,6 +517,7 @@ pub struct App {
     err_streak: u32,
     restore: saved_queue::Restore,
     resume: resume::Resume,
+    leveling: leveling::LevelingState,
 
     pub discover: DiscoverView,
     pub browser: Browser,
@@ -649,6 +651,7 @@ impl App {
             err_streak: 0,
             restore: saved_queue::Restore::default(),
             resume: resume::Resume::default(),
+            leveling: leveling::LevelingState::default(),
             discover: DiscoverView::default(),
             radio: None,
             adventure: Adventure::default(),

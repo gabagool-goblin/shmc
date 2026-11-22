@@ -175,6 +175,27 @@ pub const ALL: &[Setting] = &[
         applies: None,
     },
     Setting {
+        key: "mpv.loudness_leveling",
+        label: "Loudness leveling",
+        help: "Even out loudness with Plex's analysis: off, track or album (an album keeps its dynamics). Needs Plex Pass.",
+        kind: Kind::Enum {
+            options: &["off", "track", "album"],
+        },
+        group: "Playback",
+        applies: None,
+    },
+    Setting {
+        key: "mpv.leveling_preamp",
+        label: "Leveling preamp",
+        help: "dB added to the leveling gain, -15 to 15; the peak still caps it.",
+        kind: Kind::Float {
+            min: Some(-15.0),
+            max: Some(15.0),
+        },
+        group: "Playback",
+        applies: Some(Applies { key: "mpv.loudness_leveling", when: When::IsNot("off"), reason: "only used while leveling is on" }),
+    },
+    Setting {
         key: "album_art.backend",
         label: "Art backend",
         help: "How covers are drawn: auto, kitty, iterm2, sixel, halfblocks or none.",

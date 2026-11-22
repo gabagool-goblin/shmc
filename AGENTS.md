@@ -48,7 +48,8 @@
 - `shmc config --list` and `--check` show the token only as `(set)` or
   `(missing)`. The config screen never writes the redacted value back.
 - The config and its `.bak` are written atomically 0600. The cache dir is 0700
-  and holds only album art and mpv's socket and FIFO; files there are 0600.
+  and holds only album art, mpv's socket and FIFO, and the leveling script;
+  files there are 0600.
   The saved queue (state dir, 0700/0600, atomic) holds rating keys, never a URL.
   What cannot be made private fails closed, never falls back to a shared
   location.
@@ -96,7 +97,9 @@
   `loadfile` batch would otherwise deadlock.
 - mpv runs with `--no-config --load-scripts=no --ytdl=no`, and shmc's
   `--log-file` is always its last argument (a user one in `mpv.extra_args` is
-  dropped), so nothing writes the token-bearing URL unredacted.
+  dropped), so nothing writes the token-bearing URL unredacted. The only
+  script is shmc's own leveling one (`--script`, written 0600 to the private
+  run dir); it reads the URL for the part id and never logs it.
 - `loop-playlist`/`loop-file`: `set_property` with `"inf"`/`"no"`, never
   `cycle`.
 - Consume removes only the finished entry; never send `playlist-play-index`

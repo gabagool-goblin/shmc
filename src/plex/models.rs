@@ -248,6 +248,14 @@ pub struct WireStream {
     pub channels: Option<u32>,
     #[serde(rename = "@selected", default)]
     pub selected: Option<String>,
+    #[serde(rename = "@loudness", default, deserialize_with = "lenient")]
+    pub loudness: Option<f64>,
+    #[serde(rename = "@peak", default, deserialize_with = "lenient")]
+    pub peak: Option<f64>,
+    #[serde(rename = "@albumGain", default, deserialize_with = "lenient")]
+    pub album_gain: Option<f64>,
+    #[serde(rename = "@albumPeak", default, deserialize_with = "lenient")]
+    pub album_peak: Option<f64>,
 }
 
 // Domain models
@@ -276,13 +284,25 @@ pub struct Album {
 
 /// Bulk XML has codec, bitrate and channels from `<Media>`; the sample rate and
 /// bit depth need the `<Stream>` of the full track metadata.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct AudioInfo {
     pub codec: Option<String>,
     pub bitrate_kbps: Option<u32>,
     pub sample_rate_hz: Option<u32>,
     pub bit_depth: Option<u32>,
     pub channels: Option<u32>,
+    pub loudness: Loudness,
+}
+
+/// Plex's loudness analysis; its `gain` is the album's, so it is not read.
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub struct Loudness {
+    pub track_lufs: Option<f64>,
+    /// Linear; 1.0 = full scale.
+    pub track_peak: Option<f64>,
+    /// dB.
+    pub album_gain: Option<f64>,
+    pub album_peak: Option<f64>,
 }
 
 #[derive(Debug, Clone)]
@@ -416,6 +436,12 @@ impl WireTrack {
             channels: audio_stream
                 .and_then(|s| s.channels)
                 .or_else(|| media.and_then(|m| m.audio_channels)),
+            loudness: Loudness {
+                track_lufs: audio_stream.and_then(|s| s.loudness),
+                track_peak: audio_stream.and_then(|s| s.peak),
+                album_gain: audio_stream.and_then(|s| s.album_gain),
+                album_peak: audio_stream.and_then(|s| s.album_peak),
+            },
         };
         let artist = self
             .original_title

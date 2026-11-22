@@ -1,5 +1,6 @@
 //! Drives mpv over JSON IPC; mpv's playlist mirrors the queue, URLs only.
 
+use super::leveling::{self, Leveling};
 use crate::config::MpvConfig;
 use crate::redact::redact_secrets;
 use anyhow::{Context, Result};
@@ -60,6 +61,10 @@ pub enum MpvCmd {
     Move {
         from: usize,
         to: usize,
+    },
+    SetGain {
+        part: String,
+        db: f64,
     },
     /// The reply echoes `request_id`: mpv's answers have no other identity.
     GetProperty {
@@ -172,8 +177,15 @@ impl MpvHandle {
 /// mpv answers local properties at once; slower means a dead socket.
 const GET_PROPERTY_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
 
+pub const LEVELING_READY: &str = "user-data/shmc/leveling";
+
 /// mpv's arguments and the dropped `extra_args` entry; shmc's `--log-file` goes last.
-fn build_args(cfg: &MpvConfig, sock: &Path, fifo: Option<&Path>) -> (Vec<String>, Option<String>) {
+fn build_args(
+    cfg: &MpvConfig,
+    sock: &Path,
+    fifo: Option<&Path>,
+    script: Option<&Path>,
+) -> (Vec<String>, Option<String>) {
     let mut args: Vec<String> = vec![
         "--no-terminal".into(),
         // mpv.conf or scripts could write the token URL to disk (watch_later).
@@ -191,6 +203,9 @@ fn build_args(cfg: &MpvConfig, sock: &Path, fifo: Option<&Path>) -> (Vec<String>
         "--msg-level=all=warn".into(),
         format!("--input-ipc-server={}", sock.display()),
     ];
+    if let Some(script) = script {
+        args.push(format!("--script={}", script.display()));
+    }
     let mut skip_value = false;
     let mut ignored: Option<String> = None;
     for arg in &cfg.extra_args {
@@ -233,8 +248,21 @@ pub async fn spawn(cfg: &MpvConfig) -> Result<(MpvHandle, UnboundedReceiver<MpvE
     let log_pipe = mpv_log_pipe();
     let fifo_path = log_pipe.as_ref().map(|pipe| pipe.fifo.clone());
 
-    let (args, ignored_setting) =
-        build_args(cfg, &sock, log_pipe.as_ref().map(|pipe| pipe.fifo.as_path()));
+    let script = (cfg.leveling() != Leveling::Off)
+        .then(|| match leveling::write_script() {
+            Ok(path) => Some(path),
+            Err(e) => {
+                warn!("loudness leveling is off: cannot write its mpv script: {e}");
+                None
+            }
+        })
+        .flatten();
+    let (args, ignored_setting) = build_args(
+        cfg,
+        &sock,
+        log_pipe.as_ref().map(|pipe| pipe.fifo.as_path()),
+        script.as_deref(),
+    );
 
     let child = match Command::new(&cfg.path)
         .args(&args)
@@ -297,6 +325,7 @@ pub async fn spawn(cfg: &MpvConfig) -> Result<(MpvHandle, UnboundedReceiver<MpvE
             (9, "shuffle"),
             // fires once per file: no polling
             (10, "audio-bitrate"),
+            (11, LEVELING_READY),
         ] {
             let _ = write_half
                 .write_all(
@@ -721,6 +750,9 @@ fn cmd_to_lines(cmd: MpvCmd) -> Vec<String> {
             let target = if from < to { to + 1 } else { to };
             json!({"command": ["playlist-move", from, target]})
         }
+        MpvCmd::SetGain { part, db } => {
+            json!({"command": ["set_property", format!("user-data/shmc/gain/{part}"), db]})
+        }
         MpvCmd::GetProperty { name, request_id } => {
             json!({"command": ["get_property", name], "request_id": request_id})
         }
@@ -1028,12 +1060,27 @@ mod tests {
 
     #[test]
     fn ytdl_off_but_user_can_enable() {
-        let cfg =
-            MpvConfig { path: "mpv".into(), extra_args: vec!["--ytdl=yes".into()], volume: 50.0 };
-        let (args, _) = build_args(&cfg, Path::new("/tmp/shmc.sock"), None);
+        let cfg = MpvConfig {
+            path: "mpv".into(),
+            extra_args: vec!["--ytdl=yes".into()],
+            volume: 50.0,
+            ..MpvConfig::default()
+        };
+        let (args, _) = build_args(&cfg, Path::new("/tmp/shmc.sock"), None, None);
         let ours = args.iter().position(|a| a == "--ytdl=no").expect("--ytdl=no");
         let theirs = args.iter().position(|a| a == "--ytdl=yes").expect("user arg");
         assert!(ours < theirs, "mpv takes the last occurrence: {args:?}");
+    }
+
+    #[test]
+    fn leveling_script_is_passed_and_the_log_file_stays_last() {
+        let cfg = MpvConfig { extra_args: vec!["--ao=null".into()], ..MpvConfig::default() };
+        let script = Path::new("/tmp/run/leveling.lua");
+        let (args, _) =
+            build_args(&cfg, Path::new("/tmp/shmc.sock"), Some(Path::new("/tmp/p")), Some(script));
+        assert!(args.contains(&"--load-scripts=no".to_string()));
+        assert!(args.contains(&"--script=/tmp/run/leveling.lua".to_string()), "{args:?}");
+        assert_eq!(args.last().map(String::as_str), Some("--log-file=/tmp/p"));
     }
 
     #[test]
@@ -1042,8 +1089,9 @@ mod tests {
             path: "mpv".into(),
             extra_args: vec!["--audio-device=null".into()],
             volume: 50.0,
+            ..MpvConfig::default()
         };
-        let (args, _) = build_args(&cfg, Path::new("/tmp/shmc.sock"), None);
+        let (args, _) = build_args(&cfg, Path::new("/tmp/shmc.sock"), None, None);
         let user = args.iter().position(|a| a == "--audio-device=null").expect("user arg");
         for flag in ["--no-config", "--load-scripts=no"] {
             let at = args.iter().position(|a| a == flag).unwrap_or_else(|| panic!("{flag}"));
@@ -1095,11 +1143,12 @@ mod tests {
             path: "mpv".into(),
             extra_args: vec!["--ao=pulse".into(), "--log-file=/tmp/leak.log".into()],
             volume: 50.0,
+            ..MpvConfig::default()
         };
         let sock = Path::new("/tmp/shmc.sock");
         let fifo = Path::new("/tmp/shmc.pipe");
 
-        let (args, ignored) = build_args(&cfg, sock, Some(fifo));
+        let (args, ignored) = build_args(&cfg, sock, Some(fifo), None);
         assert_eq!(ignored.as_deref(), Some("--log-file=/tmp/leak.log"));
         assert!(args.iter().any(|a| a == "--ao=pulse"), "other args survive");
         assert!(
@@ -1112,7 +1161,7 @@ mod tests {
             "ours must be last: mpv takes the last occurrence"
         );
 
-        let (args, ignored) = build_args(&cfg, sock, None);
+        let (args, ignored) = build_args(&cfg, sock, None, None);
         assert!(ignored.is_some());
         assert!(!args.iter().any(|a| a.starts_with("--log-file")));
 
@@ -1121,8 +1170,9 @@ mod tests {
             path: "mpv".into(),
             extra_args: vec!["--log-file".into(), "/tmp/leak.log".into(), "--ao=pulse".into()],
             volume: 50.0,
+            ..MpvConfig::default()
         };
-        let (args, ignored) = build_args(&cfg, sock, Some(fifo));
+        let (args, ignored) = build_args(&cfg, sock, Some(fifo), None);
         assert_eq!(ignored.as_deref(), Some("--log-file"));
         assert!(!args.iter().any(|a| a.contains("leak")), "{args:?}");
         assert!(args.iter().any(|a| a == "--ao=pulse"), "{args:?}");

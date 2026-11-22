@@ -271,13 +271,14 @@ impl App {
             }
             Msg::TrackInfo { rating_key, audio, user_rating } => {
                 self.ratings.insert(rating_key.clone(), user_rating);
+                self.level_track_info(&rating_key, &audio);
+                self.audio_cache.insert(rating_key.clone(), audio.clone());
                 let wanted = self.current_track().map(|t| t.rating_key.as_str())
                     == Some(rating_key.as_str());
                 if wanted {
                     if let Some(t) = self.current.and_then(|i| self.queue.items.get_mut(i)) {
                         t.audio = audio.clone();
                     }
-                    self.audio_cache.insert(rating_key, audio.clone());
                     self.audio = audio;
                 }
             }
@@ -400,6 +401,7 @@ impl App {
                 "loop-file" => self.loop_file = prop_on(&value),
                 // shmc owns the shuffled order
                 "shuffle" => {}
+                crate::playback::mpv::LEVELING_READY => self.leveling.ready = prop_on(&value),
                 "audio-bitrate" => {
                     self.bitrate_bps = value.as_ref().and_then(|v| v.as_f64()).unwrap_or(0.0);
                 }
@@ -498,6 +500,7 @@ impl App {
             MpvEvent::MediaKey(key) => self.media_key(key),
             MpvEvent::FileLoaded => {
                 self.cancel_resume();
+                self.check_leveling_loaded();
                 self.fetch_art_for_current();
                 self.fetch_audio_for_current();
                 self.seek_restored();
@@ -566,6 +569,7 @@ impl App {
         if need_audio || need_rating {
             let _ = self.plex.tx.send(PlexCmd::LoadTrackInfo(key));
         }
+        self.level_around_current();
     }
 }
 
@@ -612,6 +616,7 @@ mod tests {
             path: "mpv".into(),
             extra_args: vec!["--ao=null".into()],
             volume: 50.0,
+            ..crate::config::MpvConfig::default()
         };
         let (mpv, _events) = crate::playback::mpv::spawn(&cfg).await.expect("spawn mpv");
         let (plex_tx, mut plex_rx) = tokio::sync::mpsc::unbounded_channel();

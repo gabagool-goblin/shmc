@@ -376,7 +376,11 @@ pub struct MpvConfig {
     pub extra_args: Vec<String>,
     /// Startup volume (0-100)
     pub volume: f64,
+    pub loudness_leveling: String,
+    pub leveling_preamp: f64,
 }
+
+pub const LEVELING_PREAMP_DB: (f64, f64) = (-15.0, 15.0);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
@@ -391,7 +395,41 @@ pub struct AlbumArtConfig {
 
 impl Default for MpvConfig {
     fn default() -> Self {
-        Self { path: "mpv".into(), extra_args: Vec::new(), volume: 100.0 }
+        Self {
+            path: "mpv".into(),
+            extra_args: Vec::new(),
+            volume: 100.0,
+            loudness_leveling: "off".into(),
+            leveling_preamp: 0.0,
+        }
+    }
+}
+
+impl MpvConfig {
+    pub fn leveling(&self) -> crate::playback::Leveling {
+        crate::playback::Leveling::parse(&self.loudness_leveling).unwrap_or_default()
+    }
+
+    pub fn preamp_db(&self) -> f64 {
+        let (lo, hi) = LEVELING_PREAMP_DB;
+        if (lo..=hi).contains(&self.leveling_preamp) {
+            self.leveling_preamp
+        } else {
+            0.0
+        }
+    }
+
+    /// Problems for `shmc config --check`: keys only, never values.
+    pub fn problems(&self) -> Vec<String> {
+        let mut out = Vec::new();
+        if crate::playback::Leveling::parse(&self.loudness_leveling).is_none() {
+            out.push("mpv.loudness_leveling is not off, track or album; using off".to_string());
+        }
+        if self.preamp_db() != self.leveling_preamp {
+            let (lo, hi) = LEVELING_PREAMP_DB;
+            out.push(format!("mpv.leveling_preamp must be {lo}-{hi}; using 0"));
+        }
+        out
     }
 }
 
