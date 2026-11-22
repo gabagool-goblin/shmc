@@ -12,6 +12,7 @@ All notable changes to shmc are documented here. The format follows
 - When a dropped connection stops playback, shmc plays the failed track again once Plex answers.
 - Loudness leveling from Plex's analysis, by track or by album (`mpv.loudness_leveling`, Plex Pass).
 - Discover lists Plex's shelves above the stations, and Recently played, Top rated and Never played below them. Albums, artists and playlists open in place, `Esc` goes back, and `:refresh` loads new shelves.
+- Discover has top tracks, albums and artists for a week, a month, a year or all time, and a Best of for each year and decade.
 
 ### Changed
 

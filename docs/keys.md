@@ -88,11 +88,12 @@ Results open in the Search tab, where the usual keys work. `Esc` goes back a ste
 
 ## Discover
 
-The Discover tab has three groups, and the highlighted entry shows on the right.
+The Discover tab has four groups, and the highlighted entry shows on the right.
 
 - Suggested: Plex's shelves for the library, such as Recently Added, More by an artist and Recent Playlists. Plex picks new ones each time; `:refresh` loads them again.
 - Stations: the library's radio stations (Plex Pass and `plex.allow_writes`). The first 30 tracks show on the right, and `Enter` plays them as a radio.
 - Library: Recently played, Top rated (four stars or more) and 100 random albums you have never played.
+- Top: the 100 most played tracks, albums and artists in a week, a month, a year or all time. `p` changes the period, and `{` and `}` step to the one before or after. Plays are counted for the server owner's account. Best of lists this decade's years and every decade, and `Enter` opens their most played albums.
 
 `Enter` on an album opens its tracks, on an artist their albums and on a playlist its first tracks; `Esc` goes back. `Enter` on a track plays it and the rest of the rows loaded so far.
 
@@ -104,6 +105,8 @@ The Discover tab has three groups, and the highlighted entry shows on the right.
 | `i` | Insert the track, album, artist or playlist after the playing track |
 | `v` | Select a range of tracks |
 | `m`, `s` | Similar tracks, track radio |
+| `p` | Top lists: week, month, year or all time |
+| `{`, `}` | Top lists: the period before or after |
 | `b` | Open the track in Browser |
 | `Esc` | Go back, or clear the Sonic Adventure stops |
 
@@ -229,5 +232,6 @@ If `[keys]` contains an invalid section, action, key name or duplicate binding w
 | `search` | `/` | search |
 | `back` | `Esc`, `BSpace` (browser); `Esc` (queue, discover, playlists, search); `Esc`, `q` (help) | queue, discover, browser, playlists, search, help |
 | `similar` | `m` | queue, discover, browser, playlists, search |
+| `period`, `period_back`, `period_forward` | `p`; `{`; `}` | discover |
 | `radio` | `s` | queue, discover, browser, playlists, search |
 | `adventure_add`, `adventure_build` | `w`, `W` | queue, discover, browser, playlists, search |

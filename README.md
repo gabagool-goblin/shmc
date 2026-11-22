@@ -23,7 +23,7 @@ Compact layout with the `gruvbox-dark` theme and track details below the cover:
 ### Library
 - Browse artists, albums, tracks and playlists.
 - Search and filter your library.
-- A Discover tab with Plex's shelves and your recently played, top rated and never played music.
+- A Discover tab with Plex's shelves and your recently played, top rated, never played and most played music.
 - Play now, play next or add to the queue; select ranges and jump by letter.
 
 ### Queue and playback
