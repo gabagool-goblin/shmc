@@ -117,8 +117,7 @@ impl App {
             Msg::AdventureProgress { key, leg, legs } => self.adventure_progress(&key, leg, legs),
             Msg::AdventureBuilt { key, outcome } => self.adventure_built(key, outcome),
             Msg::RadioLoaded { key, label, outcome } => self.radio_loaded(key, label, outcome),
-            Msg::StationsLoaded(outcome) => self.stations_loaded(outcome),
-            Msg::StationPreview { key, preview } => self.station_preview(key, preview),
+            Msg::Discover(msg) => self.discover_msg(msg),
             Msg::PlaylistsLoaded(list) => {
                 self.playlists.list.items = list;
                 self.playlists.preview_cache.clear();
