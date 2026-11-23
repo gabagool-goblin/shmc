@@ -177,7 +177,12 @@ async fn restart(
         }
         other => {
             tracing::warn!("radio: starting the station again: {}", other.problem());
-            ReadOn::Gone
+            match other {
+                RadioOutcome::Empty | RadioOutcome::NoClientId => {
+                    ReadOn::Failed(other.problem().into())
+                }
+                _ => ReadOn::Gone,
+            }
         }
     }
 }
@@ -426,9 +431,9 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn a_station_that_cannot_start_again_is_gone() {
+    async fn a_station_that_fails_to_start_again_is_read_again_later() {
         let (result, _, lines) = read_more(404).await;
-        assert!(matches!(result, ReadOn::Gone), "{result:?}");
+        assert!(matches!(result, ReadOn::Failed(_)), "{result:?}");
         assert_eq!(lines.iter().filter(|l| l.starts_with("POST ")).count(), 1);
     }
 }
