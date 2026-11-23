@@ -16,7 +16,7 @@ pub(super) struct LevelingState {
 }
 
 /// Bulk lists have no `<Stream>`: no sample rate, no analysis.
-fn is_full(audio: &AudioInfo) -> bool {
+pub(super) fn is_full(audio: &AudioInfo) -> bool {
     audio.sample_rate_hz.is_some() || audio.bit_depth.is_some()
 }
 
@@ -41,7 +41,12 @@ impl App {
             current
         };
         for i in [current, next] {
-            let Some(track) = self.queue.items.get(i).cloned() else { continue };
+            let Some(track) = self.queue.items.get(i) else { continue };
+            let part = track.part_key.as_deref().and_then(leveling::part_id);
+            if part.is_none_or(|p| self.leveling.published.contains(p)) {
+                continue;
+            }
+            let track = track.clone();
             match self.full_audio(&track) {
                 Some(audio) => self.publish_gain(&track, &audio),
                 None if i != current && self.leveling.asked.insert(track.rating_key.clone()) => {

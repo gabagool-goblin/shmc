@@ -97,3 +97,19 @@ async fn loaded_script_is_not_reported() {
     app.handle_msg(Msg::Mpv(MpvEvent::FileLoaded));
     assert!(!app.status.contains("leveling"), "{}", app.status);
 }
+
+#[tokio::test]
+async fn play_next_prepares_the_new_next_tracks_gain() {
+    let (mut app, _plex, mut mpv) = leveled_app(Leveling::Track).await;
+    app.queue.items[0].audio = analysed(-8.0);
+    app.play_queue_index(0);
+    gains(&mut mpv);
+
+    let mut next = track(7);
+    next.audio = analysed(-14.0);
+    app.play_next_tracks(vec![next], Confirm::Tracks);
+    app.handle_msg(Msg::Resize);
+
+    assert_eq!(gains(&mut mpv), [("7".to_string(), -4.0)]);
+    assert_eq!(app.current, Some(0));
+}

@@ -1,3 +1,4 @@
+use super::leveling::is_full;
 use super::{
     sort_albums, App, BrowserCol, ListKind, ListRef, Msg, PlaylistsCol, PlexCmd, SearchDetail, Tab,
     FAILED_STREAK_LIMIT,
@@ -347,6 +348,7 @@ impl App {
         self.preview_playlist();
         self.follow_discover();
         self.follow_radio();
+        self.level_around_current();
     }
 
     /// The guard ends on its expected value, count or deadline.
@@ -558,7 +560,7 @@ impl App {
         };
         let key = t.rating_key.clone();
         let bulk = t.audio.clone();
-        let full = t.audio.sample_rate_hz.is_some() || t.audio.bit_depth.is_some();
+        let full = is_full(&t.audio);
         let duration = t.duration_ms.map(|ms| ms as f64 / 1000.0).unwrap_or(0.0);
         self.duration = duration;
         let cached = self.audio_cache.get(&key).cloned();
