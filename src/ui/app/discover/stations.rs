@@ -38,7 +38,8 @@ impl App {
         if !self.allow_writes {
             return;
         }
-        if self.discover.played.remove(&station.key) {
+        let failed = matches!(self.discover.previews.get(&station.key), Some(Preview::Failed(_)));
+        if self.discover.played.remove(&station.key) || failed {
             self.discover.previews.remove(&station.key);
         }
         if !self.discover.previews.contains_key(&station.key) {

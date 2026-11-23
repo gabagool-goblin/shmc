@@ -201,6 +201,20 @@ async fn a_failed_preview_shows_its_reason_and_keeps_the_queue() {
 }
 
 #[tokio::test]
+async fn a_failed_preview_is_asked_for_again_on_the_next_visit() {
+    let (mut app, mut plex) = on_discover().await;
+    app.handle_msg(Msg::Discover(DiscoverMsg::StationPreview {
+        key: station_key(1),
+        preview: Preview::Failed("the station returned no tracks".into()),
+    }));
+    app.handle_msg(key('j'));
+    sent(&mut plex);
+    app.handle_msg(key('k'));
+    assert_eq!(previews_asked(&mut plex), [station_key(1)]);
+    assert!(render(&mut app, 120, 32).contains("loading Library Radio…"));
+}
+
+#[tokio::test]
 async fn a_played_station_gets_fresh_tracks_on_the_next_visit() {
     let (mut app, mut plex) = on_discover().await;
     app.handle_msg(key('j'));
