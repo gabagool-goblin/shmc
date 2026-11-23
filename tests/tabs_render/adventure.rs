@@ -186,6 +186,17 @@ async fn the_path_opens_in_search_and_esc_returns_to_the_origin() {
 }
 
 #[tokio::test]
+async fn stops_picked_while_a_path_builds_stay_for_the_next_one() {
+    let (mut app, _plex) = on_queue().await;
+    two_stops(&mut app);
+    app.handle_msg(key('W'));
+    app.queue.state.select(Some(7));
+    app.handle_msg(key('w'));
+    app.handle_msg(path(&[2, 8, 5]));
+    assert_eq!(stop_keys(&app), ["t7"]);
+}
+
+#[tokio::test]
 async fn a_failed_build_keeps_the_stops_and_opens_nothing() {
     let (mut app, _plex) = on_queue().await;
     two_stops(&mut app);
