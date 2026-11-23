@@ -3,7 +3,7 @@
 use super::discover::{album, on_library, Plex};
 use super::*;
 use shmc::plex::discover::{BestOf, ShelfItems};
-use shmc::ui::app::{DiscoverCmd, DiscoverMsg, OpenKind, Opened, Pane};
+use shmc::ui::app::{DiscoverCmd, DiscoverCol, DiscoverMsg, OpenKind, Opened, Pane};
 use shmc::ui::when::{local, now_unix};
 
 const BEST_OF: usize = 8;
@@ -130,4 +130,22 @@ async fn enter_opens_the_most_played_albums_in_the_servers_order_and_esc_goes_ba
     assert_eq!(shown(&app).len(), 6);
     let Pane::Items(pane) = &app.discover.pane else { panic!("the list is back") };
     assert_eq!(pane.state.selected(), Some(1));
+}
+
+#[tokio::test]
+async fn an_empty_year_keeps_the_list_instead_of_opening_a_blank_pane() {
+    let (mut app, mut plex) = on_library(BEST_OF).await;
+    sent(&mut plex);
+    app.handle_msg(choices(0));
+    app.handle_msg(key('l'));
+    app.handle_msg(enter());
+    let d = this_decade();
+    app.handle_msg(Msg::Discover(DiscoverMsg::Opened {
+        key: (d + 3).to_string(),
+        outcome: Opened::Albums(Vec::new()),
+    }));
+    assert_eq!(shown(&app).len(), 6);
+    let Pane::Items(pane) = &app.discover.pane else { panic!("the list stays") };
+    assert_eq!(pane.state.selected(), Some(0));
+    assert_eq!(app.discover.focus, DiscoverCol::Right);
 }
