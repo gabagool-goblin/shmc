@@ -126,6 +126,34 @@ async fn a_top_list_is_one_page_counted_after_copies_are_dropped() {
     assert!(screen.contains("(100 tracks)"), "{screen}");
 }
 
+#[tokio::test]
+async fn the_library_lists_show_no_count_and_a_top_list_keeps_its_own() {
+    let never_played = Msg::Discover(DiscoverMsg::Library {
+        list: LibraryList::NeverPlayed,
+        generation: 0,
+        start: 0,
+        outcome: LibraryOutcome::Albums(vec![super::discover::album("n1", "Quiet", "Mira", 2020)]),
+    });
+    let recent = page_of(LibraryList::RecentlyPlayed, 0, 0, numbered(0..5), 9307);
+    for (row, msg, title, count) in [
+        (0, recent, "Recently played", None),
+        (2, never_played, "Never played", None),
+        (TOP_ALBUMS, top_albums(), "Top albums", Some("(2 albums)")),
+    ] {
+        let (mut app, _plex) = on_library(row).await;
+        app.handle_msg(msg);
+        for (w, h) in [(120u16, 32u16), (80, 24), (50, 40)] {
+            let screen = render(&mut app, w, h);
+            let header = screen.lines().find(|l| l.contains(title));
+            let header = header.unwrap_or_else(|| panic!("{title} at {w}x{h}\n{screen}"));
+            match count {
+                Some(count) => assert!(header.contains(count), "{header:?} at {w}x{h}"),
+                None => assert!(!header.contains('('), "{header:?} at {w}x{h}"),
+            }
+        }
+    }
+}
+
 fn top_albums() -> Msg {
     let album = |key: &str, title: &str, plays| Album {
         plays: Some(plays),

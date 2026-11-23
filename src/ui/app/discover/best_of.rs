@@ -78,6 +78,7 @@ impl App {
                     items: ShelfItems::BestOf(items),
                     state: Default::default(),
                     plays: false,
+                    counted: true,
                 };
                 pane.state.select(Some(0));
                 Pane::Items(pane)
