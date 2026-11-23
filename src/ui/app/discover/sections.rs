@@ -176,6 +176,7 @@ impl App {
             items: shelf.items.clone(),
             state: Default::default(),
             plays: false,
+            counted: true,
         };
         pane.state.select(Some(0));
         self.discover.pane = Pane::Items(pane);

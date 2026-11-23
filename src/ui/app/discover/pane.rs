@@ -27,6 +27,7 @@ pub struct ItemsPane {
     pub items: ShelfItems,
     pub state: TableState,
     pub plays: bool,
+    pub counted: bool,
 }
 
 #[derive(Default)]

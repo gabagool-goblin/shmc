@@ -33,8 +33,14 @@ pub(super) fn draw_pane(f: &mut Frame, app: &mut App, pane: Rect) {
     ])
     .split(pane);
     let (label, count) = match &app.discover.pane {
-        Pane::Tracks(p) => (p.label(), Some(counted(p.total, "track"))),
-        Pane::Items(p) => (p.label(), noun(&p.items).map(|n| counted(p.items.len(), n))),
+        Pane::Tracks(p) => {
+            let shown = !matches!(p.source, TracksSource::Library(l) if !l.is_top());
+            (p.label(), shown.then(|| counted(p.total, "track")))
+        }
+        Pane::Items(p) => {
+            let noun = noun(&p.items).filter(|_| p.counted);
+            (p.label(), noun.map(|n| counted(p.items.len(), n)))
+        }
         Pane::Empty => return,
     };
     let count = count.map(|c| format!(" ({c})")).unwrap_or_default();

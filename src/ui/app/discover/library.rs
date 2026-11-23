@@ -179,6 +179,7 @@ impl App {
                 items,
                 state: Default::default(),
                 plays,
+                counted: list.is_top(),
             };
             pane.state.select((!pane.items.is_empty()).then_some(0));
             Pane::Items(pane)

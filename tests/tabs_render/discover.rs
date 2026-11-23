@@ -716,7 +716,7 @@ async fn highlighting_a_library_list_asks_for_its_first_page_once() {
     app.handle_msg(key('k'));
     let again = library_asks(&mut plex);
     assert!(!again.contains(&(LibraryList::RecentlyPlayed, 0)), "kept once loaded: {again:?}");
-    assert!(render(&mut app, 120, 32).contains("Recently played (5 tracks)"));
+    assert_eq!(app.discover.tracks().len(), 5);
 }
 
 #[tokio::test]
@@ -725,7 +725,6 @@ async fn nearing_the_loaded_end_asks_for_the_next_page_once_and_never_past_the_t
     sent(&mut plex);
     app.handle_msg(page_of(LibraryList::RecentlyPlayed, 0, 0, numbered(0..100), 250));
     assert!(library_requests(&mut plex).is_empty(), "the cursor is at the top");
-    assert!(render(&mut app, 120, 32).contains("Recently played (250 tracks)"));
 
     app.handle_msg(key('l'));
     app.handle_msg(key('G'));
@@ -778,7 +777,6 @@ async fn the_same_song_on_two_pages_is_kept_once_and_offsets_count_server_rows()
     app.handle_msg(page_of(LibraryList::RecentlyPlayed, 0, 2, second, 4));
     let keys: Vec<_> = app.discover.tracks().iter().map(|t| t.rating_key.clone()).collect();
     assert_eq!(keys, ["t1", "t2", "t4"]);
-    assert!(render(&mut app, 120, 32).contains("Recently played (4 tracks)"));
 }
 
 #[tokio::test]
@@ -808,7 +806,6 @@ async fn never_played_opens_an_album_in_place_and_esc_restores_the_list() {
         start: 0,
         outcome: LibraryOutcome::Albums(albums),
     }));
-    assert!(render(&mut app, 120, 32).contains("Never played (2 albums)"));
     app.handle_msg(key('l'));
     app.handle_msg(key('j'));
     app.handle_msg(enter());
