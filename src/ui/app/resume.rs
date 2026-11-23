@@ -64,6 +64,10 @@ impl App {
         tracing::info!(offline = waiting.offline, "Plex answers; resuming");
         self.play_queue_index(at);
         self.resume.retried = true;
-        self.transient(format!("connection back: playing {title}"));
+        if waiting.offline {
+            self.transient(format!("connection back: playing {title}"));
+        } else {
+            self.transient(format!("trying {title} again"));
+        }
     }
 }
