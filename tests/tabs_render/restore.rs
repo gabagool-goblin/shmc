@@ -181,3 +181,33 @@ async fn saving_writes_the_queue_and_an_empty_one_removes_the_file() {
     app.save_queue(&path);
     assert!(!path.exists());
 }
+
+fn written(path: &std::path::Path) -> SavedQueue {
+    serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap()
+}
+
+#[tokio::test]
+async fn a_playing_queue_is_saved_every_30_seconds_only_when_it_changed() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("queue.json");
+    let mut app = new_app().await;
+    app.replace_queue_and_play((0..3).map(track).collect(), Confirm::Tracks);
+    let start = std::time::Instant::now();
+    let at = |s| start + std::time::Duration::from_secs(s);
+
+    app.autosave_queue(&path, at(0));
+    app.autosave_queue(&path, at(29));
+    assert!(!path.exists(), "not before 30 s");
+    app.autosave_queue(&path, at(30));
+    let saved = written(&path);
+    assert_eq!((saved.tracks, saved.current), (keys(&[0, 1, 2]), Some(0)));
+
+    std::fs::remove_file(&path).unwrap();
+    app.autosave_queue(&path, at(60));
+    assert!(!path.exists(), "nothing changed");
+    app.position = 42.0;
+    app.autosave_queue(&path, at(75));
+    assert!(!path.exists(), "the next save is due at 90 s");
+    app.autosave_queue(&path, at(90));
+    assert_eq!(written(&path).position, 42.0);
+}

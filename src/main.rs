@@ -16,7 +16,6 @@ enum ConfigMode {
     List,
 }
 
-/// What a bare argument asks for.
 #[derive(Debug, PartialEq, Eq)]
 enum BareCommand {
     Player,
@@ -732,6 +731,9 @@ fn ui_loop(terminal: &mut ui::term::Term, started: &mut Started) -> Result<UiEnd
         if redraw.shutdown {
             break;
         }
+        if let Some(path) = &queue_file {
+            app.autosave_queue(path, std::time::Instant::now());
+        }
 
         let want = cava_wanted(&app);
         if want != cava_state {
@@ -751,7 +753,6 @@ fn ui_loop(terminal: &mut ui::term::Term, started: &mut Started) -> Result<UiEnd
             continue;
         }
 
-        // Wait out the frame budget, folding in what arrives so a burst paints once.
         let elapsed = last_draw.elapsed();
         if elapsed < frame_budget {
             std::thread::sleep(frame_budget - elapsed);
@@ -961,7 +962,6 @@ mod tests {
             config_arg(&args(&["--config", "a.toml", "--config", "b.toml", "config"])),
             Some(PathBuf::from("b.toml"))
         );
-        // A value that looks like a command is still a value.
         assert_eq!(config_arg(&args(&["--config", "config"])), Some(PathBuf::from("config")));
         assert_eq!(config_arg(&args(&["--config="])), None);
         assert_eq!(config_arg(&args(&["--config"])), None);

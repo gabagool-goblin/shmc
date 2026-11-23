@@ -155,7 +155,7 @@ The visualizer's bar width and gap are minimums. Narrow panes show fewer bars ra
 
 ### Saved queue
 
-With `restore_queue = true`, shmc saves the queue on quit, with the playing track, its position and the shuffle, repeat, single and consume modes. The next start brings it back paused at the same place. Tracks removed from the library are left out, and a radio comes back as its tracks without adding more.
+With `restore_queue = true`, shmc saves the queue every 30 seconds while it changes and on quit, with the playing track, its position and the shuffle, repeat, single and consume modes. The next start brings it back paused at the same place. Tracks removed from the library are left out, and a radio comes back as its tracks without adding more.
 
 ### Queue columns
 

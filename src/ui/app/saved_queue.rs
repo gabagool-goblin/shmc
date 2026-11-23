@@ -6,6 +6,7 @@ use crate::plex::Track;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::time::{Duration, Instant};
 
 /// Never a stream URL, so never the token.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -62,6 +63,14 @@ pub(super) struct Restore {
     pub(super) seek: Option<(usize, f64)>,
 }
 
+const AUTOSAVE_EVERY: Duration = Duration::from_secs(30);
+
+#[derive(Debug, Default)]
+pub(super) struct Autosave {
+    due: Option<Instant>,
+    written: Option<SavedQueue>,
+}
+
 fn tracks_word(n: usize) -> &'static str {
     if n == 1 {
         "track"
@@ -71,7 +80,7 @@ fn tracks_word(n: usize) -> &'static str {
 }
 
 impl App {
-    /// The file to save the queue to on quit; `None` when off.
+    /// The file the queue is saved to; `None` when off.
     pub fn restore_saved_queue(&mut self, enabled: bool) -> Option<PathBuf> {
         let path = crate::config::queue_path()?;
         if !enabled {
@@ -123,13 +132,34 @@ impl App {
     }
 
     pub fn save_queue(&self, path: &Path) {
-        if self.queue.items.is_empty() {
+        self.store_queue(path, &self.saved_queue());
+    }
+
+    /// At most every `AUTOSAVE_EVERY`, and only when the queue or position changed.
+    pub fn autosave_queue(&mut self, path: &Path, now: Instant) {
+        let Some(due) = self.autosave.due else {
+            self.autosave.due = Some(now + AUTOSAVE_EVERY);
+            return;
+        };
+        if now < due {
+            return;
+        }
+        self.autosave.due = Some(now + AUTOSAVE_EVERY);
+        let saved = self.saved_queue();
+        if self.autosave.written.as_ref() != Some(&saved) {
+            self.store_queue(path, &saved);
+            self.autosave.written = Some(saved);
+        }
+    }
+
+    fn store_queue(&self, path: &Path, saved: &SavedQueue) {
+        if saved.tracks.is_empty() {
             if !self.restore.unapplied {
                 remove(path);
             }
             return;
         }
-        if let Err(e) = write(path, &self.saved_queue()) {
+        if let Err(e) = write(path, saved) {
             tracing::warn!("cannot save the queue: {e:#}");
         }
     }
