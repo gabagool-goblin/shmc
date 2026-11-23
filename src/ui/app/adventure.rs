@@ -149,6 +149,7 @@ impl App {
                     self.transient_err("Sonic Adventure failed".into());
                     return;
                 };
+                let built = key.split(',').count().min(self.adventure.stops.len());
                 let label = format!("Sonic Adventure: {} to {}", first.title, last.title);
                 self.push_back_for_detail(req.origin);
                 let mut state = TableState::default();
@@ -162,7 +163,7 @@ impl App {
                     radio: None,
                 }));
                 self.search.focused = false;
-                self.adventure.stops.clear();
+                self.adventure.stops.drain(..built);
                 self.goto_tab(Tab::Search);
             }
             AdventureOutcome::NoSonic => self.transient("sonic analysis needs Plex Pass".into()),
