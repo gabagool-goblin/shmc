@@ -75,6 +75,16 @@ impl App {
         };
         let new = match outcome {
             Opened::Failed(msg) => return self.transient_err(msg),
+            Opened::Tracks { tracks, .. } if tracks.is_empty() => {
+                return self.transient("no tracks".into());
+            }
+            Opened::Albums(albums) if albums.is_empty() => {
+                let none = match what {
+                    OpenKind::BestOf(_) => "no played albums",
+                    _ => "no albums",
+                };
+                return self.transient(none.into());
+            }
             Opened::Tracks { tracks, total } => {
                 let source = match what {
                     OpenKind::Playlist { .. } => TracksSource::Playlist { key },
