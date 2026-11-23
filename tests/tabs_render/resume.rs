@@ -51,6 +51,7 @@ async fn failed_track_plays_again_once_plex_answers() {
     assert!(answer_check(&mut app, &mut plex, false) > std::time::Duration::ZERO, "it waits");
     answer_check(&mut app, &mut plex, true);
 
+    assert_eq!(app.status, "connection back: playing Starfall! 2");
     assert_eq!(played(&mut mpv), [2], "the first failed track, not the one after");
     assert_eq!(app.current, Some(2));
     assert!(!app.stopped);
@@ -62,6 +63,7 @@ async fn first_answer_from_plex_resumes_too() {
     let (mut app, mut plex, mut mpv) = stopped_by_failures().await;
     answer_check(&mut app, &mut plex, true);
 
+    assert_eq!(app.status, "trying Starfall! 2 again");
     assert_eq!(played(&mut mpv), [2]);
 }
 
