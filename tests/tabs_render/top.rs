@@ -31,7 +31,7 @@ fn spans(plex: &mut Plex) -> Vec<Span> {
 }
 
 fn span_of(kind: PeriodKind, back: u32) -> Span {
-    let span = Period { kind, back }.span(now_unix());
+    let span = Period { kind, back }.span(now_unix()).expect("a date");
     assert_eq!(span.is_some(), kind != PeriodKind::AllTime);
     span
 }
@@ -228,7 +228,7 @@ async fn a_loaded_top_list_is_fetched_again_once_its_period_rolls_over() {
     let later = now_unix() + 400 * 86_400;
     app.follow_discover_at(later);
     let asked = top_requests(&mut plex);
-    let want = Period { kind: PeriodKind::Month, back: 0 }.span(later);
+    let want = Period { kind: PeriodKind::Month, back: 0 }.span(later).unwrap();
     assert_eq!(asked.len(), 1);
     assert_eq!((asked[0].0, asked[0].1, asked[0].2), (LibraryList::TopTracks, 1, want));
     assert!(app.discover.tracks().is_empty(), "the old period's rows are gone");
@@ -254,4 +254,15 @@ async fn an_album_opened_from_a_top_list_stays_open_across_a_rollover() {
     app.handle_msg(key_code(KeyCode::Esc));
     app.follow_discover_at(later);
     assert_eq!(top_requests(&mut plex).len(), 1, "the list is fetched again once it shows");
+}
+
+#[tokio::test]
+async fn a_top_list_whose_dates_cannot_be_worked_out_asks_for_nothing() {
+    let (mut app, mut plex) = super::discover::on_discover().await;
+    sent(&mut plex);
+    app.discover.sections_state.select(Some(7 + TOP_TRACKS));
+    app.follow_discover_at(i64::MAX);
+    assert!(top_requests(&mut plex).is_empty(), "no all-time query under a month label");
+    let screen = render(&mut app, 120, 32);
+    assert!(screen.contains("loading top tracks:"), "{screen}");
 }

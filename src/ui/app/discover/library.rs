@@ -122,7 +122,7 @@ impl App {
         let lib = &self.discover.library;
         let data = &lib.lists[list.index()];
         let asked = data.loaded || data.fetch == Fetch::Loading;
-        if !list.is_top() || !asked || data.span == lib.period.span(now) {
+        if !list.is_top() || !asked || lib.period.span(now) == Ok(data.span) {
             return;
         }
         self.discover.library.reset_list(list);
@@ -134,8 +134,16 @@ impl App {
 
     fn request_library(&mut self, list: LibraryList, start: usize, now: i64) {
         let lib = &mut self.discover.library;
-        let span = if list.is_top() { lib.period.span(now) } else { None };
+        let span = if list.is_top() { lib.period.span(now) } else { Ok(None) };
         let data = &mut lib.lists[list.index()];
+        let span = match span {
+            Ok(span) => span,
+            Err(why) => {
+                let title = list.title().to_lowercase();
+                data.fetch = Fetch::Failed(format!("loading {title}: {why}"));
+                return;
+            }
+        };
         if start == 0 {
             data.span = span;
         }
