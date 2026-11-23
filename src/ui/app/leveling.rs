@@ -86,7 +86,12 @@ impl App {
         }
         self.leveling.warned = true;
         tracing::warn!("the leveling script did not load");
-        self.transient_err("loudness leveling is off: it needs mpv 0.38 or newer with Lua".into());
+        let why = if self.mpv.script_unwritten {
+            "shmc cannot write its mpv script"
+        } else {
+            "it needs mpv 0.38 or newer with Lua"
+        };
+        self.transient_err(format!("loudness leveling is off: {why}"));
     }
 
     fn full_audio(&self, track: &Track) -> Option<AudioInfo> {

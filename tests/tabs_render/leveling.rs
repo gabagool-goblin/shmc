@@ -131,3 +131,12 @@ async fn failed_next_track_lookup_is_asked_again_when_the_playing_track_changes(
     app.play_queue_index(0);
     assert_eq!(asks(&mut plex), 1);
 }
+
+#[tokio::test]
+async fn unwritable_script_is_blamed_instead_of_the_mpv_version() {
+    let (mut app, _plex, _mpv) = leveled_app(Leveling::Track).await;
+    app.mpv.script_unwritten = true;
+    app.handle_msg(Msg::Mpv(MpvEvent::FileLoaded));
+    assert!(app.status.contains("cannot write its mpv script"), "{}", app.status);
+    assert!(!app.status.contains("mpv 0.38"), "{}", app.status);
+}
