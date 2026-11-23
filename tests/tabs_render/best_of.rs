@@ -2,7 +2,7 @@
 
 use super::discover::{album, on_library, Plex};
 use super::*;
-use shmc::plex::discover::{BestOf, ShelfItems};
+use shmc::plex::discover::{BestOf, DiscoverHubs, Shelf, ShelfItems};
 use shmc::ui::app::{DiscoverCmd, DiscoverCol, DiscoverMsg, OpenKind, Opened, Pane};
 use shmc::ui::when::{local, now_unix};
 
@@ -99,7 +99,7 @@ async fn enter_opens_the_most_played_albums_in_the_servers_order_and_esc_goes_ba
             _ => None,
         })
         .collect();
-    assert_eq!(asked, [((d + 1).to_string(), BestOf::Year(d + 1))]);
+    assert_eq!(asked, [(format!("best-of:{}", d + 1), BestOf::Year(d + 1))]);
 
     let played = |key: &str, title: &str, year, plays| shmc::plex::Album {
         plays: Some(plays),
@@ -111,7 +111,7 @@ async fn enter_opens_the_most_played_albums_in_the_servers_order_and_esc_goes_ba
         played("a3", "Mid", 2023, 7),
     ];
     app.handle_msg(Msg::Discover(DiscoverMsg::Opened {
-        key: (d + 1).to_string(),
+        key: format!("best-of:{}", d + 1),
         outcome: Opened::Albums(albums),
     }));
     let Pane::Items(pane) = &app.discover.pane else { panic!("albums expected") };
@@ -141,7 +141,7 @@ async fn an_empty_year_keeps_the_list_instead_of_opening_a_blank_pane() {
     app.handle_msg(enter());
     let d = this_decade();
     app.handle_msg(Msg::Discover(DiscoverMsg::Opened {
-        key: (d + 3).to_string(),
+        key: format!("best-of:{}", d + 3),
         outcome: Opened::Albums(Vec::new()),
     }));
     assert_eq!(shown(&app).len(), 6);
@@ -158,4 +158,46 @@ async fn a_server_with_no_best_of_choices_says_nothing_was_found() {
     app.handle_msg(Msg::Discover(DiscoverMsg::BestOf { generation: 0, outcome }));
     let screen = render(&mut app, 120, 32);
     assert!(screen.contains("nothing found") && !screen.contains("loading best of"), "{screen}");
+}
+
+#[tokio::test]
+async fn a_best_of_reply_is_not_taken_for_the_reply_of_an_album_with_the_same_key() {
+    let (mut app, mut plex) = on_library(BEST_OF).await;
+    sent(&mut plex);
+    app.handle_msg(choices(0));
+    app.handle_msg(key('l'));
+    app.handle_msg(enter());
+    let best_of = sent(&mut plex)
+        .into_iter()
+        .find_map(|c| match c {
+            PlexCmd::Discover(DiscoverCmd::Open { key, .. }) => Some(key),
+            _ => None,
+        })
+        .expect("Best of was asked");
+    app.handle_msg(key_code(KeyCode::Esc));
+
+    let year = this_decade() + 3;
+    let shelf = Shelf {
+        title: "Albums".into(),
+        items: ShelfItems::Albums(vec![album(&year.to_string(), "Same Key", "Mira Vale", 2020)]),
+    };
+    app.handle_msg(Msg::Discover(DiscoverMsg::Loaded(DiscoverHubs {
+        shelves: vec![shelf],
+        stations: Vec::new(),
+    })));
+    app.discover.sections_state.select(Some(1));
+    app.handle_msg(Msg::Cava(Vec::new()));
+    app.handle_msg(key('l'));
+    app.handle_msg(enter());
+
+    app.handle_msg(Msg::Discover(DiscoverMsg::Opened {
+        key: best_of,
+        outcome: Opened::Albums(vec![album("a1", "Late", "Mira Vale", 2021)]),
+    }));
+    assert!(matches!(app.discover.pane, Pane::Items(_)), "the late Best of reply was dropped");
+    app.handle_msg(Msg::Discover(DiscoverMsg::Opened {
+        key: year.to_string(),
+        outcome: super::discover::album_tracks(2),
+    }));
+    assert_eq!(app.discover.tracks().len(), 2, "the album's reply still applied");
 }
