@@ -964,3 +964,38 @@ async fn leveling_script_waits_for_a_gain_still_on_its_way() {
 
     handle.shutdown().await;
 }
+
+#[tokio::test]
+async fn leveling_script_applies_a_gain_that_arrives_after_it_stopped_waiting() {
+    let _guard = MPV_TEST_LOCK.lock().await;
+    let dir = tempfile::tempdir().unwrap();
+    let (handle, mut events) = spawn_leveling().await;
+
+    handle.tx.send(MpvCmd::Play(vec![item(part_file(dir.path(), "44"))])).unwrap();
+    assert_eq!(gain_once_loaded(&handle, &mut events).await, 0.0);
+    handle.tx.send(MpvCmd::SetGain { part: "44".into(), db: -4.0 }).unwrap();
+    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    let late = handle.get_property("volume-gain").await.expect("volume-gain").as_f64();
+    assert_eq!(late, Some(-4.0), "the late gain reached the playing file");
+
+    handle.tx.send(MpvCmd::Play(vec![item(part_file(dir.path(), "55"))])).unwrap();
+    assert_eq!(gain_once_loaded(&handle, &mut events).await, 0.0, "the next file is not affected");
+
+    handle.shutdown().await;
+}
+
+#[tokio::test]
+async fn leveling_script_keeps_the_next_files_gain_after_a_late_one() {
+    let _guard = MPV_TEST_LOCK.lock().await;
+    let dir = tempfile::tempdir().unwrap();
+    let (handle, mut events) = spawn_leveling().await;
+
+    handle.tx.send(MpvCmd::SetGain { part: "77".into(), db: -2.0 }).unwrap();
+    let files = vec![item(part_file(dir.path(), "66")), item(part_file(dir.path(), "77"))];
+    handle.tx.send(MpvCmd::Play(files)).unwrap();
+    assert_eq!(gain_once_loaded(&handle, &mut events).await, 0.0);
+    handle.tx.send(MpvCmd::SetGain { part: "66".into(), db: -4.0 }).unwrap();
+    assert_eq!(gain_once_loaded(&handle, &mut events).await, -2.0);
+
+    handle.shutdown().await;
+}
