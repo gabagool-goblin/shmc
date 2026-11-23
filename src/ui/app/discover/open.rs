@@ -52,7 +52,7 @@ impl App {
             }),
             ShelfItems::BestOf(v) => v.get(real).map(|b| {
                 let label = b.label();
-                (label.clone(), label, OpenKind::BestOf(*b), "loading albums…")
+                (format!("best-of:{label}"), label, OpenKind::BestOf(*b), "loading albums…")
             }),
             ShelfItems::Playlists(v) => v.get(real).map(|p| {
                 let what = OpenKind::Playlist { size };
