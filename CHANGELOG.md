@@ -21,7 +21,7 @@ All notable changes to shmc are documented here. The format follows
 ### Fixed
 
 - A redirect to a deeply nested `blob:` URL can no longer crash shmc.
-- Radio no longer keeps asking Plex for tracks when a station only repeats itself, and survives a failed station restart. Playback resumes after an outage even when the queue was edited meanwhile, and an emptied queue stays empty after a restart.
+- Radio no longer keeps asking Plex for tracks when a station only repeats itself, and survives a failed station restart.
 
 ## 0.3.1 — 2026-11-21
 
