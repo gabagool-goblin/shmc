@@ -59,11 +59,19 @@ impl Period {
     }
 
     /// Inclusive unix seconds from local midnight of the first day to the second before the next
-    /// period; `None` for all time.
-    pub fn span(self, now_unix: i64) -> Option<(i64, i64)> {
-        let now = local(now_unix)?;
-        let (start, end) = self.bounds((now.year, now.month, now.day))?;
-        Some((midnight(start)?, midnight(end)? - 1))
+    /// period; `Ok(None)` for all time.
+    pub fn span(self, now_unix: i64) -> Result<Option<(i64, i64)>, &'static str> {
+        const OUT_OF_RANGE: &str = "the date is out of range";
+        if self.kind == PeriodKind::AllTime {
+            return Ok(None);
+        }
+        let now = local(now_unix).ok_or(OUT_OF_RANGE)?;
+        let Some((start, end)) = self.bounds((now.year, now.month, now.day)) else {
+            return Ok(None);
+        };
+        let start = midnight(start).ok_or(OUT_OF_RANGE)?;
+        let end = midnight(end).ok_or(OUT_OF_RANGE)?;
+        Ok(Some((start, end - 1)))
     }
 
     pub fn label(self, now_unix: i64) -> String {
@@ -182,7 +190,7 @@ mod tests {
     fn all_time_has_no_bounds() {
         let all = of(PeriodKind::AllTime, 0);
         assert_eq!(all.bounds((2026, 11, 22)), None);
-        assert_eq!(all.span(1_795_000_000), None);
+        assert_eq!(all.span(1_795_000_000), Ok(None));
         assert_eq!(all.label_on((2026, 11, 22)), "All time");
     }
 
@@ -211,10 +219,18 @@ mod tests {
     fn consecutive_periods_leave_no_gap_and_no_overlap() {
         let now = 1_795_000_000;
         for kind in [PeriodKind::Week, PeriodKind::Month, PeriodKind::Year] {
-            let (_, before_end) = of(kind, 1).span(now).unwrap();
-            let (start, end) = of(kind, 0).span(now).unwrap();
+            let (_, before_end) = of(kind, 1).span(now).unwrap().unwrap();
+            let (start, end) = of(kind, 0).span(now).unwrap().unwrap();
             assert_eq!(before_end + 1, start, "{kind:?}");
             assert!(end > start && start <= now && now <= end, "{kind:?}");
         }
+    }
+
+    #[test]
+    fn a_date_that_cannot_be_worked_out_is_an_error_not_all_time() {
+        for kind in [PeriodKind::Week, PeriodKind::Month, PeriodKind::Year] {
+            assert!(of(kind, 0).span(i64::MAX).is_err(), "{kind:?}");
+        }
+        assert_eq!(of(PeriodKind::AllTime, 0).span(i64::MAX), Ok(None));
     }
 }
