@@ -149,6 +149,21 @@ async fn quitting_before_the_restore_lands_keeps_the_file() {
 }
 
 #[tokio::test]
+async fn an_emptied_queue_stays_empty_after_a_superseded_restore() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("queue.json");
+    let s = saved(&[1, 2], Some(0), 10.0);
+    saved_queue::write(&path, &s).unwrap();
+    let (mut app, _plex) = new_app_with_plex().await;
+    app.restore_queue(s);
+    app.replace_queue_and_play((5..8).map(track).collect(), Confirm::Tracks);
+    app.queue.items.clear();
+
+    app.save_queue(&path);
+    assert!(!path.exists());
+}
+
+#[tokio::test]
 async fn saving_writes_the_queue_and_an_empty_one_removes_the_file() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("state").join("queue.json");

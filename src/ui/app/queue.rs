@@ -213,6 +213,7 @@ impl App {
         }
         self.radio = None;
         self.restore.seek = None;
+        self.restore.unapplied = false;
         self.cancel_resume();
         self.shuffle_new_queue(&mut playable);
         let (playable, items) = self.playable(playable);
