@@ -17,6 +17,7 @@ All notable changes to shmc are documented here. The format follows
 ### Changed
 
 - Building from source needs Rust 1.90 or newer.
+- Large numbers use commas as the thousands separator.
 
 ### Fixed
 

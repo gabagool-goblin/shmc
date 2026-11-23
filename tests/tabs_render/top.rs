@@ -197,7 +197,7 @@ async fn the_period_line_and_plays_column_fit_at_every_size() {
         assert!(screen.lines().all(|l| l.chars().count() <= w as usize), "{w}x{h}\n{screen}");
         assert!(screen.contains("week  month  year  all time"), "{w}x{h}\n{screen}");
         let header = screen.lines().find(|l| l.contains("Len")).expect("table header");
-        let row = screen.lines().find(|l| l.contains("1 234")).map(str::to_string);
+        let row = screen.lines().find(|l| l.contains("1,234")).map(str::to_string);
         if w >= 80 {
             let row = row.unwrap_or_else(|| panic!("plays at {w}x{h}\n{screen}"));
             assert!(header.contains("Plays") && row.contains("4:17"), "{header:?} {row:?}");
@@ -222,7 +222,7 @@ async fn the_period_line_and_plays_column_fit_at_every_size() {
             assert!(screen.contains("week  month  year  all time"), "{w}x{h}\n{screen}");
             let shown: String = needle.chars().take(6).collect();
             let line = screen.lines().find(|l| l.contains(&shown)).expect("a row");
-            assert!(line.contains("1 234"), "plays clipped in {line:?} at {w}x{h}");
+            assert!(line.contains("1,234"), "plays clipped in {line:?} at {w}x{h}");
             assert!(screen.lines().any(|l| l.contains("Plays")), "{w}x{h}\n{screen}");
         }
     }
