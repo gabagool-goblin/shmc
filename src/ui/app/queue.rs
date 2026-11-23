@@ -56,8 +56,11 @@ impl App {
             }
             QueueOutcome::Radio { tracks, confirm, name, queue } => {
                 self.playlist_load = None;
+                let random = std::mem::replace(&mut self.random, false);
                 if self.replace_queue_and_play(tracks, confirm) {
                     self.begin_radio(name, queue);
+                } else {
+                    self.random = random;
                 }
             }
             QueueOutcome::RadioMore { id, result } => self.apply_radio_more(&id, result),
