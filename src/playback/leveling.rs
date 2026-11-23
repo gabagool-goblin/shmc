@@ -38,9 +38,14 @@ impl Leveling {
         };
         let Some(gain) = gain else { return 0.0 };
         let gain = gain + preamp_db;
-        match peak.filter(|&p| p > 0.0) {
+        let gain = match peak.filter(|&p| p > 0.0) {
             Some(peak) => gain.min(-20.0 * peak.log10()),
             None => gain,
+        };
+        if gain.is_finite() {
+            gain
+        } else {
+            0.0
         }
     }
 }
@@ -92,6 +97,12 @@ mod tests {
         assert_eq!(Leveling::Track.gain_db(&Loudness::default(), 3.0), 0.0);
         let track_only = Loudness { track_lufs: Some(-8.0), ..Loudness::default() };
         assert_eq!(Leveling::Album.gain_db(&track_only, 0.0), -10.0, "album falls back to track");
+    }
+
+    #[test]
+    fn gain_that_is_not_a_number_plays_as_it_is() {
+        let silent = Loudness { track_lufs: Some(f64::NEG_INFINITY), ..Loudness::default() };
+        assert_eq!(Leveling::Track.gain_db(&silent, 0.0), 0.0);
     }
 
     #[test]
