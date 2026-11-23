@@ -102,20 +102,22 @@ async fn stopped_queue_comes_back_stopped() {
 
 #[tokio::test]
 async fn shuffled_queue_restores_its_original_order() {
+    let in_order: Vec<String> = (0..20).map(|i| format!("t{i}")).collect();
     let s = {
         let mut app = new_app().await;
-        app.replace_queue_and_play((0..6).map(track).collect(), Confirm::Tracks);
+        app.replace_queue_and_play((0..20).map(track).collect(), Confirm::Tracks);
         app.handle_msg(key('z'));
-        assert_ne!(queue_keys(&app), keys(&[0, 1, 2, 3, 4, 5]), "shuffled");
+        assert_ne!(queue_keys(&app), in_order, "shuffled");
         app.saved_queue()
     };
     let (mut app, mut plex) = new_app_with_plex().await;
     let shuffled = s.tracks.clone();
-    restore(&mut app, &mut plex, s, &[5, 4, 3, 2, 1, 0]);
+    let found: Vec<usize> = (0..20).rev().collect();
+    restore(&mut app, &mut plex, s, &found);
     assert_eq!(queue_keys(&app), shuffled);
 
     app.handle_msg(key('z'));
-    assert_eq!(queue_keys(&app), keys(&[0, 1, 2, 3, 4, 5]));
+    assert_eq!(queue_keys(&app), in_order);
 }
 
 #[tokio::test]
