@@ -337,6 +337,7 @@ impl App {
                     self.transient_err(error);
                 }
             }
+            Msg::TrackInfoFailed { rating_key } => self.level_track_info_failed(rating_key),
             Msg::PreviewFailed { key } => {
                 // Retry on the next highlight, or a dead server is asked on every message
                 if self.playlists.tracks_for.as_deref() == Some(key.as_str()) {
@@ -554,6 +555,7 @@ impl App {
 
     /// Shows the bulk audio info at once, then asks for the full metadata.
     pub(super) fn fetch_audio_for_current(&mut self) {
+        self.retry_failed_track_info();
         let Some(t) = self.current_track() else {
             self.audio = AudioInfo::default();
             return;

@@ -345,7 +345,10 @@ pub fn spawn_plex_worker(
                                 user_rating: t.user_rating,
                             });
                         }
-                        Err(e) => tracing::warn!("track info: {e:#}"),
+                        Err(e) => {
+                            tracing::warn!("track info: {e:#}");
+                            let _ = tx.send(Msg::TrackInfoFailed { rating_key: key });
+                        }
                     },
                     PlexCmd::Rate { key, rating, title } => match client.rate(&key, rating).await {
                         Ok(()) => {

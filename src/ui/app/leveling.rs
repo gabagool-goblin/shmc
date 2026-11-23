@@ -11,6 +11,7 @@ pub(super) struct LevelingState {
     preamp_db: f64,
     published: HashSet<String>,
     asked: HashSet<String>,
+    failed: HashSet<String>,
     pub(super) ready: bool,
     warned: bool,
 }
@@ -54,6 +55,17 @@ impl App {
                 }
                 None => {}
             }
+        }
+    }
+
+    /// Kept in `asked` until the playing track changes, so a dead server is asked once per track.
+    pub(super) fn level_track_info_failed(&mut self, rating_key: String) {
+        self.leveling.failed.insert(rating_key);
+    }
+
+    pub(super) fn retry_failed_track_info(&mut self) {
+        for key in self.leveling.failed.drain() {
+            self.leveling.asked.remove(&key);
         }
     }
 

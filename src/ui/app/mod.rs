@@ -242,6 +242,9 @@ pub enum Msg {
         audio: AudioInfo,
         user_rating: Option<u8>,
     },
+    TrackInfoFailed {
+        rating_key: String,
+    },
     /// The server accepted a rating.
     Rated {
         rating_key: String,
