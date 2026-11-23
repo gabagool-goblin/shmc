@@ -2,6 +2,7 @@ use super::{DiscoverCol, DiscoverLoad, DiscoverView, ItemsPane, Pane};
 use crate::plex::discover::{DiscoverHubs, LibraryList};
 use crate::ui::app::{App, ListRef, Tab};
 use crate::ui::scroll;
+use crate::ui::when::now_unix;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Row {
@@ -137,11 +138,20 @@ impl App {
     }
 
     pub(in crate::ui::app) fn follow_discover(&mut self) {
+        self.follow_discover_at(now_unix());
+    }
+
+    pub fn follow_discover_at(&mut self, now: i64) {
         if self.tab != Tab::Discover {
             return;
         }
         let Some(row) = self.highlighted_row() else { return };
         if self.discover.followed == Some(row) {
+            if let (Row::Library(list), None) = (row, &self.discover.pending) {
+                if self.discover.period_line().is_some() {
+                    self.renew_top(list, now);
+                }
+            }
             return self.page_library();
         }
         self.discover.followed = Some(row);
@@ -151,7 +161,7 @@ impl App {
         match row {
             Row::Shelf(i) => self.show_shelf(i),
             Row::Station(i) => self.follow_station(i),
-            Row::Library(list) => self.follow_library(list),
+            Row::Library(list) => self.follow_library(list, now),
             Row::BestOf => self.follow_best_of(),
             Row::Heading(_) | Row::Blank => self.discover.pane = Pane::Empty,
         }

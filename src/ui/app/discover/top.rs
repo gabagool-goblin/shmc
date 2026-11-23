@@ -2,6 +2,7 @@ use super::{DiscoverView, Row};
 use crate::plex::discover::LibraryList;
 use crate::ui::app::App;
 use crate::ui::period::{Period, PeriodKind};
+use crate::ui::when::now_unix;
 
 impl DiscoverView {
     /// `None` unless the pane is a Top list itself.
@@ -37,7 +38,7 @@ impl App {
         self.discover.back.clear();
         self.discover.pending = None;
         self.drop_visual(crate::ui::app::ListRef::DTracks);
-        self.follow_library(followed);
+        self.follow_library(followed, now_unix());
         self.settle_focus();
     }
 }

@@ -216,3 +216,42 @@ async fn opening_a_top_album_leaves_the_period_line_for_the_album() {
     app.handle_msg(key_code(KeyCode::Esc));
     assert!(render(&mut app, 120, 32).contains("week  month  year  all time"));
 }
+
+#[tokio::test]
+async fn a_loaded_top_list_is_fetched_again_once_its_period_rolls_over() {
+    let (mut app, mut plex) = on_library(TOP_TRACKS).await;
+    sent(&mut plex);
+    app.handle_msg(page_of(LibraryList::TopTracks, 0, 0, numbered(0..3), 3));
+    app.follow_discover_at(now_unix());
+    assert!(top_requests(&mut plex).is_empty(), "the period is still current");
+
+    let later = now_unix() + 400 * 86_400;
+    app.follow_discover_at(later);
+    let asked = top_requests(&mut plex);
+    let want = Period { kind: PeriodKind::Month, back: 0 }.span(later);
+    assert_eq!(asked.len(), 1);
+    assert_eq!((asked[0].0, asked[0].1, asked[0].2), (LibraryList::TopTracks, 1, want));
+    assert!(app.discover.tracks().is_empty(), "the old period's rows are gone");
+}
+
+#[tokio::test]
+async fn an_album_opened_from_a_top_list_stays_open_across_a_rollover() {
+    let (mut app, mut plex) = on_library(TOP_ALBUMS).await;
+    sent(&mut plex);
+    app.handle_msg(top_albums());
+    app.handle_msg(key('l'));
+    app.handle_msg(enter());
+    app.handle_msg(Msg::Discover(DiscoverMsg::Opened {
+        key: "a1".into(),
+        outcome: super::discover::album_tracks(2),
+    }));
+    sent(&mut plex);
+    let later = now_unix() + 400 * 86_400;
+    app.follow_discover_at(later);
+    assert!(top_requests(&mut plex).is_empty());
+    assert_eq!(app.discover.tracks().len(), 2, "the album is still open");
+
+    app.handle_msg(key_code(KeyCode::Esc));
+    app.follow_discover_at(later);
+    assert_eq!(top_requests(&mut plex).len(), 1, "the list is fetched again once it shows");
+}
