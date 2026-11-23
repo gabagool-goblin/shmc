@@ -100,7 +100,6 @@ pub enum QueueAction {
     PlayNext,
 }
 
-/// What an add/play confirmation message is about.
 #[derive(Debug, Clone)]
 pub enum Confirm {
     Track {
@@ -245,7 +244,6 @@ pub enum Msg {
     TrackInfoFailed {
         rating_key: String,
     },
-    /// The server accepted a rating.
     Rated {
         rating_key: String,
         rating: Option<u8>,
@@ -299,7 +297,7 @@ pub struct PlaylistsView {
     pub list: FilteredList<crate::plex::Playlist>,
     pub focus: PlaylistsCol,
     pub tracks: FilteredList<Track>,
-    /// The playlist whose items are (being) loaded.
+    /// The playlist whose items are loaded.
     pub tracks_for: Option<String>,
     pub tracks_total: Option<usize>,
     pub preview_cache: HashMap<String, Vec<Track>>,
@@ -459,7 +457,6 @@ pub struct App {
     pub plex: PlexHandle,
     pub mpv: MpvHandle,
 
-    // playback mirror: the queue is mpv's playlist
     pub queue: FilteredList<Track, TableState>,
     pub current: Option<usize>,
     pub position: f64,
@@ -519,6 +516,7 @@ pub struct App {
     /// Failures since a file last loaded.
     err_streak: u32,
     restore: saved_queue::Restore,
+    autosave: saved_queue::Autosave,
     resume: resume::Resume,
     leveling: leveling::LevelingState,
 
@@ -653,6 +651,7 @@ impl App {
             failed_at: None,
             err_streak: 0,
             restore: saved_queue::Restore::default(),
+            autosave: saved_queue::Autosave::default(),
             resume: resume::Resume::default(),
             leveling: leveling::LevelingState::default(),
             discover: DiscoverView::default(),
