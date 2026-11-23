@@ -132,6 +132,8 @@ pub struct MpvHandle {
     sock: PathBuf,
     /// A user setting shmc ignored at startup (e.g. `--log-file`).
     pub ignored_setting: Option<String>,
+    /// Leveling was asked for but shmc could not write its script.
+    pub script_unwritten: bool,
     /// Callers waiting on a `get_property` reply, by `request_id`.
     pending: std::sync::Arc<Pending>,
     next_request: std::sync::Arc<AtomicU64>,
@@ -248,7 +250,8 @@ pub async fn spawn(cfg: &MpvConfig) -> Result<(MpvHandle, UnboundedReceiver<MpvE
     let log_pipe = mpv_log_pipe();
     let fifo_path = log_pipe.as_ref().map(|pipe| pipe.fifo.clone());
 
-    let script = (cfg.leveling() != Leveling::Off)
+    let wants_script = cfg.leveling() != Leveling::Off;
+    let script = wants_script
         .then(|| match leveling::write_script() {
             Ok(path) => Some(path),
             Err(e) => {
@@ -257,6 +260,7 @@ pub async fn spawn(cfg: &MpvConfig) -> Result<(MpvHandle, UnboundedReceiver<MpvE
             }
         })
         .flatten();
+    let script_unwritten = wants_script && script.is_none();
     let (args, ignored_setting) = build_args(
         cfg,
         &sock,
@@ -390,6 +394,7 @@ pub async fn spawn(cfg: &MpvConfig) -> Result<(MpvHandle, UnboundedReceiver<MpvE
             _socket: std::sync::Arc::new(SocketCleanup(sock.clone())),
             sock,
             ignored_setting,
+            script_unwritten,
             pending,
             next_request,
         },
