@@ -136,7 +136,7 @@ shmc starts mpv with `--no-config`, so your `mpv.conf` and scripts aren't loaded
 
 `--log-file` is ignored in `extra_args` because mpv logs stream URLs containing your Plex token.
 
-`loudness_leveling` evens out loudness with Plex's own analysis, which needs Plex Pass. `track` brings every track to the same level; `album` moves each album as a whole, so its quiet and loud songs keep their difference. The gain never lifts a track's peak past full scale, and tracks Plex hasn't analysed play as they are. It needs mpv 0.37 or newer built with Lua: shmc gives mpv a small script of its own for it, while your mpv scripts stay off. `--replaygain`, which reads tags in the files, still works through `extra_args`.
+`loudness_leveling` evens out loudness with Plex's own analysis, which needs Plex Pass. `track` brings every track to the same level; `album` moves each album as a whole, so its quiet and loud songs keep their difference. The gain never lifts a track's peak past full scale, and tracks Plex hasn't analysed play as they are. It needs mpv 0.38 or newer built with Lua: shmc gives mpv a small script of its own for it, while your mpv scripts stay off. `--replaygain`, which reads tags in the files, still works through `extra_args`.
 
 ### Album art and visualizer
 

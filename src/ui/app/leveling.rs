@@ -74,7 +74,7 @@ impl App {
         }
         self.leveling.warned = true;
         tracing::warn!("the leveling script did not load");
-        self.transient_err("loudness leveling is off: it needs mpv 0.37 or newer with Lua".into());
+        self.transient_err("loudness leveling is off: it needs mpv 0.38 or newer with Lua".into());
     }
 
     fn full_audio(&self, track: &Track) -> Option<AudioInfo> {
