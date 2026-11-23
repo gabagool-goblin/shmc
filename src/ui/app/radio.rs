@@ -334,6 +334,9 @@ impl App {
         match result {
             ReadOn::Tracks(tracks, last) => {
                 radio.queue.last = last;
+                if tracks.is_empty() {
+                    radio.failed_at = playing;
+                }
                 radio.added.extend(tracks.iter().map(|t| t.rating_key.clone()));
                 self.append_playable(tracks);
             }
