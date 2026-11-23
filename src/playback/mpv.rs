@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use std::io::{BufRead, Write};
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixStream;
 use tokio::process::{Child, Command};
@@ -73,7 +73,7 @@ pub enum MpvCmd {
     },
 }
 
-/// A media key or Control Center button, rebound inside mpv.
+/// A media key, rebound inside mpv.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MediaKey {
     Toggle,
@@ -102,15 +102,9 @@ const MEDIA_KEYS: [(&str, &str, MediaKey); 10] = [
 
 #[derive(Debug, Clone)]
 pub enum MpvEvent {
-    Property {
-        name: String,
-        value: Option<Value>,
-    },
-    EndFile {
-        reason: String,
-    },
+    Property { name: String, value: Option<Value> },
+    EndFile { reason: String },
     Ready,
-    /// A media key pressed, reported through a `script-message`.
     MediaKey(MediaKey),
     FileLoaded,
     Shutdown,
@@ -137,11 +131,13 @@ pub struct MpvHandle {
     /// Callers waiting on a `get_property` reply, by `request_id`.
     pending: std::sync::Arc<Pending>,
     next_request: std::sync::Arc<AtomicU64>,
+    quitting: std::sync::Arc<AtomicBool>,
     _socket: std::sync::Arc<SocketCleanup>,
 }
 
 impl MpvHandle {
     pub async fn shutdown(&self) {
+        self.quitting.store(true, Ordering::Relaxed);
         let mut child = self.inner.lock().await;
         let _ = child.start_kill();
         // A killed mpv cannot unlink its own socket.
@@ -312,6 +308,8 @@ pub async fn spawn(cfg: &MpvConfig) -> Result<(MpvHandle, UnboundedReceiver<MpvE
     let pending: std::sync::Arc<Pending> =
         std::sync::Arc::new(tokio::sync::Mutex::new(HashMap::new()));
     let next_request = std::sync::Arc::new(AtomicU64::new(1));
+    let quitting = std::sync::Arc::new(AtomicBool::new(false));
+    let reader_quitting = quitting.clone();
     let reader_pending = pending.clone();
     let writer_pending = pending.clone();
 
@@ -327,7 +325,6 @@ pub async fn spawn(cfg: &MpvConfig) -> Result<(MpvHandle, UnboundedReceiver<MpvE
             (7, "loop-playlist"),
             (8, "loop-file"),
             (9, "shuffle"),
-            // fires once per file: no polling
             (10, "audio-bitrate"),
             (11, LEVELING_READY),
         ] {
@@ -357,10 +354,8 @@ pub async fn spawn(cfg: &MpvConfig) -> Result<(MpvHandle, UnboundedReceiver<MpvE
         }
         let _ = etx.send(MpvEvent::Ready);
 
-        // Own task: mpv answers every command, so a long `loadfile` burst would deadlock.
         let reader = tokio::spawn(async move {
-            read_events(read_half, &reader_pending, &etx).await;
-            // Nobody will answer the questions still open.
+            read_events(read_half, &reader_pending, &etx, &reader_quitting).await;
             reader_pending.lock().await.clear();
         });
 
@@ -391,6 +386,7 @@ pub async fn spawn(cfg: &MpvConfig) -> Result<(MpvHandle, UnboundedReceiver<MpvE
         MpvHandle {
             tx,
             inner,
+            quitting,
             _socket: std::sync::Arc::new(SocketCleanup(sock.clone())),
             sock,
             ignored_setting,
@@ -404,17 +400,23 @@ pub async fn spawn(cfg: &MpvConfig) -> Result<(MpvHandle, UnboundedReceiver<MpvE
 
 type Pending = tokio::sync::Mutex<HashMap<u64, oneshot::Sender<Result<Value>>>>;
 
-/// Route mpv's lines to callers and the UI; only EOF or an I/O error ends this.
+/// Routes mpv's replies to callers and its events to the UI.
 async fn read_events<R: tokio::io::AsyncRead + Unpin>(
     read: R,
     pending: &Pending,
     etx: &UnboundedSender<MpvEvent>,
+    quitting: &AtomicBool,
 ) {
     let mut reader = BufReader::new(read);
     let mut buf = Vec::new();
     loop {
         buf.clear();
         match reader.read_until(b'\n', &mut buf).await {
+            Ok(0) if quitting.load(Ordering::Relaxed) => {
+                info!("mpv quit");
+                let _ = etx.send(MpvEvent::Shutdown);
+                break;
+            }
             Ok(0) => {
                 warn!("mpv exited (IPC closed)");
                 let _ = etx.send(MpvEvent::Shutdown);
@@ -465,7 +467,6 @@ fn mpv_log_pipe() -> Option<MpvLogPipe> {
         }
     };
 
-    // Truncate on every start so the file cannot grow without bound.
     let log = crate::config::usable_log_dir()?.join("mpv.log");
     crate::cache::open_private(&log, false).ok()?;
 
@@ -615,7 +616,6 @@ fn remove_stale_sockets(dir: &Path, max_age: std::time::Duration) {
             continue;
         }
         let path = entry.path();
-        // Probe only old nodes: a young one may not be listening yet.
         if !touched_longer_ago_than(&path, now, max_age) {
             continue;
         }
@@ -625,7 +625,6 @@ fn remove_stale_sockets(dir: &Path, max_age: std::time::Duration) {
     }
 }
 
-/// Remove log FIFOs a killed shmc left behind.
 fn remove_stale_pipes(dir: &Path, max_age: std::time::Duration) {
     let Ok(entries) = std::fs::read_dir(dir) else {
         return;
@@ -765,7 +764,6 @@ fn cmd_to_lines(cmd: MpvCmd) -> Vec<String> {
     vec![v.to_string()]
 }
 
-/// A reply to a command sent with a `request_id`, else `None`.
 fn parse_reply(line: &str) -> Option<(u64, Result<Value>)> {
     let v: Value = serde_json::from_str(line).ok()?;
     let request_id = v.get("request_id")?.as_u64()?;
@@ -891,13 +889,11 @@ mod tests {
         let live = tmp.path().join("shmc-mpv-1-1.sock");
         let _listener = std::os::unix::net::UnixListener::bind(&live).unwrap();
 
-        // Zero age makes everything old: only the probe can save the socket.
         remove_stale_sockets(tmp.path(), std::time::Duration::ZERO);
 
         assert!(live.exists(), "a live mpv must survive any sweep");
     }
 
-    /// Plain files only: a socket cannot be opened to backdate it.
     fn age_by(path: &Path, age: std::time::Duration) {
         let file = std::fs::File::options().write(true).open(path).unwrap();
         let then = std::time::SystemTime::now().checked_sub(age).unwrap();
@@ -1111,7 +1107,7 @@ mod tests {
             {\"event\":\"end-file\",\"reason\":\"eof\"}\n";
         let pending = Pending::default();
         let (etx, mut erx) = unbounded_channel();
-        read_events(input, &pending, &etx).await;
+        read_events(input, &pending, &etx, &AtomicBool::new(false)).await;
         let mut got = Vec::new();
         while let Ok(ev) = erx.try_recv() {
             got.push(ev);
@@ -1170,7 +1166,6 @@ mod tests {
         assert!(ignored.is_some());
         assert!(!args.iter().any(|a| a.starts_with("--log-file")));
 
-        // The two-element form loses its value too.
         let cfg = MpvConfig {
             path: "mpv".into(),
             extra_args: vec!["--log-file".into(), "/tmp/leak.log".into(), "--ao=pulse".into()],
