@@ -41,6 +41,7 @@ struct ListData {
     generation: u64,
     loaded: bool,
     fetch: Fetch,
+    span: Option<(i64, i64)>,
     tracks: Vec<Track>,
     albums: Vec<Album>,
     artists: Vec<Artist>,
@@ -103,21 +104,41 @@ pub(super) async fn load(
 }
 
 impl App {
-    pub(super) fn follow_library(&mut self, list: LibraryList) {
+    pub(super) fn follow_library(&mut self, list: LibraryList, now: i64) {
         let data = &mut self.discover.library.lists[list.index()];
         if matches!(data.fetch, Fetch::Failed(_)) {
             data.fetch = Fetch::Idle;
         }
+        self.renew_top(list, now);
+        let data = &self.discover.library.lists[list.index()];
         if !data.loaded && data.fetch == Fetch::Idle {
-            self.request_library(list, 0);
+            self.request_library(list, 0, now);
         }
         self.show_library(list);
     }
 
-    fn request_library(&mut self, list: LibraryList, start: usize) {
+    /// Fetches a Top list again once its period has rolled over.
+    pub(super) fn renew_top(&mut self, list: LibraryList, now: i64) {
+        let lib = &self.discover.library;
+        let data = &lib.lists[list.index()];
+        let asked = data.loaded || data.fetch == Fetch::Loading;
+        if !list.is_top() || !asked || data.span == lib.period.span(now) {
+            return;
+        }
+        self.discover.library.reset_list(list);
+        self.drop_visual(crate::ui::app::ListRef::DTracks);
+        self.request_library(list, 0, now);
+        self.show_library(list);
+        self.settle_focus();
+    }
+
+    fn request_library(&mut self, list: LibraryList, start: usize, now: i64) {
         let lib = &mut self.discover.library;
-        let span = if list.is_top() { lib.period.span(now_unix()) } else { None };
+        let span = if list.is_top() { lib.period.span(now) } else { None };
         let data = &mut lib.lists[list.index()];
+        if start == 0 {
+            data.span = span;
+        }
         data.fetch = Fetch::Loading;
         let cmd = DiscoverCmd::LoadLibrary { list, generation: data.generation, start, span };
         let _ = self.plex.tx.send(PlexCmd::Discover(cmd));
@@ -185,7 +206,7 @@ impl App {
             return;
         }
         let start = data.fetched;
-        self.request_library(list, start);
+        self.request_library(list, start, now_unix());
     }
 
     pub(super) fn library_loaded(
