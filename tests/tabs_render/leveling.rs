@@ -113,3 +113,21 @@ async fn play_next_prepares_the_new_next_tracks_gain() {
     assert_eq!(gains(&mut mpv), [("7".to_string(), -4.0)]);
     assert_eq!(app.current, Some(0));
 }
+
+#[tokio::test]
+async fn failed_next_track_lookup_is_asked_again_when_the_playing_track_changes() {
+    let (mut app, mut plex, _mpv) = leveled_app(Leveling::Track).await;
+    app.queue.items[0].audio = analysed(-8.0);
+    let asks = |plex: &mut _| {
+        sent(plex).iter().filter(|c| matches!(c, PlexCmd::LoadTrackInfo(k) if k == "t1")).count()
+    };
+    app.play_queue_index(0);
+    assert_eq!(asks(&mut plex), 1);
+
+    app.handle_msg(Msg::TrackInfoFailed { rating_key: "t1".into() });
+    app.handle_msg(Msg::Resize);
+    assert_eq!(asks(&mut plex), 0, "not on every message");
+
+    app.play_queue_index(0);
+    assert_eq!(asks(&mut plex), 1);
+}
