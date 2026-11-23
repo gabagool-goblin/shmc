@@ -66,6 +66,26 @@ async fn first_answer_from_plex_resumes_too() {
 }
 
 #[tokio::test]
+async fn resume_plays_the_failed_track_where_the_queue_moved_it() {
+    let (mut app, mut plex, mut mpv) = stopped_by_failures().await;
+    answer_check(&mut app, &mut plex, false);
+    app.queue.items.remove(0);
+    answer_check(&mut app, &mut plex, true);
+
+    assert_eq!(played(&mut mpv), [1]);
+}
+
+#[tokio::test]
+async fn resume_gives_up_when_the_failed_track_left_the_queue() {
+    let (mut app, mut plex, mut mpv) = stopped_by_failures().await;
+    answer_check(&mut app, &mut plex, false);
+    app.queue.items.remove(2);
+    answer_check(&mut app, &mut plex, true);
+
+    assert!(played(&mut mpv).is_empty());
+}
+
+#[tokio::test]
 async fn resume_that_fails_again_is_not_retried() {
     let (mut app, mut plex, mut mpv) = stopped_by_failures().await;
     answer_check(&mut app, &mut plex, true);
