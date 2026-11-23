@@ -31,6 +31,7 @@ impl Choices {
     pub fn message(&self) -> String {
         match &self.fetch {
             Fetch::Failed(msg) => msg.clone(),
+            Fetch::Ready { .. } => "nothing found".into(),
             _ => "loading best of…".into(),
         }
     }

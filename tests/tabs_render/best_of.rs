@@ -149,3 +149,13 @@ async fn an_empty_year_keeps_the_list_instead_of_opening_a_blank_pane() {
     assert_eq!(pane.state.selected(), Some(0));
     assert_eq!(app.discover.focus, DiscoverCol::Right);
 }
+
+#[tokio::test]
+async fn a_server_with_no_best_of_choices_says_nothing_was_found() {
+    let (mut app, mut plex) = on_library(BEST_OF).await;
+    sent(&mut plex);
+    let outcome = Ok((vec![this_decade() - 9], Vec::new()));
+    app.handle_msg(Msg::Discover(DiscoverMsg::BestOf { generation: 0, outcome }));
+    let screen = render(&mut app, 120, 32);
+    assert!(screen.contains("nothing found") && !screen.contains("loading best of"), "{screen}");
+}
