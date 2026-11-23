@@ -53,17 +53,16 @@ impl App {
             return;
         }
         let Some(waiting) = self.resume.waiting.take() else { return };
-        let Some(title) = self
-            .queue
-            .items
-            .get(waiting.at)
-            .filter(|t| t.rating_key == waiting.key)
-            .map(|t| t.title.clone())
+        let held = |i: usize| self.queue.items.get(i).is_some_and(|t| t.rating_key == waiting.key);
+        let Some(at) = Some(waiting.at)
+            .filter(|&i| held(i))
+            .or_else(|| self.queue.items.iter().position(|t| t.rating_key == waiting.key))
         else {
             return;
         };
+        let title = self.queue.items[at].title.clone();
         tracing::info!(offline = waiting.offline, "Plex answers; resuming");
-        self.play_queue_index(waiting.at);
+        self.play_queue_index(at);
         self.resume.retried = true;
         self.transient(format!("connection back: playing {title}"));
     }
