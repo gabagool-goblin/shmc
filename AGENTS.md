@@ -50,7 +50,8 @@
 - The config and its `.bak` are written atomically 0600. The cache dir is 0700
   and holds only album art, mpv's socket and FIFO, and the leveling script;
   files there are 0600.
-  The saved queue (state dir, 0700/0600, atomic) holds rating keys, never a URL.
+  The saved queue (state dir, 0700/0600, atomic) holds rating keys and the
+  server address, never a stream URL.
   What cannot be made private fails closed, never falls back to a shared
   location.
 
