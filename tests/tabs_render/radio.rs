@@ -213,6 +213,25 @@ async fn enter_on_a_radio_list_plays_it_from_the_row_with_shuffle_off() {
 }
 
 #[tokio::test]
+async fn a_radio_with_nothing_playable_leaves_shuffle_and_the_queue_alone() {
+    let (mut app, _plex) = on_browser().await;
+    app.queue.items = (0..3).map(track).collect();
+    app.random = true;
+    app.handle_msg(key('s'));
+    let unplayable: Vec<_> = (10..12).map(|i| Track { part_key: None, ..track(i) }).collect();
+    let queue = RadioQueue { id: "9".into(), last: "q11".into(), seed: seed() };
+    app.handle_msg(Msg::RadioLoaded {
+        key: "ar1".into(),
+        label: "Northwind Sounds Radio".into(),
+        outcome: RadioOutcome::Tracks(unplayable, queue),
+    });
+    app.handle_msg(enter());
+    assert!(app.random);
+    assert!(app.radio.is_none());
+    assert_eq!(queue_keys(&app), ["t0", "t1", "t2"]);
+}
+
+#[tokio::test]
 async fn enter_on_a_list_that_is_not_a_radio_starts_none() {
     let (mut app, _plex) = new_app_with_plex().await;
     open_album(&mut app);
