@@ -266,3 +266,23 @@ async fn a_top_list_whose_dates_cannot_be_worked_out_asks_for_nothing() {
     let screen = render(&mut app, 120, 32);
     assert!(screen.contains("loading top tracks:"), "{screen}");
 }
+
+#[tokio::test]
+async fn the_period_keys_leave_an_album_opened_from_a_top_list_alone() {
+    let (mut app, mut plex) = on_library(TOP_ALBUMS).await;
+    sent(&mut plex);
+    app.handle_msg(top_albums());
+    app.handle_msg(key('l'));
+    app.handle_msg(enter());
+    app.handle_msg(Msg::Discover(DiscoverMsg::Opened {
+        key: "a1".into(),
+        outcome: super::discover::album_tracks(2),
+    }));
+    sent(&mut plex);
+    for c in ['{', '}', 'p'] {
+        app.handle_msg(key(c));
+    }
+    assert!(top_requests(&mut plex).is_empty());
+    assert_eq!(app.discover.library.period, Period::default());
+    assert_eq!(app.discover.tracks().len(), 2, "the album is still open");
+}

@@ -29,8 +29,11 @@ impl App {
 
     fn set_period(&mut self, period: Period) {
         let Some(Row::Library(followed)) = self.discover.followed else { return };
+        if self.discover.period_line().is_none() {
+            return;
+        }
         let lib = &mut self.discover.library;
-        if !followed.is_top() || period == lib.period {
+        if period == lib.period {
             return;
         }
         lib.period = period;
