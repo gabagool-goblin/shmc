@@ -840,3 +840,13 @@ async fn the_played_column_fits_where_there_is_room_and_goes_before_it_clips() {
         }
     }
 }
+
+#[tokio::test]
+async fn enter_on_a_loaded_library_row_moves_to_its_list() {
+    let (mut app, mut plex) = on_library(0).await;
+    sent(&mut plex);
+    app.handle_msg(page_of(LibraryList::RecentlyPlayed, 0, 0, numbered(0..5), 5));
+    assert_eq!(app.discover.focus, DiscoverCol::Sections);
+    app.handle_msg(enter());
+    assert_eq!(app.discover.focus, DiscoverCol::Right);
+}

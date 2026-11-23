@@ -6,8 +6,8 @@ impl App {
     pub(in crate::ui::app) fn activate_section(&mut self) {
         match self.highlighted_row() {
             Some(Row::Station(_)) => self.start_station(),
-            Some(Row::Shelf(_)) => self.discover_column_right(),
-            _ => {}
+            Some(Row::Shelf(_) | Row::Library(_) | Row::BestOf) => self.discover_column_right(),
+            Some(Row::Heading(_) | Row::Blank) | None => {}
         }
     }
 
