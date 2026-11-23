@@ -22,6 +22,7 @@ All notable changes to shmc are documented here. The format follows
 
 - A redirect to a deeply nested `blob:` URL can no longer crash shmc.
 - Radio no longer keeps asking Plex for tracks when a station only repeats itself, and survives a failed station restart.
+- A playback report no longer fails when Plex has closed an idle connection.
 
 ## 0.3.1 — 2026-11-21
 

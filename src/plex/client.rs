@@ -390,7 +390,6 @@ impl PlexClient {
         Ok(())
     }
 
-    /// One attempt: a late report is worth less than the next one.
     pub async fn timeline(&self, client_id: &str, r: &Report) -> Result<()> {
         let mut url = self.url_for("/:/timeline")?;
         url.query_pairs_mut()
@@ -405,15 +404,20 @@ impl PlexClient {
             "linux" => "Linux",
             other => other,
         };
-        let resp = self
-            .request(reqwest::Method::GET, url.as_str(), "application/xml")
-            .header("X-Plex-Client-Identifier", client_id)
-            .header("X-Plex-Device-Name", "shmc")
-            .header("X-Plex-Platform", platform)
-            .timeout(std::time::Duration::from_secs(5))
-            .send()
-            .await
-            .map_err(|e| anyhow::anyhow!("request failed: {}", e.without_url()))?;
+        let send = || {
+            self.request(reqwest::Method::GET, url.as_str(), "application/xml")
+                .header("X-Plex-Client-Identifier", client_id)
+                .header("X-Plex-Device-Name", "shmc")
+                .header("X-Plex-Platform", platform)
+                .timeout(std::time::Duration::from_secs(5))
+                .send()
+        };
+        // A send on a kept-alive connection Plex has closed fails at once.
+        let resp = match send().await {
+            Err(e) if !e.is_timeout() => send().await,
+            sent => sent,
+        }
+        .map_err(|e| anyhow::anyhow!("request failed: {}", e.without_url()))?;
         let status = resp.status();
         if status == reqwest::StatusCode::UNAUTHORIZED || status == reqwest::StatusCode::FORBIDDEN {
             bail!("Plex refused the playback report (HTTP {status})");
@@ -493,8 +497,7 @@ impl PlexClient {
                 }
             }
         }
-        // A track removed from the library since it was queued is dropped by
-        // Plex without an error; the other chunks are still worth saving.
+        // Plex drops a track removed from the library without an error.
         if confirmed < total {
             let reason = format!("Plex refused {} (removed from the library?)", total - confirmed);
             return stopped(name, id, confirmed, total, reason);
@@ -650,7 +653,7 @@ impl PlexClient {
         Ok(list)
     }
 
-    /// Tracks of a playlist, in playlist order (never re-sorted).
+    /// Tracks of a playlist, in playlist order.
     pub async fn playlist_items(&self, rating_key: &str) -> Result<Vec<Track>> {
         self.get_all_paged(
             &format!("/playlists/{rating_key}/items"),
@@ -909,7 +912,6 @@ mod url_for_tests {
     use super::testing::serve_pages;
     use super::*;
 
-    /// A path from the server must not send the token elsewhere.
     #[test]
     fn other_origin_url_refused() {
         let client = PlexClient::new("http://plex:32400", "tok");

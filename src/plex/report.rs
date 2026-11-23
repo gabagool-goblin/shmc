@@ -31,7 +31,7 @@ pub struct Report {
     pub duration_ms: u64,
 }
 
-/// Owns the sending task. Failures never retry; only the first reaches `on_first_failure`.
+/// Owns the sending task. Only the first failure reaches `on_first_failure`.
 pub struct Reporter {
     tx: UnboundedSender<Report>,
     task: JoinHandle<()>,
@@ -90,6 +90,13 @@ mod tests {
 
     /// A fake PMS answering every request with `status`; `None` never answers.
     async fn serve(status: Option<u16>) -> (String, Arc<Mutex<Vec<String>>>) {
+        serve_after_drops(status, 0).await
+    }
+
+    async fn serve_after_drops(
+        status: Option<u16>,
+        mut drops: usize,
+    ) -> (String, Arc<Mutex<Vec<String>>>) {
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let base = format!("http://{}", listener.local_addr().unwrap());
         let seen: Arc<Mutex<Vec<String>>> = Arc::default();
@@ -102,6 +109,10 @@ mod tests {
                 let n = sock.read(&mut buf).await.unwrap_or(0);
                 let req = String::from_utf8_lossy(&buf[..n]).to_string();
                 log.lock().unwrap().push(req.lines().next().unwrap_or("").to_string());
+                if drops > 0 {
+                    drops -= 1;
+                    continue;
+                }
                 match status {
                     Some(code) => {
                         let resp = format!(
@@ -170,6 +181,16 @@ mod tests {
             errors += 1;
         }
         assert_eq!(errors, 1);
+    }
+
+    #[tokio::test]
+    async fn a_closed_connection_is_tried_again_once() {
+        let (base, seen) = serve_after_drops(Some(200), 1).await;
+        let (reporter, mut notes) = reporter(&base);
+        reporter.sender().send(report("a", PlayState::Playing)).unwrap();
+        reporter.finish(Duration::from_secs(5)).await;
+        assert_eq!(seen.lock().unwrap().len(), 2);
+        assert!(notes.try_recv().is_err(), "no failure reached the UI");
     }
 
     #[tokio::test]
