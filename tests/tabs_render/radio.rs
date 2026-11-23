@@ -338,6 +338,22 @@ async fn a_failed_read_asks_again_only_once_the_playing_track_changes() {
 }
 
 #[tokio::test]
+async fn a_read_that_finds_only_repeats_waits_for_the_next_track() {
+    let (mut app, mut plex) = radio_playing(8).await;
+    let (seq, ..) = reads(&mut plex).remove(0);
+    app.handle_msg(more(seq, ReadOn::Tracks(Vec::new(), "q40".into())));
+    assert!(app.radio.is_some());
+    app.handle_msg(Msg::Cava(Vec::new()));
+    assert!(reads(&mut plex).is_empty());
+
+    app.current = Some(1);
+    app.handle_msg(Msg::Cava(Vec::new()));
+    let next = reads(&mut plex);
+    assert_eq!(next.len(), 1);
+    assert_eq!(next[0].1.last, "q40");
+}
+
+#[tokio::test]
 async fn shuffle_is_refused_while_a_radio_plays() {
     let (mut app, _plex) = radio_playing(30).await;
     app.handle_msg(key('z'));
