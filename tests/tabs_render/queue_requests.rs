@@ -225,7 +225,7 @@ async fn streamed_playlist_plays_at_once_and_grows() {
     assert!(!app.stopped, "playback starts with the first page");
 
     app.handle_msg(page(seq, 200..230, false));
-    assert!(app.status.contains("230 / 5 000"), "{}", app.status);
+    assert!(app.status.contains("230 / 5,000"), "{}", app.status);
     app.handle_msg(page(seq, 230..260, true));
 
     assert_eq!(queue_keys(&app), (0..260).map(|i| format!("t{i}")).collect::<Vec<_>>());
@@ -283,7 +283,7 @@ async fn loading_playlist_refuses_add_shuffle_move() {
     for k in ['u', 'J', 'K', 'z', 'Z'] {
         app.handle_msg(key(k));
         assert_eq!(queue_keys(&app), before, "{k}");
-        assert!(app.status.contains("still loading (230 / 5 000)"), "{k}: {}", app.status);
+        assert!(app.status.contains("still loading (230 / 5,000)"), "{k}: {}", app.status);
         assert!(!app.random, "{k}");
     }
     run_cmd(&mut app, "shuffle");
@@ -350,7 +350,7 @@ async fn page_failure_keeps_loaded_tracks() {
     app.handle_msg(Msg::PlaylistLoadStopped { load_id: seq, error: "boom".into() });
 
     assert_eq!(app.queue.items.len(), 230);
-    assert!(app.status.contains("stopped at 230 / 5 000: boom"), "{}", app.status);
+    assert!(app.status.contains("stopped at 230 / 5,000: boom"), "{}", app.status);
     assert!(app.status_error);
     app.tab = Tab::Playlists;
     app.handle_msg(key('a'));

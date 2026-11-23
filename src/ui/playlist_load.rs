@@ -30,19 +30,19 @@ impl PlaylistLoad {
         Self { id, cancel: Arc::new(AtomicBool::new(false)), landed: false, loaded: 0, total: 0 }
     }
 
-    /// `6 000 / 24 627`
+    /// `6,000 / 24,627`
     pub fn progress(&self) -> String {
         format!("{} / {}", group(self.loaded), group(self.total))
     }
 }
 
-/// 24627 -> "24 627"
+/// 24627 -> "24,627"
 pub fn group(n: usize) -> String {
     let digits = n.to_string();
     let mut out = String::new();
     for (i, c) in digits.chars().enumerate() {
         if i > 0 && (digits.len() - i).is_multiple_of(3) {
-            out.push(' ');
+            out.push(',');
         }
         out.push(c);
     }
@@ -111,7 +111,6 @@ pub async fn run(client: PlexClient, tx: UnboundedSender<Msg>, req: PlaylistRequ
                 None => QueueOutcome::Tracks { tracks, confirm, action },
                 Some(s) => match from_start(tracks, s) {
                     Some(tracks) => QueueOutcome::Tracks { tracks, confirm, action },
-                    // never silently replace their queue with the whole playlist
                     None => QueueOutcome::StartMissing,
                 },
             },
@@ -335,7 +334,6 @@ mod tests {
         assert_eq!(tracks.len() + rest, 5237 - 300);
     }
 
-    /// Enter on the second copy of a song starts from the second copy.
     #[tokio::test]
     async fn start_is_the_entry_not_the_song() {
         let (base, _) = serve_pages(move |start, size, _| {
@@ -402,7 +400,6 @@ mod tests {
         let (req, cancel) = request(true, None);
         let (tx, mut rx) = unbounded_channel();
         let task = tokio::spawn(run(client, tx, req));
-        // cancel before the first tail page lands
         let first = rx.recv().await.unwrap();
         assert!(matches!(reply_of(&first), QueueOutcome::Streaming { .. }));
         cancel.store(true, Ordering::Relaxed);
@@ -431,8 +428,8 @@ mod tests {
 
     #[test]
     fn counts_are_grouped_by_thousands() {
-        assert_eq!(group(6000), "6 000");
-        assert_eq!(group(24627), "24 627");
+        assert_eq!(group(6000), "6,000");
+        assert_eq!(group(24627), "24,627");
         assert_eq!(group(37), "37");
     }
 }
