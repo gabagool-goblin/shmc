@@ -189,7 +189,7 @@ async fn key_after_expired_prompt_not_swallowed() {
     app.playlists.tracks.state.select(Some(0));
     app.playlists.focus = PlaylistsCol::Items;
     app.tab = Tab::Playlists;
-    app.confirm_playlist_over = 1000;
+    app.ui.confirm_playlist_over = 1000;
     // times out at once, so the next key press is late
     app.confirm_timeout_secs = 0;
 

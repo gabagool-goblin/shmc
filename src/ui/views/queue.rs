@@ -26,11 +26,11 @@ pub(super) fn draw_queue_tab(f: &mut Frame, app: &mut App, area: Rect) -> bool {
     let (art_area, queue_area) = if !app.art_enabled {
         (None, inner)
     } else {
-        let cols = if app.art_square && app.picker.is_some() {
+        let cols = if app.ui.art_square && app.picker.is_some() {
             let cell = app.picker.as_ref().map(picker_cell).unwrap_or((10, 20));
-            let img_h = inner.height - art_meta_rows(inner.height, app.art_metadata);
+            let img_h = inner.height - art_meta_rows(inner.height, app.ui.art_metadata);
             let square = square_art_width(img_h, cell);
-            let art_pct = app.art_pct.clamp(10, 90);
+            let art_pct = app.ui.art_pct.clamp(10, 90);
             let max_by_pct = (inner.width as u32 * art_pct as u32 / 100) as u16;
             let max_art = inner.width.saturating_sub(MIN_QUEUE_COLS).min(max_by_pct);
             let art_w = square
@@ -38,7 +38,7 @@ pub(super) fn draw_queue_tab(f: &mut Frame, app: &mut App, area: Rect) -> bool {
                 .min(inner.width.saturating_sub(1).max(1));
             Layout::horizontal([Constraint::Length(art_w), Constraint::Min(1)]).split(inner)
         } else {
-            let art_pct = app.art_pct.clamp(10, 90);
+            let art_pct = app.ui.art_pct.clamp(10, 90);
             Layout::horizontal([
                 Constraint::Percentage(art_pct),
                 Constraint::Percentage(100 - art_pct),
@@ -53,7 +53,7 @@ pub(super) fn draw_queue_tab(f: &mut Frame, app: &mut App, area: Rect) -> bool {
     };
     let meta_shown = art_area.is_some_and(|pane| draw_art_pane(f, app, pane));
 
-    let viz_h = viz_height(app.visualizer_pct, queue_area.height);
+    let viz_h = viz_height(app.ui.visualizer_pct, queue_area.height);
     let rows = Layout::vertical([
         Constraint::Length(queue_area.height.saturating_sub(viz_h)),
         Constraint::Length(viz_h),
@@ -132,8 +132,8 @@ fn draw_art_pane(f: &mut Frame, app: &mut App, pane: Rect) -> bool {
         return false;
     }
 
-    if app.art_square && app.picker.is_some() {
-        let meta_h = art_meta_rows(content.height, app.art_metadata);
+    if app.ui.art_square && app.picker.is_some() {
+        let meta_h = art_meta_rows(content.height, app.ui.art_metadata);
         let art_h = content.height.saturating_sub(meta_h);
         let image_area = Rect { height: art_h, ..content };
         draw_art_image(f, app, image_area);
@@ -197,7 +197,7 @@ fn draw_art_image(f: &mut Frame, app: &mut App, content: Rect) {
                 img.as_ref(),
                 rect,
                 cell,
-                app.art_pad_px,
+                app.ui.art_pad_px,
                 app.art_max_px,
                 art_padding_fill(),
             ) {
@@ -245,7 +245,7 @@ fn draw_art_meta(f: &mut Frame, app: &App, area: Rect) -> bool {
     let mut title_line =
         vec![Span::styled(title.clone(), theme::text().add_modifier(Modifier::BOLD))];
     // Without the header, this is the only place the playing track's rating shows.
-    if let Some(rating) = app.rating_label().filter(|_| app.header_compact) {
+    if let Some(rating) = app.rating_label().filter(|_| app.ui.header_compact) {
         if theme::str_width(&title) + 1 + theme::str_width(&rating) <= text_area.width as usize {
             title_line.push(Span::styled(format!(" {rating}"), theme::accent()));
         }
@@ -370,14 +370,18 @@ fn draw_queue_table(f: &mut Frame, app: &mut App, area: Rect) {
     let ind = indicator_text(&app.queue.filter, raw);
     let visible_rows = area.height.saturating_sub(u16::from(ind.is_some()) + 2) as usize;
     let (content, _) = list_split(area, total, visible_rows);
-    let qc =
-        QueueCols::new(&app.queue_columns, app.column_weights, &app.queue.items, content.width);
+    let qc = QueueCols::new(
+        &app.ui.queue_columns,
+        app.ui.column_weights,
+        &app.queue.items,
+        content.width,
+    );
     let frame = table_frame(f, area, total, &qc.constraints(), Some(&qc.headers()), ind);
 
     let cursor = app.queue.state.selected();
     let visible = frame.rows.height as usize;
     let offset =
-        app.scroll.update(ScrollId::Queue, cursor.unwrap_or(0), visible, total, app.scrolloff);
+        app.scroll.update(ScrollId::Queue, cursor.unwrap_or(0), visible, total, app.ui.scrolloff);
     if total == 0 {
         if app.queue.filter.is_active() {
             no_matches(f, frame.rows);

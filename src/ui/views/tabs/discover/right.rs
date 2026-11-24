@@ -81,7 +81,7 @@ fn draw_tracks(f: &mut Frame, app: &mut App, area: Rect) {
     let Pane::Tracks(pane) = &app.discover.pane else { return };
     let total = pane.tracks.len();
     let num_w = None;
-    let tc = TrackCols::plain(app.column_weights, TRACK_LEGACY);
+    let tc = TrackCols::plain(app.ui.column_weights, TRACK_LEGACY);
     let longest = pane.tracks.iter().filter_map(|t| t.duration_ms).max();
     let widest_plays = pane.tracks.iter().filter_map(|t| t.plays).max().unwrap_or(0);
     let extra = match pane.source {
@@ -104,7 +104,7 @@ fn draw_tracks(f: &mut Frame, app: &mut App, area: Rect) {
         cursor.unwrap_or(0),
         visible,
         total,
-        app.scrolloff,
+        app.ui.scrolloff,
     );
     let cur_key = app.current_track().map(|t| t.rating_key.clone());
     let rows = build_track_rows(
@@ -166,7 +166,7 @@ fn draw_items(f: &mut Frame, app: &mut App, area: Rect) {
         cursor.unwrap_or(0),
         visible,
         total,
-        app.scrolloff,
+        app.ui.scrolloff,
     );
     let end = (offset + visible).min(total);
     let w = &frame.col_w;

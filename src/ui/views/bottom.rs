@@ -199,7 +199,7 @@ fn draw_progress(f: &mut Frame, app: &App, inner: Rect) {
     if inner.width < 8 || inner.height == 0 {
         return;
     }
-    let t = icons::transport(app.icons_ascii);
+    let t = icons::transport(app.ui.icons_ascii);
     // A 2-cell field, so play, pause and stop take the same width.
     let glyph = if app.stopped {
         t.stop

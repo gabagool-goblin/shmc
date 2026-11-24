@@ -38,7 +38,7 @@ impl App {
         self.playlists.tracks.state.select(Some(0));
         self.playlists.tracks.filter.clear();
 
-        if self.preview_tracks == 0 {
+        if self.ui.preview_tracks == 0 {
             self.playlists.tracks_for = None;
             return;
         }
@@ -48,12 +48,12 @@ impl App {
             self.announce_preview_cap();
             return;
         }
-        if self.preview_debounce_ms == 0 {
+        if self.ui.preview_debounce_ms == 0 {
             self.load_playlist_preview(key);
         } else {
             let tx = self.msg_tx.clone();
             let epoch = self.preview_epoch;
-            let delay = self.preview_debounce_ms;
+            let delay = self.ui.preview_debounce_ms;
             std::thread::spawn(move || {
                 std::thread::sleep(std::time::Duration::from_millis(delay));
                 let _ = tx.send(Msg::PreviewPlaylist { key, epoch });
@@ -67,7 +67,7 @@ impl App {
     }
 
     pub(super) fn load_playlist_preview(&mut self, key: String) {
-        let size = self.preview_tracks.max(1);
+        let size = self.ui.preview_tracks.max(1);
         let _ = self.plex.tx.send(PlexCmd::LoadPlaylistPreview { key, size });
     }
 
@@ -77,7 +77,7 @@ impl App {
             return;
         }
         let Some(total) = self.playlists.tracks_total else { return };
-        if self.preview_tracks == 0 || total <= self.preview_tracks {
+        if self.ui.preview_tracks == 0 || total <= self.ui.preview_tracks {
             return;
         }
         let shown = self.playlists.tracks.items.len();
@@ -98,7 +98,7 @@ impl App {
         start: Option<String>,
     ) {
         let n = count.unwrap_or(0) as usize;
-        if self.confirm_playlist_over > 0 && n > self.confirm_playlist_over {
+        if self.ui.confirm_playlist_over > 0 && n > self.ui.confirm_playlist_over {
             self.pending_clear = None;
             self.pending_playlist = Some(PendingPlaylist {
                 key,

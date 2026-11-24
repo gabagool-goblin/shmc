@@ -128,7 +128,7 @@ pub(in crate::ui::views) fn draw_browser_tab(f: &mut Frame, app: &mut App, area:
             cursor.unwrap_or(0),
             visible,
             total,
-            app.scrolloff,
+            app.ui.scrolloff,
         );
         if total == 0 {
             if app.browser.tracks.filter.is_active() {

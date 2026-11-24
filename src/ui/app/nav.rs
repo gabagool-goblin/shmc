@@ -444,7 +444,7 @@ impl App {
 
     /// Not while filtered: the playing row may be hidden.
     pub(super) fn follow_queue(&mut self) {
-        if !self.auto_follow
+        if !self.ui.auto_follow
             || !self.queue_follow
             || self.tab != Tab::Queue
             || self.queue.filter.is_active()
@@ -548,10 +548,10 @@ impl App {
             return;
         };
         let Some(key) = self.queue.items.get(cur).map(|t| t.rating_key.clone()) else { return };
-        let center = self.center_cursor;
+        let center = self.ui.center_cursor;
         let in_queue = self.active_list() == ListRef::Queue;
         if in_queue {
-            self.queue_follow = self.auto_follow;
+            self.queue_follow = self.ui.auto_follow;
         }
         match self.active_list() {
             ListRef::Queue => {
@@ -561,7 +561,7 @@ impl App {
                 };
                 self.queue.state.select(Some(p));
                 // with auto-follow off `o` still jumps, once
-                if self.auto_follow {
+                if self.ui.auto_follow {
                     self.scroll.pin_top(ScrollId::Queue);
                     self.transient("queue follow: on".into());
                 } else {

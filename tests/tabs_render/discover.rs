@@ -304,7 +304,7 @@ async fn the_number_keys_and_tab_reach_the_new_order() {
 #[tokio::test]
 async fn r_rates_the_highlighted_station_track() {
     let (mut app, mut plex) = on_discover().await;
-    app.rating_style = RatingStyle::Five;
+    app.ui.rating_style = RatingStyle::Five;
     app.handle_msg(key('j'));
     previewed(&mut app, 8, 3);
     sent(&mut plex);

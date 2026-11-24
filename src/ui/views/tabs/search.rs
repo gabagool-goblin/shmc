@@ -43,7 +43,7 @@ fn draw_search_results(f: &mut Frame, app: &mut App, inner: Rect) {
         draw_similar_hits(f, app, parts[1]);
         return;
     }
-    let tc = TrackCols::new(app.column_weights, [1, 0, 2], SEARCH_HIT_COLS);
+    let tc = TrackCols::new(app.ui.column_weights, [1, 0, 2], SEARCH_HIT_COLS);
     let mut cols = tc.constraints();
     cols.push(Constraint::Length(len_col_width(
         app.search.hits.iter().filter_map(|h| h.duration_ms).max(),
@@ -58,7 +58,7 @@ fn draw_search_results(f: &mut Frame, app: &mut App, inner: Rect) {
         cursor.unwrap_or(0),
         visible,
         total,
-        app.scrolloff,
+        app.ui.scrolloff,
     );
     let end = (offset + visible).min(total);
     let cur_key = app.current_track().map(|t| t.rating_key.clone());
@@ -153,7 +153,7 @@ fn draw_similar_hits(f: &mut Frame, app: &mut App, area: Rect) {
         cursor.unwrap_or(0),
         visible,
         total,
-        app.scrolloff,
+        app.ui.scrolloff,
     );
     let Some(s) = app.search.similar.as_ref() else { return };
     let end = (offset + visible).min(total);
@@ -207,7 +207,7 @@ fn draw_search_detail(f: &mut Frame, app: &mut App, inner: Rect) {
     };
     draw_list_label(f, parts[0], &label, &format!(" ({})", SimilarKind::Tracks.count(total)));
 
-    let tc = TrackCols::plain(app.column_weights, SEARCH_TRACK_COLS);
+    let tc = TrackCols::plain(app.ui.column_weights, SEARCH_TRACK_COLS);
     // Match gives way first on a narrow pane, so Len and the text keep their room.
     let show_match = inner.width >= MATCH_MIN_WIDTH
         && app.search.detail.as_ref().is_some_and(|d| d.matches.is_some());
@@ -233,7 +233,7 @@ fn draw_search_detail(f: &mut Frame, app: &mut App, inner: Rect) {
         cursor.unwrap_or(0),
         visible,
         total,
-        app.scrolloff,
+        app.ui.scrolloff,
     );
 
     let selected = app.visual_range();

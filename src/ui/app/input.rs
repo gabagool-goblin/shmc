@@ -713,9 +713,9 @@ impl App {
             }
             Act::PrevTrack => {
                 let nothing_before = self.current == Some(0) && !self.loop_playlist;
-                let played = self.position > self.prev_restart_secs as f64;
+                let played = self.position > self.ui.prev_restart_secs as f64;
                 let restart =
-                    !self.stopped && (nothing_before || (self.prev_restart_secs > 0 && played));
+                    !self.stopped && (nothing_before || (self.ui.prev_restart_secs > 0 && played));
                 if restart {
                     // so a second `<` goes back before mpv reports the new time
                     self.position = 0.0;

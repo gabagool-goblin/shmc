@@ -85,7 +85,7 @@ pub(in crate::ui::views) fn draw_playlists_tab(f: &mut Frame, app: &mut App, are
             .unwrap_or_else(|| "Enter".into());
         let msg = if app.playlists.list.items.is_empty() {
             "no playlists found".to_string()
-        } else if app.preview_tracks == 0 {
+        } else if app.ui.preview_tracks == 0 {
             format!("preview off; {key} adds this playlist")
         } else {
             format!("highlight a playlist to preview, {key} adds it")
@@ -98,12 +98,12 @@ pub(in crate::ui::views) fn draw_playlists_tab(f: &mut Frame, app: &mut App, are
     let total = app.playlists.tracks.filter.len(raw);
     let ind = indicator_text(&app.playlists.tracks.filter, raw);
     // Sized from the preview cap, so the columns stay put as the selection moves.
-    let num_w = if app.numbers_playlists {
-        Some(track_number_width(app.preview_tracks.max(1)))
+    let num_w = if app.ui.numbers_playlists {
+        Some(track_number_width(app.ui.preview_tracks.max(1)))
     } else {
         None
     };
-    let tc = TrackCols::plain(app.column_weights, TRACK_LEGACY);
+    let tc = TrackCols::plain(app.ui.column_weights, TRACK_LEGACY);
     let cols_c = track_cols(
         num_w,
         len_col_width(app.playlists.tracks.items.iter().filter_map(|t| t.duration_ms).max()),
@@ -118,7 +118,7 @@ pub(in crate::ui::views) fn draw_playlists_tab(f: &mut Frame, app: &mut App, are
         cursor.unwrap_or(0),
         visible,
         total,
-        app.scrolloff,
+        app.ui.scrolloff,
     );
     if total == 0 {
         if app.playlists.tracks.filter.is_active() {

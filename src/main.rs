@@ -682,7 +682,7 @@ enum CavaWanted {
 fn cava_wanted(app: &App) -> CavaWanted {
     if app.stopped {
         CavaWanted::Stop
-    } else if app.paused || app.tab != Tab::Queue || app.visualizer_pct == 0 {
+    } else if app.paused || app.tab != Tab::Queue || app.ui.visualizer_pct == 0 {
         CavaWanted::Pause
     } else {
         CavaWanted::Play
@@ -747,7 +747,7 @@ fn ui_loop(terminal: &mut ui::term::Term, started: &mut Started) -> Result<UiEnd
             }
         }
 
-        let viz_on = app.tab == Tab::Queue && app.visualizer_pct > 0;
+        let viz_on = app.tab == Tab::Queue && app.ui.visualizer_pct > 0;
         let pos_due = last_draw.elapsed() >= POS_INTERVAL;
         if !wants_redraw(&redraw, viz_on, pos_due) {
             continue;

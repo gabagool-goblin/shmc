@@ -1,4 +1,4 @@
-use crate::config::{KeyTable, RatingStyle, UiConfig, VolumeDisplay};
+use crate::config::{KeyTable, UiConfig};
 use crate::playback::{MpvCmd, MpvEvent, MpvHandle};
 use crate::plex::{Album, Artist, AudioInfo, SearchHit, Track};
 use crate::ui::keymap::Keymap;
@@ -14,6 +14,7 @@ use std::sync::mpsc::{self, RecvTimeoutError, Sender};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::mpsc::UnboundedSender;
+use ui_settings::UiSettings;
 
 mod activate;
 mod adventure;
@@ -34,6 +35,7 @@ pub mod saved_queue;
 mod search_back;
 mod shuffle;
 mod similar;
+pub mod ui_settings;
 
 pub use adventure::{Adventure, AdventureOutcome, Stop};
 pub use discover::{
@@ -491,7 +493,6 @@ pub struct App {
     pending_rating: Option<rating::PendingRating>,
     /// Ratings known per rating key, from a track's metadata or a confirmed write.
     pub ratings: HashMap<String, Option<u8>>,
-    pub rating_style: RatingStyle,
     pub allow_writes: bool,
     /// Where playback reports go; None when `plex.report_playback` is off.
     pub reporter: Option<UnboundedSender<crate::plex::report::Report>>,
@@ -501,10 +502,6 @@ pub struct App {
     queue_seq: QueueSeq,
     pub radio: Option<ActiveRadio>,
     pub adventure: Adventure,
-    /// 0 = previews off.
-    pub preview_tracks: usize,
-    pub preview_debounce_ms: u64,
-    pub confirm_playlist_over: usize,
     /// After this long a y/n question lapses and the key goes through.
     pub confirm_timeout_secs: u64,
     preview_epoch: u64,
@@ -542,33 +539,9 @@ pub struct App {
     pub art_max_px: [u32; 2],
 
     pub scroll: ScrollStore,
-    pub scrolloff: usize,
-    pub center_cursor: bool,
-    pub auto_follow: bool,
     /// Follows the playing row until the user browses; `o` re-arms it.
     queue_follow: bool,
-    pub icons_ascii: bool,
-    pub volume_display: VolumeDisplay,
-    pub mode_words: bool,
-    pub header_compact: bool,
-    pub art_pct: u16,
-    pub art_square: bool,
-    pub art_metadata: bool,
-    pub art_pad_px: u16,
-    /// % of the queue column, min 8 rows; 0 hides.
-    pub visualizer_pct: u16,
-    pub album_sort: String,
-    /// 0 = `<` always goes back.
-    pub prev_restart_secs: u64,
-    pub visualizer_mode: String,
-    pub visualizer_bars: u16,
-    pub visualizer_anchor: String,
-    pub visualizer_bar_width: u16,
-    pub visualizer_bar_gap: u16,
-    pub numbers_playlists: bool,
-    /// Title, Artist, Album; 0 hides one.
-    pub column_weights: [u32; 3],
-    pub queue_columns: Vec<crate::config::QueueColumn>,
+    pub ui: UiSettings,
 
     pub status: String,
     pub status_error: bool,
@@ -635,15 +608,11 @@ impl App {
             pending_clear: None,
             pending_rating: None,
             ratings: HashMap::new(),
-            rating_style: ui.rating_mode(),
             allow_writes: false,
             reporter: None,
             report: None,
             playlist_load: None,
             queue_seq: QueueSeq::default(),
-            preview_tracks: ui.preview_tracks,
-            preview_debounce_ms: ui.preview_debounce_ms,
-            confirm_playlist_over: ui.confirm_playlist_over,
             confirm_timeout_secs: 10,
             preview_epoch: 0,
             preview_blocked: None,
@@ -673,29 +642,8 @@ impl App {
             cover_due: false,
             art_max_px,
             scroll: ScrollStore::default(),
-            scrolloff: ui.scrolloff,
-            center_cursor: ui.center_cursor,
-            auto_follow: ui.auto_follow,
             queue_follow: ui.auto_follow,
-            icons_ascii: ui.ascii_icons(),
-            volume_display: ui.volume_mode(),
-            mode_words: ui.mode_words(),
-            header_compact: ui.compact_header(),
-            art_pct: ui.art_pct,
-            art_square: ui.art_square,
-            art_metadata: ui.art_metadata,
-            art_pad_px: ui.art_pad_px,
-            visualizer_pct: ui.visualizer_pct,
-            album_sort: ui.album_sort.clone(),
-            prev_restart_secs: ui.prev_restart_secs,
-            visualizer_mode: ui.visualizer_mode.clone(),
-            visualizer_bars: ui.visualizer_bars,
-            visualizer_anchor: ui.visualizer_anchor.clone(),
-            visualizer_bar_width: ui.visualizer_bar_width,
-            visualizer_bar_gap: ui.visualizer_bar_gap,
-            numbers_playlists: ui.numbers_playlists(),
-            column_weights: ui.effective_column_weights(),
-            queue_columns: ui.resolved_queue_columns(),
+            ui: UiSettings::new(&ui),
             status: String::new(),
             status_error: false,
             status_epoch: 0,

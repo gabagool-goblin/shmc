@@ -118,12 +118,12 @@ pub(super) fn draw_visualizer(f: &mut Frame, app: &App, area: Rect) {
     }
     let w = area.width as usize;
     let h = area.height as usize;
-    let mode = if app.visualizer_mode.eq_ignore_ascii_case("spread") {
+    let mode = if app.ui.visualizer_mode.eq_ignore_ascii_case("spread") {
         VisualizerMode::Spread
     } else {
         VisualizerMode::Adaptive
     };
-    let anchor = if app.visualizer_anchor.eq_ignore_ascii_case("bar") {
+    let anchor = if app.ui.visualizer_anchor.eq_ignore_ascii_case("bar") {
         SpreadAnchor::Bar
     } else {
         SpreadAnchor::Gap
@@ -132,9 +132,9 @@ pub(super) fn draw_visualizer(f: &mut Frame, app: &App, area: Rect) {
         w,
         mode,
         anchor,
-        app.visualizer_bar_width,
-        app.visualizer_bar_gap,
-        app.visualizer_bars,
+        app.ui.visualizer_bar_width,
+        app.ui.visualizer_bar_gap,
+        app.ui.visualizer_bars,
         crate::playback::cava::BARS,
     );
     let bars = layout.bars.len();

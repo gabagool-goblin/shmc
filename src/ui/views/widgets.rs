@@ -134,7 +134,7 @@ pub(super) fn window(
     area: Rect,
 ) -> (usize, usize) {
     let visible = area.height as usize;
-    let offset = app.scroll.update(id, cursor.unwrap_or(0), visible, total, app.scrolloff);
+    let offset = app.scroll.update(id, cursor.unwrap_or(0), visible, total, app.ui.scrolloff);
     (offset, visible)
 }
 

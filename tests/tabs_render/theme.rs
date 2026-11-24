@@ -574,7 +574,7 @@ async fn every_header_border_combo_fits() {
     app.position = 42.0;
     app.duration = 257.0;
     for compact in [false, true] {
-        app.header_compact = compact;
+        app.ui.header_compact = compact;
         for style in STYLES {
             let _look = LookGuard::set(with_borders(style));
             for (w, h) in [(120u16, 40u16), (80, 24), (50, 20), (80, 60)] {
@@ -666,9 +666,9 @@ async fn border_styles_draw_their_glyphs() {
 async fn compact_without_borders_keeps_now_playing_row() {
     let mut app = new_app().await;
     queue_app_with_art(&mut app, true);
-    app.art_metadata = true;
+    app.ui.art_metadata = true;
     app.queue.items[2].title = "Unique Song".into();
-    app.header_compact = true;
+    app.ui.header_compact = true;
     let _look = LookGuard::set(with_borders(theme::BorderStyle::None));
     let h = 30;
     app.tab = Tab::Queue;
