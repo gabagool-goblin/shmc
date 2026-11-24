@@ -1,3 +1,4 @@
+pub mod account;
 pub mod client;
 pub mod client_id;
 pub mod discover;

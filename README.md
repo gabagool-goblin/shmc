@@ -112,9 +112,9 @@ cargo install --locked --git https://github.com/gabagool-goblin/shmc
 
 ## Getting started
 
-Run `shmc`. On first launch, enter your Plex server URL and token. Settings are saved to `~/.config/shmc/config.toml`.
+Run `shmc`. On first launch, sign in at plex.tv/link with the code shmc shows, or enter your Plex server URL and token. Settings are saved to `~/.config/shmc/config.toml`.
 
-See [Configuration](docs/configuration.md) for help finding your token.
+See [Configuration](docs/configuration.md) for details.
 
 | Key | Action |
 |---|---|

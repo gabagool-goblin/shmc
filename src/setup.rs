@@ -1,10 +1,11 @@
-//! Setup: ask for the server URL and token, check them with the server, save.
+//! Setup: sign in through plex.tv or ask for the server URL and token, check them, save.
 
 use anyhow::{bail, Context, Result};
 use std::io::{self, IsTerminal, Write};
 use std::path::{Path, PathBuf};
 
 use crate::config::Config;
+use crate::plex::account::{self, PlexTv};
 use crate::plex::PlexClient;
 
 pub fn can_prompt() -> bool {
@@ -23,13 +24,38 @@ pub fn hint(path: &Path) -> String {
 
 /// `existing`'s values are offered as defaults.
 pub async fn interactive(path: &PathBuf, existing: Option<Config>) -> Result<Config> {
-    let d_server = existing.as_ref().map(|c| c.plex.server.as_str()).filter(|s| !s.is_empty());
-    let d_token = existing.as_ref().map(|c| c.plex.token.as_str()).filter(|s| !s.is_empty());
-
     println!();
     println!("shmc setup");
     println!();
     println!("Config file: {}", path.display());
+    println!();
+    println!("  1) Sign in with plex.tv");
+    println!("  2) Enter a server URL and token");
+    let signing_in = loop {
+        match prompt("Choose", Some("1"))?.as_str() {
+            "1" => break true,
+            "2" => break false,
+            _ => println!("  1 or 2"),
+        }
+    };
+    let (server, token) =
+        if signing_in { sign_in(path).await? } else { typed(existing.as_ref()).await? };
+
+    // Baseline = what the file held, so only `plex.server` and `plex.token` are written.
+    let baseline = existing.clone().unwrap_or_default();
+    let mut cfg = existing.unwrap_or_default();
+    cfg.plex.server = server;
+    cfg.plex.token = token;
+    cfg.save_changes(path, &baseline)?;
+    println!();
+    println!("saved {}", path.display());
+
+    Config::load(path)
+}
+
+async fn typed(existing: Option<&Config>) -> Result<(String, String)> {
+    let d_server = existing.map(|c| c.plex.server.as_str()).filter(|s| !s.is_empty());
+    let d_token = existing.map(|c| c.plex.token.as_str()).filter(|s| !s.is_empty());
     println!();
     println!("Find your Plex token at https://app.plex.tv/desktop#!/settings/account");
     println!("(View XML, then copy the X-Plex-Token=... value from the URL).");
@@ -58,17 +84,71 @@ pub async fn interactive(path: &PathBuf, existing: Option<Config>) -> Result<Con
             }
         }
     }
+    Ok((server, token))
+}
 
-    // Baseline = what the file held, so only `plex.server` and `plex.token` are written.
-    let baseline = existing.clone().unwrap_or_default();
-    let mut cfg = existing.unwrap_or_default();
-    cfg.plex.server = server;
-    cfg.plex.token = token;
-    cfg.save_changes(path, &baseline)?;
+async fn sign_in(path: &Path) -> Result<(String, String)> {
+    let dir = path.parent().unwrap_or_else(|| Path::new("."));
+    let client_id = crate::plex::client_id::load_or_create(dir)
+        .context("storing the client id plex.tv lists shmc under")?;
+    let tv = PlexTv::new(&client_id);
+    let pin = tv.create_pin().await?;
     println!();
-    println!("saved {}", path.display());
+    println!("Go to https://plex.tv/link and enter the code  {}", pin.code);
+    println!(
+        "Waiting for plex.tv... (the code lasts {} minutes; Ctrl-C cancels)",
+        pin.expires_in.as_secs() / 60
+    );
+    let account_token = tv.wait_for_token(&pin, account::POLL_EVERY).await?;
+    println!("signed in");
 
-    Config::load(path)
+    let mut servers = tv.servers(&account_token).await?;
+    let server = match servers.len() {
+        0 => bail!("this Plex account has no servers; nothing was written"),
+        1 => servers.remove(0),
+        n => {
+            println!();
+            for (i, s) in servers.iter().enumerate() {
+                let shared = if s.owned { "" } else { " (shared)" };
+                println!("  {}) {}{shared}", i + 1, s.name);
+            }
+            let pick = loop {
+                match prompt("Server", Some("1"))?.parse::<usize>() {
+                    Ok(i) if (1..=n).contains(&i) => break i - 1,
+                    _ => println!("  a number from 1 to {n}"),
+                }
+            };
+            servers.remove(pick)
+        }
+    };
+
+    println!();
+    print!("checking {} ... ", server.name);
+    io::stdout().flush().ok();
+    let addresses = server.addresses();
+    let Some((i, machine, version)) =
+        account::first_answering(&addresses, &server.token, account::ANSWER_WITHIN).await
+    else {
+        println!("failed");
+        bail!("none of its {} addresses answered from here; nothing was written", addresses.len());
+    };
+    let address = &addresses[i];
+    let kind = match (address.relay, address.local, address.https) {
+        (true, _, _) => "relay",
+        (_, true, true) => "local, https",
+        (_, true, false) => "local, http",
+        (_, false, _) => "remote, https",
+    };
+    println!("ok");
+    println!("  {} ({kind})", address.uri);
+    println!("  Plex Media Server {version} ({})", crate::doctor::short_id(&machine));
+    if address.relay {
+        println!("  ! a relay is slow; shmc uses it because no direct address answered");
+    }
+    if let Some(warning) = crate::config::plain_http_warning(&address.uri) {
+        println!("  ! {warning}");
+    }
+    Ok((address.uri.clone(), server.token))
 }
 
 /// 0600 through a temp file: `fs::copy` would keep a hand-edited config's 0644.
