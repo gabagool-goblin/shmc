@@ -132,7 +132,7 @@ async fn highlighting_a_playlist_previews_its_tracks() {
     app.playlists.list.state.select(Some(0));
     app.playlists.focus = PlaylistsCol::List;
     app.tab = Tab::Playlists;
-    app.preview_debounce_ms = 0;
+    app.ui.preview_debounce_ms = 0;
 
     app.handle_msg(key('j'));
 
@@ -155,7 +155,7 @@ async fn cached_playlist_preview_skips_the_request() {
     app.playlists.list.state.select(Some(0));
     app.playlists.focus = PlaylistsCol::List;
     app.tab = Tab::Playlists;
-    app.preview_debounce_ms = 0;
+    app.ui.preview_debounce_ms = 0;
 
     app.handle_msg(key('j'));
 
@@ -173,7 +173,7 @@ async fn failed_playlist_preview_retried_on_highlight() {
     app.playlists.list.state.select(Some(0));
     app.playlists.focus = PlaylistsCol::List;
     app.tab = Tab::Playlists;
-    app.preview_debounce_ms = 0;
+    app.ui.preview_debounce_ms = 0;
     let requests = |plex: &mut tokio::sync::mpsc::UnboundedReceiver<PlexCmd>| {
         sent(plex)
             .into_iter()
@@ -437,7 +437,7 @@ async fn large_playlist_add_asks_for_confirmation() {
     app.playlists.list.state.select(Some(0));
     app.playlists.focus = PlaylistsCol::List;
     app.tab = Tab::Playlists;
-    app.confirm_playlist_over = 1000;
+    app.ui.confirm_playlist_over = 1000;
 
     app.handle_msg(enter());
     assert!(resolve_seqs(&mut plex).is_empty(), "a large playlist must ask before queueing");
@@ -615,7 +615,7 @@ async fn large_playlist_track_asks_remainder_or_start() {
         app.playlists.tracks.state.select(Some(1));
         app.playlists.focus = PlaylistsCol::Items;
         app.tab = Tab::Playlists;
-        app.confirm_playlist_over = 1000;
+        app.ui.confirm_playlist_over = 1000;
 
         app.handle_msg(press());
 
@@ -651,7 +651,7 @@ async fn play_next_large_playlist_inserts_one_track() {
     app.playlists.tracks.state.select(Some(1));
     app.playlists.focus = PlaylistsCol::Items;
     app.tab = Tab::Playlists;
-    app.confirm_playlist_over = 1000;
+    app.ui.confirm_playlist_over = 1000;
     app.queue.items = vec![track(0)];
     app.current = Some(0);
 
@@ -765,7 +765,7 @@ fn albums_sort_by_mode_with_missing_years() {
 #[tokio::test]
 async fn albums_loaded_applies_the_configured_order() {
     let mut app = new_app().await;
-    app.album_sort = "year_desc".into();
+    app.ui.album_sort = "year_desc".into();
     app.browser.albums_for = Some("a1".into());
     app.handle_msg(Msg::AlbumsLoaded {
         artist_key: "a1".into(),

@@ -164,8 +164,8 @@ async fn square_art_pane_respects_the_percentage_cap() {
     let mut app = new_app().await;
     app.art_enabled = true;
     app.picker = Some(ratatui_image::picker::Picker::halfblocks());
-    app.art_square = true;
-    app.art_metadata = true;
+    app.ui.art_square = true;
+    app.ui.art_metadata = true;
     let track0 = track(0);
     let artist = track0.artist.clone();
     let album = track0.album.clone();
@@ -194,7 +194,7 @@ async fn square_art_pane_respects_the_percentage_cap() {
     assert!(left_text.contains(&artist), "metadata artist missing\n{left_text}");
     assert!(left_text.contains(&album), "metadata album missing\n{left_text}");
 
-    app.art_metadata = false;
+    app.ui.art_metadata = false;
     let frame = render(&mut app, 120, 40);
     let cover_line = frame.lines().find(|l| l.contains("No cover")).expect("cover box");
     let bars = bar_columns(cover_line);
@@ -236,10 +236,10 @@ async fn disabling_art_gives_the_queue_full_width() {
 async fn cover_box_fills_height_limited_pane() {
     let mut app = new_app().await;
     queue_app_with_art(&mut app, true);
-    app.art_square = true;
+    app.ui.art_square = true;
     let mut checked = 0;
     for metadata in [true, false] {
-        app.art_metadata = metadata;
+        app.ui.art_metadata = metadata;
         for (w, hs) in [(250u16, 18u16..=60), (200, 18..=50)] {
             for h in hs {
                 let g = grid(&mut app, w, h);

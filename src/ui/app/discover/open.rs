@@ -42,7 +42,7 @@ impl App {
     pub(in crate::ui::app) fn open_item(&mut self) {
         let Some(real) = self.real_at(ListRef::DItems) else { return };
         let Pane::Items(pane) = &self.discover.pane else { return };
-        let size = self.preview_tracks.max(1);
+        let size = self.ui.preview_tracks.max(1);
         let opened = match &pane.items {
             ShelfItems::Albums(v) => v.get(real).map(|a| {
                 (a.rating_key.clone(), a.title.clone(), OpenKind::Album, "loading album…")
@@ -104,7 +104,7 @@ impl App {
             Opened::Albums(mut albums) => {
                 let best_of = matches!(what, OpenKind::BestOf(_));
                 if !best_of {
-                    sort_albums(&mut albums, &self.album_sort);
+                    sort_albums(&mut albums, &self.ui.album_sort);
                 }
                 let mut pane = ItemsPane {
                     shelf,

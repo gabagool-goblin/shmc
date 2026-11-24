@@ -39,7 +39,7 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     }
     let spacing = theme::spacing();
     let style = spacing.borders;
-    let compact = app.header_compact;
+    let compact = app.ui.header_compact;
     // Zero-height spacers would still change how the solver squeezes a small terminal.
     let gap = theme::effective_block_gap(
         area.height,

@@ -470,7 +470,7 @@ async fn first_step_after_o_does_not_scroll() {
     app.stopped = false;
     let _ = render(&mut app, 120, 40);
     let visible = app.scroll.visible(ScrollId::Queue);
-    let margin = app.scrolloff.min((visible.saturating_sub(1)) / 2);
+    let margin = app.ui.scrolloff.min((visible.saturating_sub(1)) / 2);
     assert!(visible > margin + 1 && visible < 300, "unexpected queue height {visible}");
 
     app.handle_msg(key('o'));
@@ -508,7 +508,7 @@ async fn move_after_o_does_not_repin_row() {
         app.current = Some(80);
         app.queue.state.select(Some(80));
         app.stopped = false;
-        app.auto_follow = follow;
+        app.ui.auto_follow = follow;
         let _ = render(&mut app, 120, 40);
         let visible = app.scroll.visible(ScrollId::Queue);
         let before = app.scroll.offset(ScrollId::Queue);
@@ -519,7 +519,7 @@ async fn move_after_o_does_not_repin_row() {
         assert_eq!(app.queue.state.selected(), Some(81), "auto_follow {follow}");
         assert_eq!(
             app.scroll.offset(ScrollId::Queue),
-            compute_offset(81, before, visible, 300, app.scrolloff),
+            compute_offset(81, before, visible, 300, app.ui.scrolloff),
             "auto_follow {follow}: a move before the pin is drawn must not pin row 81 to the top"
         );
     }
@@ -719,7 +719,7 @@ async fn auto_follow_can_be_disabled() {
 
     // with the option off, `o` jumps once but does not stay armed
     app.current = Some(80);
-    app.auto_follow = false;
+    app.ui.auto_follow = false;
     app.handle_msg(key('o'));
     assert_eq!(app.status, "queue follow: off");
     let _ = render(&mut app, 120, 40);
@@ -1204,7 +1204,7 @@ async fn prev_goes_back_early_or_threshold_off() {
     drop(app); // the next app needs the shared lock
 
     let (mut app, mut rx) = playing_app(2, 30.0).await;
-    app.prev_restart_secs = 0;
+    app.ui.prev_restart_secs = 0;
     app.handle_msg(key('<'));
     assert!(matches!(rx.try_recv(), Ok(mpv::MpvCmd::Prev)));
 }

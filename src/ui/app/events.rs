@@ -54,7 +54,7 @@ impl App {
             Msg::AlbumsLoaded { artist_key, albums } => {
                 if self.browser.albums_for.as_deref() == Some(artist_key.as_str()) {
                     self.browser.albums.items = albums;
-                    sort_albums(&mut self.browser.albums.items, &self.album_sort);
+                    sort_albums(&mut self.browser.albums.items, &self.ui.album_sort);
                     self.browser.albums.state.select(if self.browser.albums.items.is_empty() {
                         None
                     } else {
@@ -567,7 +567,8 @@ impl App {
         self.duration = duration;
         let cached = self.audio_cache.get(&key).cloned();
         let need_audio = !full && cached.is_none();
-        let need_rating = self.rating_style != RatingStyle::Off && !self.ratings.contains_key(&key);
+        let need_rating =
+            self.ui.rating_style != RatingStyle::Off && !self.ratings.contains_key(&key);
         self.audio = if full { bulk } else { cached.unwrap_or(bulk) };
         if need_audio || need_rating {
             let _ = self.plex.tx.send(PlexCmd::LoadTrackInfo(key));

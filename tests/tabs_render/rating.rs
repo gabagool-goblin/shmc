@@ -13,7 +13,7 @@ async fn playing(style: RatingStyle) -> (TestApp, tokio::sync::mpsc::UnboundedRe
     app.queue.state.select(Some(1));
     app.stopped = false;
     app.allow_writes = true;
-    app.rating_style = style;
+    app.ui.rating_style = style;
     (app, plex)
 }
 
@@ -135,11 +135,11 @@ async fn refused_rating_sends_nothing() {
     app.handle_msg(key('4'));
 
     app.allow_writes = true;
-    app.rating_style = RatingStyle::Off;
+    app.ui.rating_style = RatingStyle::Off;
     app.handle_msg(key('r'));
     assert!(app.status.contains("ui.rating_style"), "{}", app.status);
 
-    app.rating_style = RatingStyle::Five;
+    app.ui.rating_style = RatingStyle::Five;
     app.stopped = true;
     app.handle_msg(key('R'));
     assert!(app.status.contains("nothing playing"), "{}", app.status);
@@ -232,7 +232,7 @@ async fn rating_never_moves_the_title() {
 async fn compact_line_shows_the_rating_after_the_title() {
     use super::theme::{with_borders, LookGuard, STYLES};
     let (mut app, _plex) = playing(RatingStyle::Five).await;
-    app.header_compact = true;
+    app.ui.header_compact = true;
     app.tab = Tab::Help;
     app.ratings.insert("t1".into(), Some(7));
     for style in STYLES {
@@ -254,7 +254,7 @@ async fn compact_line_shows_the_rating_after_the_title() {
 async fn cover_metadata_shows_the_rating_in_compact_only() {
     let (mut app, _plex) = playing(RatingStyle::Five).await;
     queue_app_with_art(&mut app, true);
-    app.art_metadata = true;
+    app.ui.art_metadata = true;
     app.ratings.insert("t2".into(), Some(7));
     let meta_title = |app: &mut App| {
         render(app, 80, 30)
@@ -262,10 +262,10 @@ async fn cover_metadata_shows_the_rating_in_compact_only() {
             .find(|l| l.contains("│ Starfall! 2 ") && !l.contains("4:17"))
             .map(str::to_string)
     };
-    app.header_compact = true;
+    app.ui.header_compact = true;
     let row = meta_title(&mut app).expect("cover metadata");
     assert!(row.contains("│ Starfall! 2 ****. "), "{row}");
-    app.header_compact = false;
+    app.ui.header_compact = false;
     let row = meta_title(&mut app).expect("cover metadata");
     assert!(!row.contains('*'), "{row}");
 }
@@ -350,7 +350,7 @@ async fn long_title_keeps_the_rating_and_a_narrow_column_drops_it() {
     assert!(row.contains("… 4*"), "{row}");
 
     app.queue.items[0].title = "Starfall! 0".into();
-    app.column_weights = [1, 1, 1];
+    app.ui.column_weights = [1, 1, 1];
     let (rated, unrated) = {
         let rated = render(&mut app, 25, 30);
         app.ratings.insert("t0".into(), None);
@@ -367,7 +367,7 @@ async fn one_style_shows_a_star_and_off_shows_none() {
     app.queue.items[0].user_rating = Some(7);
     let row = row_of(&render(&mut app, 120, 30), "Starfall! 0");
     assert!(row.contains("Starfall! 0 *") && !row.contains("**"), "{row}");
-    app.rating_style = RatingStyle::Off;
+    app.ui.rating_style = RatingStyle::Off;
     assert!(!row_of(&render(&mut app, 120, 30), "Starfall! 0").contains('*'));
 }
 

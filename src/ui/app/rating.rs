@@ -31,7 +31,7 @@ impl App {
 
     /// The rating shown after a list row's title.
     pub(crate) fn rating_text(&self, key: &str, own: Option<u8>) -> Option<String> {
-        rating_short(self.rating_style, self.rating_for(key, own)?, self.icons_ascii)
+        rating_short(self.ui.rating_style, self.rating_for(key, own)?, self.ui.icons_ascii)
     }
 
     pub(crate) fn playing_rating(&self) -> Option<u8> {
@@ -40,7 +40,7 @@ impl App {
 
     /// The header's rating glyphs for the playing track.
     pub(crate) fn rating_label(&self) -> Option<String> {
-        rating_glyphs(self.rating_style, self.playing_rating()?, self.icons_ascii)
+        rating_glyphs(self.ui.rating_style, self.playing_rating()?, self.ui.icons_ascii)
     }
 
     /// Key, title and own rating of the highlighted track.
@@ -92,7 +92,7 @@ impl App {
             self.transient("ratings are read-only: turn on plex.allow_writes".into());
             return false;
         }
-        if self.rating_style == RatingStyle::Off {
+        if self.ui.rating_style == RatingStyle::Off {
             self.transient("ratings are hidden: set ui.rating_style".into());
             return false;
         }
@@ -100,12 +100,12 @@ impl App {
     }
 
     fn ask_rating(&mut self, key: String, title: String, current: Option<u8>) {
-        if self.rating_style == RatingStyle::One {
+        if self.ui.rating_style == RatingStyle::One {
             self.send_rating(key, title, if current.is_some() { None } else { Some(10) });
             return;
         }
         let shown = current
-            .and_then(|r| rating_glyphs(self.rating_style, r, self.icons_ascii))
+            .and_then(|r| rating_glyphs(self.ui.rating_style, r, self.ui.icons_ascii))
             .unwrap_or_else(|| "not rated".into());
         let question = format!("rate {title} ({shown}): 1 to 5 · 0 clears · any other key cancels");
         self.pending_playlist = None;
@@ -142,12 +142,12 @@ impl App {
     /// The server confirmed a write.
     pub(super) fn rating_saved(&mut self, rating_key: String, rating: Option<u8>, title: String) {
         self.ratings.insert(rating_key, rating);
-        let msg = match (self.rating_style, rating) {
+        let msg = match (self.ui.rating_style, rating) {
             (RatingStyle::One, Some(_)) => format!("starred: {title}"),
             (RatingStyle::One, None) => format!("unstarred: {title}"),
             (_, None) => format!("rating cleared: {title}"),
             (style, Some(r)) => {
-                let glyphs = rating_glyphs(style, r, self.icons_ascii).unwrap_or_default();
+                let glyphs = rating_glyphs(style, r, self.ui.icons_ascii).unwrap_or_default();
                 format!("rated {title}: {glyphs}")
             }
         };

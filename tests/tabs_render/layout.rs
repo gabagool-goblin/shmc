@@ -705,7 +705,7 @@ async fn visualizer_is_centred_in_its_pane() {
     app.cava_frame = vec![255u8; 96];
     for art in [false, true] {
         for mode in ["adaptive", "spread"] {
-            app.visualizer_mode = mode.into();
+            app.ui.visualizer_mode = mode.into();
             queue_app_with_art(&mut app, art);
             for w in 40u16..=250 {
                 let g = grid(&mut app, w, 30);
@@ -731,12 +731,12 @@ async fn spread_visualizer_even_bars_and_gaps() {
     app.cava_alive = true;
     app.cava_frame = vec![255u8; 96];
     queue_app_with_art(&mut app, false);
-    app.visualizer_mode = "spread".into();
-    app.visualizer_bars = 12;
-    app.visualizer_bar_width = 2;
-    app.visualizer_bar_gap = 1;
+    app.ui.visualizer_mode = "spread".into();
+    app.ui.visualizer_bars = 12;
+    app.ui.visualizer_bar_width = 2;
+    app.ui.visualizer_bar_gap = 1;
     for anchor in ["gap", "bar"] {
-        app.visualizer_anchor = anchor.into();
+        app.ui.visualizer_anchor = anchor.into();
         let g = grid(&mut app, 32, 30);
         let row = g.iter().rev().find(|r| r.iter().any(|c| c == "█")).expect("bars");
         let runs =
@@ -932,7 +932,7 @@ fn render_table(app: &mut App, table: Table, w: u16, h: u16) -> String {
 #[tokio::test]
 async fn default_column_weights_unchanged() {
     let mut app = app_with_every_table().await;
-    assert_eq!(app.column_weights, [30, 24, 46]);
+    assert_eq!(app.ui.column_weights, [30, 24, 46]);
     type Starts = [(u16, [usize; 4]); 3];
     let expected: [(Table, Starts); 4] = [
         (Table::Queue, [(60, [2, 19, 33, 53]), (100, [2, 31, 55, 93]), (160, [2, 49, 87, 153])]),
@@ -965,15 +965,15 @@ async fn column_weights_apply_to_every_track_table() {
             }
         };
         let base = title_w(&mut app, 120);
-        app.column_weights = [80, 10, 10];
+        app.ui.column_weights = [80, 10, 10];
         assert!(title_w(&mut app, 120) > base + 10, "{table:?}: a heavier Title is wider");
-        app.column_weights = [30, 24, 46];
+        app.ui.column_weights = [30, 24, 46];
     }
 
     for (weights, hidden) in
         [([50, 0, 50], "Artist"), ([0, 40, 60], "Title"), ([60, 40, 0], "Album")]
     {
-        app.column_weights = weights;
+        app.ui.column_weights = weights;
         for table in TABLES {
             for (w, h) in [(60, 24), (100, 40), (160, 70)] {
                 let frame = render_table(&mut app, table, w, h);
@@ -1129,7 +1129,7 @@ async fn volume_display_meter_number_or_both() {
 async fn compact_row_steps_down_before_tab_clips() {
     let mut app = new_app().await;
     queue_app_with_art(&mut app, false);
-    app.header_compact = true;
+    app.ui.header_compact = true;
     run_cmd(&mut app, "sleep 15");
     let row = |app: &mut App, w: u16| row_text(&grid(app, w, 24), 1);
     for w in [120u16, 80, 60, 50, 48] {
