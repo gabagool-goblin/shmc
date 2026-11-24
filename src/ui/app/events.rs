@@ -27,6 +27,7 @@ impl App {
             Msg::Key(ev) => self.handle_key(ev),
             Msg::Paste(text) => self.handle_paste(text),
             Msg::Quit => self.should_quit = true,
+            Msg::ConfigRead(read) => self.config_read(*read),
             Msg::Resize => {
                 // ratatui clears the screen on a resize; the cover's cells would stay skipped
                 self.art.shown_rect = None;

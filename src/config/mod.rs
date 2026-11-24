@@ -3,6 +3,7 @@
 mod file;
 mod paths;
 mod settings;
+pub mod watch;
 
 pub use file::retired_keys;
 pub(crate) use file::scrub_value;
@@ -117,7 +118,6 @@ pub struct UiConfig {
     pub header: String,
     /// Art width in percent: the cap when square, the split otherwise.
     pub art_pct: u16,
-    /// Keep the art pane pixel-square.
     pub art_square: bool,
     /// Show title/artist/album below a width-capped square cover.
     pub art_metadata: bool,
@@ -946,7 +946,6 @@ mod tests {
 
     #[test]
     fn missing_fields_fall_back_to_current_defaults() {
-        // Missing keys get their defaults, not zero or off.
         let cfg: Config = toml::from_str(
             "[plex]\nserver = \"http://host:32400\"\ntoken = \"t\"\n\
              [album_art]\nbackend = \"iterm2\"\n",

@@ -29,6 +29,7 @@ mod plex_worker;
 mod queue;
 mod radio;
 mod rating;
+pub mod reload;
 mod report;
 mod resume;
 pub mod saved_queue;
@@ -264,6 +265,7 @@ pub enum Msg {
     Error(String),
     /// A signal: the same as `q`.
     Quit,
+    ConfigRead(Box<Result<reload::Reload, String>>),
 }
 
 pub struct Browser {
@@ -542,6 +544,8 @@ pub struct App {
     /// Follows the playing row until the user browses; `o` re-arms it.
     queue_follow: bool,
     pub ui: UiSettings,
+    /// The config just applied, for the parts `main` owns.
+    pub reloaded: Option<Box<crate::config::Config>>,
 
     pub status: String,
     pub status_error: bool,
@@ -644,6 +648,7 @@ impl App {
             scroll: ScrollStore::default(),
             queue_follow: ui.auto_follow,
             ui: UiSettings::new(&ui),
+            reloaded: None,
             status: String::new(),
             status_error: false,
             status_epoch: 0,

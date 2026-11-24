@@ -30,7 +30,9 @@ Run `shmc config` to check your setup and open the editor. It has three tabs:
 
 `plex.server`, `plex.token` and `plex.music_section` cannot be reset. The token is shown as `(changed)` in the unsaved changes list.
 
-Changes are saved in place. Existing comments, key order and unknown settings are preserved. A running instance picks up changes on its next start.
+Changes are saved in place. Existing comments, key order and unknown settings are preserved.
+
+A running player applies a saved config within a second, whether it was saved here or in a text editor. Settings read only at startup wait for the next start: the Plex server, token and library, `plex.report_playback`, the mpv path, arguments and volume, the album art backend and cache, and `cava.enabled`. The player names them when they change, and the editor notes them in the details pane. Leveling changes apply from the next track; turning leveling on needs a restart if it was off at startup. A file that doesn't parse is ignored.
 
 `plex.music_section` opens a list of music libraries on your server. Press `t` to enter a library ID manually.
 

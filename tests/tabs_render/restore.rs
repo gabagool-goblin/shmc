@@ -213,3 +213,14 @@ async fn a_playing_queue_is_saved_every_30_seconds_only_when_it_changed() {
     app.autosave_queue(&path, at(90));
     assert_eq!(written(&path).position, 42.0);
 }
+
+#[test]
+fn turning_restore_queue_off_removes_the_saved_queue() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("queue.json");
+    saved_queue::write(&path, &saved(&[1], Some(0), 1.0)).unwrap();
+    assert_eq!(saved_queue::queue_file_after(true, Some(path.clone())), Some(path.clone()));
+    assert!(path.exists());
+    assert_eq!(saved_queue::queue_file_after(false, Some(path.clone())), None);
+    assert!(!path.exists());
+}

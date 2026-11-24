@@ -225,7 +225,7 @@ fn run() -> Result<()> {
     let result = (|| {
         ui::term::install_panic_hook();
         let mut terminal = ui::term::setup()?;
-        let result = ui_loop(&mut terminal, &mut started);
+        let result = ui_loop(&mut terminal, &mut started, &config_path);
         ui::term::restore(&mut terminal)?;
         result
     })();
@@ -606,15 +606,6 @@ fn spawn_keyboard_thread(tx: UnboundedSender<Msg>) {
 /// Redraw cap with the visualizer off; with it on, the cava framerate sets it.
 const DEFAULT_FRAME_INTERVAL: std::time::Duration = std::time::Duration::from_millis(33);
 
-/// With cava off the pane would be an empty box, so it gets no height.
-fn ui_settings(cfg: &config::Config) -> config::UiConfig {
-    let mut ui = cfg.ui.clone();
-    if !cfg.cava.enabled {
-        ui.visualizer_pct = 0;
-    }
-    ui
-}
-
 fn frame_interval(cava_enabled: bool, visualizer_pct: u16, framerate: u32) -> std::time::Duration {
     if !cava_enabled || visualizer_pct == 0 {
         return DEFAULT_FRAME_INTERVAL;
@@ -690,7 +681,11 @@ fn cava_wanted(app: &App) -> CavaWanted {
 }
 
 /// Runs on the bare main thread (no tokio context), so `blocking_recv` is legal.
-fn ui_loop(terminal: &mut ui::term::Term, started: &mut Started) -> Result<UiEnd> {
+fn ui_loop(
+    terminal: &mut ui::term::Term,
+    started: &mut Started,
+    config_path: &std::path::Path,
+) -> Result<UiEnd> {
     let cfg = &started.cfg;
     let mut app = App::new(
         cfg.plex.server.trim_end_matches('/').to_string(),
@@ -702,17 +697,18 @@ fn ui_loop(terminal: &mut ui::term::Term, started: &mut Started) -> Result<UiEnd
         started.art_enabled,
         cfg.album_art.max_size_px,
         started.msg_tx.clone(),
-        ui_settings(cfg),
+        ui::app::ui_settings::player_ui(cfg),
         &cfg.keys,
     );
     app.allow_writes = cfg.plex.allow_writes;
     app.set_leveling(cfg.mpv.leveling(), cfg.mpv.preamp_db());
     app.reporter = started.reporter.as_ref().map(|r| r.sender());
-    let queue_file = app.restore_saved_queue(cfg.ui.restore_queue);
+    let mut queue_file = app.restore_saved_queue(cfg.ui.restore_queue);
+    ui::app::reload::watch(config_path.to_path_buf(), cfg.clone(), started.msg_tx.clone());
 
     let cava = started.cava.clone();
     let mut cava_state = cava_wanted(&app);
-    let frame_budget =
+    let mut frame_budget =
         frame_interval(cfg.cava.enabled, cfg.ui.visualizer_pct, cfg.cava.framerate());
     let mut last_draw =
         std::time::Instant::now().checked_sub(frame_budget).unwrap_or_else(std::time::Instant::now);
@@ -733,6 +729,14 @@ fn ui_loop(terminal: &mut ui::term::Term, started: &mut Started) -> Result<UiEnd
         }
         if let Some(path) = &queue_file {
             app.autosave_queue(path, std::time::Instant::now());
+        }
+        if let Some(new) = app.reloaded.take() {
+            queue_file = ui::app::saved_queue::queue_file_after(new.ui.restore_queue, queue_file);
+            frame_budget =
+                frame_interval(new.cava.enabled, app.ui.visualizer_pct, new.cava.framerate());
+            if let Some(c) = &cava {
+                c.configure(new.cava);
+            }
         }
 
         let want = cava_wanted(&app);
@@ -803,15 +807,6 @@ fn ui_loop(terminal: &mut ui::term::Term, started: &mut Started) -> Result<UiEnd
 
 #[cfg(test)]
 mod tests {
-    #[test]
-    fn cava_off_gives_visualizer_no_height() {
-        let mut cfg = config::Config::default();
-        assert!(cfg.cava.enabled && cfg.ui.visualizer_pct > 0);
-        assert_eq!(super::ui_settings(&cfg).visualizer_pct, cfg.ui.visualizer_pct);
-        cfg.cava.enabled = false;
-        assert_eq!(super::ui_settings(&cfg).visualizer_pct, 0);
-    }
-
     use super::*;
 
     #[test]

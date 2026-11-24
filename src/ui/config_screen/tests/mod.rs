@@ -232,7 +232,6 @@ fn rejected_value_keeps_field_open() {
     assert_eq!(screen.cfg.ui.art_pct, Config::default().ui.art_pct);
 }
 
-/// The preview follows `ui.volume_display` and `ui.mode_flags`.
 #[test]
 fn preview_follows_header_options() {
     let mut screen = ctx();
@@ -265,7 +264,6 @@ fn preview_follows_icon_set() {
     assert!(!text.contains('\u{f0456}'), "{text}");
 }
 
-/// The preview follows the unsaved header mode and border style.
 #[test]
 fn preview_follows_header_mode_and_borders() {
     let _palette = theme::palette_test_lock();
@@ -489,6 +487,16 @@ fn help_pane_shows_what_value_changes_from() {
         text.contains("default 40") && text.contains("value   55"),
         "the pane says what it changes from: {text}"
     );
+}
+
+#[test]
+fn settings_read_at_startup_say_so() {
+    let mut screen = ctx();
+    let note = "applies it on the next start";
+    select(&mut screen, "plex.server");
+    assert!(frame(&mut screen, 100, 40).contains(note));
+    select(&mut screen, "ui.art_pct");
+    assert!(!frame(&mut screen, 100, 40).contains(note));
 }
 
 #[test]
