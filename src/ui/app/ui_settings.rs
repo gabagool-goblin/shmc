@@ -1,4 +1,13 @@
-use crate::config::{QueueColumn, RatingStyle, UiConfig, VolumeDisplay};
+use crate::config::{Config, QueueColumn, RatingStyle, UiConfig, VolumeDisplay};
+
+/// With cava off the pane would be an empty box, so it gets no height.
+pub fn player_ui(cfg: &Config) -> UiConfig {
+    let mut ui = cfg.ui.clone();
+    if !cfg.cava.enabled {
+        ui.visualizer_pct = 0;
+    }
+    ui
+}
 
 /// The `[ui]` settings as the player uses them.
 pub struct UiSettings {
@@ -64,5 +73,19 @@ impl UiSettings {
             column_weights: ui.effective_column_weights(),
             queue_columns: ui.resolved_queue_columns(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cava_off_gives_visualizer_no_height() {
+        let mut cfg = Config::default();
+        assert!(cfg.cava.enabled && cfg.ui.visualizer_pct > 0);
+        assert_eq!(player_ui(&cfg).visualizer_pct, cfg.ui.visualizer_pct);
+        cfg.cava.enabled = false;
+        assert_eq!(player_ui(&cfg).visualizer_pct, 0);
     }
 }

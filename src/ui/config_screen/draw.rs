@@ -372,6 +372,10 @@ impl Screen {
         } else if let Some(setting) = self.selected() {
             lines.push(Line::from(Span::styled(setting.label, theme::secondary())));
             lines.push(Line::from(Span::styled(setting.help, theme::text())));
+            if setting.next_start() {
+                let note = "A running player applies it on the next start.";
+                lines.push(Line::from(Span::styled(note, theme::dim())));
+            }
             lines.push(Line::from(""));
             lines.push(Line::from(Span::styled(format!("key     {}", setting.key), theme::dim())));
             let row = values.get(setting.key);

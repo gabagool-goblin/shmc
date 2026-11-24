@@ -825,6 +825,26 @@ pub const ALL: &[Setting] = &[
     },
 ];
 
+/// Read once at startup: a running player names these when a save changes them.
+pub const NEXT_START: [&str; 10] = [
+    "plex.server",
+    "plex.token",
+    "plex.music_section",
+    "plex.report_playback",
+    "mpv.path",
+    "mpv.extra_args",
+    "mpv.volume",
+    "album_art.backend",
+    "album_art.cache_mb",
+    "cava.enabled",
+];
+
+impl Setting {
+    pub fn next_start(&self) -> bool {
+        NEXT_START.contains(&self.key)
+    }
+}
+
 pub fn find(key: &str) -> Option<&'static Setting> {
     ALL.iter().find(|s| s.key == key)
 }
@@ -842,9 +862,15 @@ mod tests {
         for key in keys.keys() {
             assert!(described.contains(key.as_str()), "{key} has no description");
         }
-        // and the other way round
         for setting in ALL {
             assert!(keys.contains_key(setting.key), "{} is not a setting any more", setting.key);
+        }
+    }
+
+    #[test]
+    fn next_start_keys_are_settings() {
+        for key in NEXT_START {
+            assert!(find(key).is_some(), "{key}");
         }
     }
 

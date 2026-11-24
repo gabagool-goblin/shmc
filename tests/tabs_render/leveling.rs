@@ -140,3 +140,26 @@ async fn unwritable_script_is_blamed_instead_of_the_mpv_version() {
     assert!(app.status.contains("cannot write its mpv script"), "{}", app.status);
     assert!(!app.status.contains("mpv 0.38"), "{}", app.status);
 }
+
+#[tokio::test]
+async fn a_save_that_turns_leveling_off_zeroes_the_published_gains() {
+    let (mut app, _plex, mut mpv) = leveled_app(Leveling::Track).await;
+    let _appearance = super::reload::AppearanceGuard::new();
+    app.queue.items[0].audio = analysed(-8.0);
+    app.play_queue_index(0);
+    assert_eq!(gains(&mut mpv), [("0".to_string(), -10.0)]);
+
+    app.handle_msg(super::reload::saved("[mpv]\nloudness_leveling = \"off\"\n", &[]));
+    assert_eq!(gains(&mut mpv), [("0".to_string(), 0.0)]);
+}
+
+#[tokio::test]
+async fn turning_leveling_on_without_its_script_waits_for_the_next_start() {
+    let (mut app, _plex, mut mpv) = leveled_app(Leveling::Off).await;
+    let _appearance = super::reload::AppearanceGuard::new();
+    app.handle_msg(super::reload::saved("[mpv]\nloudness_leveling = \"track\"\n", &[]));
+    assert!(app.status.contains("mpv.loudness_leveling on the next start"), "{}", app.status);
+    app.queue.items[0].audio = analysed(-8.0);
+    app.play_queue_index(0);
+    assert!(gains(&mut mpv).is_empty());
+}

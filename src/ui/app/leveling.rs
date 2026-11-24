@@ -27,6 +27,26 @@ impl App {
         self.leveling.preamp_db = preamp_db;
     }
 
+    /// False when leveling was off at startup: mpv has no script to turn on.
+    pub(super) fn relevel(&mut self, mode: Leveling, preamp_db: f64) -> bool {
+        let was = self.leveling.mode;
+        if (mode, preamp_db) == (was, self.leveling.preamp_db) {
+            return true;
+        }
+        if was == Leveling::Off && mode != Leveling::Off && !self.leveling.ready {
+            return false;
+        }
+        self.set_leveling(mode, preamp_db);
+        let published = std::mem::take(&mut self.leveling.published);
+        if mode == Leveling::Off {
+            for part in published {
+                let _ = self.mpv.tx.send(MpvCmd::SetGain { part, db: 0.0 });
+            }
+        }
+        self.level_around_current();
+        true
+    }
+
     pub(super) fn level_around_current(&mut self) {
         if self.leveling.mode == Leveling::Off {
             return;

@@ -65,6 +65,15 @@ fn setting_text(value: &toml::Value) -> String {
 const SETTING_VALUE_COLUMN_MAX: usize = 44;
 
 impl Config {
+    pub fn next_start_changes(&self, new: &Config) -> Vec<&'static str> {
+        let (old_values, new_values) = (self.flat_settings(), new.flat_settings());
+        let differs = |key: &str| match key {
+            "plex.token" => self.plex.token != new.plex.token,
+            _ => old_values.get(key) != new_values.get(key),
+        };
+        crate::inventory::NEXT_START.into_iter().filter(|k| differs(k)).collect()
+    }
+
     /// The tunables at their defaults, keeping [`NO_DEFAULT`].
     pub fn restored(&self) -> Config {
         let mut next =
@@ -242,6 +251,16 @@ fn shipped_settings() -> &'static BTreeMap<String, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn next_start_changes_name_only_settings_read_at_startup() {
+        let old = Config::default();
+        let mut new = old.clone();
+        new.plex.server = "http://elsewhere:32400".into();
+        new.plex.token = "fake-new-token".into();
+        new.ui.scrolloff += 1;
+        assert_eq!(old.next_start_changes(&new), ["plex.server", "plex.token"]);
+    }
     use crate::config::PlexConfig;
 
     #[test]
@@ -321,7 +340,6 @@ mod tests {
         assert!(scrolloff.is_default());
     }
 
-    /// An override equal to the theme's colour still counts as a change.
     #[test]
     fn equal_override_is_still_a_change() {
         let row = |accent: Option<&str>| {
@@ -423,7 +441,6 @@ mod tests {
         assert!(cfg.restore_defaults().is_empty());
     }
 
-    /// `background` is judged against the chosen theme, `none` when it has none.
     #[test]
     fn background_listed_and_restored_against_theme() {
         let row = |cfg: &Config| {

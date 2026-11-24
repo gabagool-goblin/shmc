@@ -30,6 +30,8 @@ pub enum CavaCmd {
     /// Release the tap now.
     Stop,
     Shutdown,
+    /// Used from the next start; a running cava restarts with it.
+    Configure(Box<CavaConfig>),
 }
 
 pub enum CavaEvent {
@@ -57,13 +59,15 @@ impl CavaControl {
     pub fn shutdown(&self) {
         let _ = self.tx.send(CavaCmd::Shutdown);
     }
+    pub fn configure(&self, cfg: CavaConfig) {
+        let _ = self.tx.send(CavaCmd::Configure(Box::new(cfg)));
+    }
 }
 
 /// Owns the cava child. Capturing audio can keep the machine awake.
-pub fn controller(cfg: CavaConfig) -> (CavaControl, UnboundedReceiver<CavaEvent>) {
+pub fn controller(mut cfg: CavaConfig) -> (CavaControl, UnboundedReceiver<CavaEvent>) {
     let (cmd_tx, mut cmd_rx) = unbounded_channel::<CavaCmd>();
     let (ev_tx, ev_rx) = unbounded_channel::<CavaEvent>();
-    let grace = std::time::Duration::from_secs(cfg.pause_grace_secs);
 
     tokio::spawn(async move {
         let mut child: Option<CavaHandle> = None;
@@ -87,6 +91,7 @@ pub fn controller(cfg: CavaConfig) -> (CavaControl, UnboundedReceiver<CavaEvent>
                         }
                     }
                     Some(CavaCmd::Pause | CavaCmd::Stop) => {}
+                    Some(CavaCmd::Configure(new)) => cfg = *new,
                     Some(CavaCmd::Shutdown) | None => break,
                 }
                 continue;
@@ -99,7 +104,26 @@ pub fn controller(cfg: CavaConfig) -> (CavaControl, UnboundedReceiver<CavaEvent>
                 cmd = cmd_rx.recv() => match cmd {
                     Some(CavaCmd::Play) => stop_at = None,
                     Some(CavaCmd::Pause) => {
+                        let grace = std::time::Duration::from_secs(cfg.pause_grace_secs);
                         stop_at = Some(tokio::time::Instant::now() + grace);
+                    }
+                    Some(CavaCmd::Configure(new)) => {
+                        cfg = *new;
+                        keep = false;
+                        if let Some(c) = child.take() {
+                            c.shutdown().await;
+                        }
+                        match spawn(&cfg).await {
+                            Ok((c, rx)) => {
+                                child = Some(c);
+                                frames = Some(rx);
+                                let _ = ev_tx.send(CavaEvent::Started);
+                            }
+                            Err(e) => {
+                                stop_at = None;
+                                let _ = ev_tx.send(CavaEvent::Stopped(one_line(&e)));
+                            }
+                        }
                     }
                     Some(CavaCmd::Stop) => {
                         keep = false;
@@ -158,7 +182,6 @@ async fn sleep_until(at: Option<tokio::time::Instant>) {
     }
 }
 
-/// A spawn error on one line, for the visualizer pane.
 fn one_line(e: &anyhow::Error) -> String {
     let reason: String = e.to_string().split_whitespace().collect::<Vec<_>>().join(" ");
     reason.chars().take(150).collect()
@@ -455,7 +478,6 @@ noise_reduction = 77
     #[test]
     fn preset_sets_smoothing_ignores_raw_keys() {
         for (style, noise) in [("balanced", 77), ("smooth", 90), ("snappy", 40)] {
-            // raw keys are ignored outside `custom`
             let cfg = CavaConfig { style: style.into(), ..custom() };
             let conf = build_config(&cfg, "coreaudio", "tap");
             assert!(has(&conf, &format!("noise_reduction = {noise}")), "{style}\n{conf}");
@@ -546,28 +568,62 @@ noise_reduction = 77
         assert!(modes.iter().all(|(_, s)| s == "BlackHole 2ch"));
     }
 
-    /// An idle player must not keep capturing audio.
-    #[cfg(unix)]
-    #[tokio::test]
-    async fn controller_starts_and_stops_cava() {
+    /// A cava that prints `script`'s frames; `$2` is its config file.
+    fn fake_cava(dir: &std::path::Path, script: &str) -> CavaConfig {
         use std::os::unix::fs::PermissionsExt;
-
-        let dir = tempfile::tempdir().expect("tempdir");
-        let path = dir.path().join("cava");
-        std::fs::write(
-            &path,
-            format!("#!/bin/sh\nwhile true; do printf '{}'; sleep 0.01; done\n", "x".repeat(BARS)),
-        )
-        .expect("write fake cava");
+        let path = dir.join("cava");
+        std::fs::write(&path, format!("#!/bin/sh\n{script}\n")).expect("write fake cava");
         std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755))
             .expect("chmod fake cava");
-
-        let cfg = CavaConfig {
+        CavaConfig {
             path: path.to_string_lossy().into_owned(),
             framerate: 30,
             source: "test".into(),
             ..CavaConfig::default()
-        };
+        }
+    }
+
+    async fn next_frame(events: &mut UnboundedReceiver<CavaEvent>) -> Vec<u8> {
+        let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(10);
+        loop {
+            match tokio::time::timeout_at(deadline, events.recv()).await {
+                Ok(Some(CavaEvent::Frame(frame))) => return frame,
+                Ok(Some(CavaEvent::Started)) => {}
+                Ok(Some(CavaEvent::Stopped(e))) => panic!("cava stopped: {e}"),
+                Ok(None) | Err(_) => panic!("no frame"),
+            }
+        }
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn new_settings_restart_a_running_cava() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let (a, b) = ("a".repeat(BARS), "b".repeat(BARS));
+        let script = format!(
+            "if grep -q 'framerate = 50' \"$2\"; then f='{b}'; else f='{a}'; fi\n\
+             while true; do printf \"$f\"; sleep 0.01; done"
+        );
+        let cfg = fake_cava(dir.path(), &script);
+        let (control, mut events) = controller(cfg.clone());
+        control.play();
+        assert_eq!(next_frame(&mut events).await, a.as_bytes());
+
+        control.configure(CavaConfig { framerate: 50, ..cfg });
+        let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(10);
+        while next_frame(&mut events).await != b.as_bytes() {
+            assert!(tokio::time::Instant::now() < deadline, "still the old settings");
+        }
+        control.shutdown();
+    }
+
+    /// An idle player must not keep capturing audio.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn controller_starts_and_stops_cava() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let script = format!("while true; do printf '{}'; sleep 0.01; done", "x".repeat(BARS));
+        let cfg = fake_cava(dir.path(), &script);
         let (control, mut events) = controller(cfg);
 
         control.play();

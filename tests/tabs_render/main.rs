@@ -26,6 +26,7 @@ mod queue;
 mod queue_requests;
 mod radio;
 mod rating;
+mod reload;
 mod report;
 mod restore;
 mod resume;
