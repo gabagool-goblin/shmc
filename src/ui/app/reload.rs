@@ -85,7 +85,6 @@ impl App {
         self.hold_art();
 
         self.allow_writes = cfg.plex.allow_writes;
-        self.art_max_px = cfg.album_art.max_size_px;
         if !self.relevel(cfg.mpv.leveling(), cfg.mpv.preamp_db()) {
             later.push("mpv.loudness_leveling");
         }
@@ -123,6 +122,15 @@ mod tests {
         let reload = settle(&running, saved, Startup { cava: false, client_id: true });
         assert_eq!(reload.later, ["ui.visualizer_pct"]);
         assert_eq!(player_ui(&reload.cfg).visualizer_pct, 0);
+    }
+
+    #[test]
+    fn the_art_size_cap_waits_for_the_next_start() {
+        let running = Config::default();
+        let mut saved = running.clone();
+        saved.album_art.max_size_px = [1200, 1200];
+        let reload = settle(&running, saved, Startup { cava: true, client_id: true });
+        assert_eq!(reload.later, ["album_art.max_size_px"]);
     }
 
     #[test]
