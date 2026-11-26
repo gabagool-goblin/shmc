@@ -27,6 +27,7 @@ pub struct Pin {
 pub struct Server {
     pub name: String,
     pub owned: bool,
+    pub machine_id: String,
     /// For this server only; a shared server's differs from the account's.
     pub token: String,
     https_required: bool,
@@ -60,6 +61,8 @@ struct Resource {
     provides: String,
     #[serde(default)]
     owned: bool,
+    #[serde(default)]
+    client_identifier: String,
     #[serde(default)]
     access_token: Option<String>,
     #[serde(default)]
@@ -171,6 +174,7 @@ impl PlexTv {
                 Some(Server {
                     name: r.name,
                     owned: r.owned,
+                    machine_id: r.client_identifier,
                     token: r.access_token.filter(|t| !t.is_empty())?,
                     https_required: r.https_required,
                     on_its_network: r.public_address_matches,
@@ -217,26 +221,28 @@ impl Server {
     }
 }
 
-/// The best-ranked address that answers; the rest get the token only if no local https one does.
+/// The best-ranked address where `machine_id` answers; plain http only if no local https does.
 pub async fn first_answering(
     addresses: &[Address],
     token: &str,
+    machine_id: &str,
     within: Duration,
-) -> Option<(usize, String, String)> {
+) -> Option<(usize, String)> {
     let local_https = addresses.iter().take_while(|a| a.local && a.https && !a.relay).count();
     let (first, rest) = addresses.split_at(local_https);
-    if let Some(found) = answering(first, token, within).await {
+    if let Some(found) = answering(first, token, machine_id, within).await {
         return Some(found);
     }
-    let (i, machine, version) = answering(rest, token, within).await?;
-    Some((local_https + i, machine, version))
+    let (i, version) = answering(rest, token, machine_id, within).await?;
+    Some((local_https + i, version))
 }
 
 async fn answering(
     addresses: &[Address],
     token: &str,
+    machine_id: &str,
     within: Duration,
-) -> Option<(usize, String, String)> {
+) -> Option<(usize, String)> {
     let mut tries = AbortOnDrop(
         addresses
             .iter()
@@ -248,7 +254,9 @@ async fn answering(
     );
     for i in 0..tries.0.len() {
         if let Ok(Ok(Ok((machine, version)))) = (&mut tries.0[i]).await {
-            return Some((i, machine, version));
+            if machine == machine_id {
+                return Some((i, version));
+            }
         }
     }
     None
@@ -308,7 +316,7 @@ mod tests {
     #[tokio::test]
     async fn each_server_comes_with_its_own_token_and_players_are_left_out() {
         let resources = r#"[
-            {"name":"Friend","provides":"server","owned":false,"accessToken":"fake-shared-token",
+            {"name":"Friend","provides":"server","owned":false,"clientIdentifier":"m-friend","accessToken":"fake-shared-token",
              "connections":[{"uri":"https://a.plex.direct:32400","protocol":"https","address":"10.0.0.2","port":32400,"local":false,"relay":false}]},
             {"name":"Phone","provides":"player,controller","owned":true,"accessToken":"fake-device-token"}
         ]"#;
@@ -317,6 +325,7 @@ mod tests {
         let servers = tv.servers("fake-account-token").await.unwrap();
         let [server] = servers.as_slice() else { panic!("one server") };
         assert_eq!((server.name.as_str(), server.owned), ("Friend", false));
+        assert_eq!(server.machine_id, "m-friend");
         assert_eq!(server.token, "fake-shared-token");
         assert!(!seen.lock().unwrap()[0].contains("fake-account-token"), "never in the URL");
         assert!(full.lock().unwrap()[0].contains("fake-account-token"), "sent as a header");
@@ -360,6 +369,7 @@ mod tests {
         Server {
             name: "Home".into(),
             owned: true,
+            machine_id: "m1".into(),
             token: "fake".into(),
             https_required,
             on_its_network: true,
@@ -439,12 +449,13 @@ mod tests {
         let within = Duration::from_millis(300);
 
         let picked =
-            first_answering(&[address(&silent_uri), address(&answers)], "fake", within).await;
-        assert_eq!(picked, Some((1, "m1".into(), "1.41.0".into())));
+            first_answering(&[address(&silent_uri), address(&answers)], "fake", "m1", within).await;
+        assert_eq!(picked, Some((1, "1.41.0".into())));
         let picked =
-            first_answering(&[address(&answers), address(&silent_uri)], "fake", within).await;
+            first_answering(&[address(&answers), address(&silent_uri)], "fake", "m1", within).await;
         assert_eq!(picked.map(|p| p.0), Some(0));
-        assert_eq!(first_answering(&[address(&silent_uri)], "fake", within).await, None);
+        assert_eq!(first_answering(&[address(&silent_uri)], "fake", "m1", within).await, None);
+        assert_eq!(first_answering(&[address(&answers)], "fake", "m2", within).await, None);
     }
 
     #[tokio::test]
@@ -456,7 +467,7 @@ mod tests {
             Address { uri: https, local: true, https: true, relay: false },
             Address { uri: http, local: true, https: false, relay: false },
         ];
-        let picked = first_answering(&addresses, "fake", Duration::from_millis(300)).await;
+        let picked = first_answering(&addresses, "fake", "m1", Duration::from_millis(300)).await;
         assert_eq!(picked.map(|p| p.0), Some(0));
         assert!(http_seen.lock().unwrap().is_empty(), "the token went over plain http");
     }
