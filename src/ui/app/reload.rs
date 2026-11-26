@@ -96,7 +96,10 @@ impl App {
 
         self.reloaded = Some(Box::new(cfg));
         match (problems.first(), later.as_slice()) {
-            (Some(problem), _) => self.transient_err(problem.clone()),
+            (Some(problem), []) => self.transient_err(problem.clone()),
+            (Some(problem), keys) => {
+                self.transient_err(format!("{problem}; {} on the next start", and_list(keys)));
+            }
             (None, []) => self.transient("settings applied".into()),
             (None, keys) => {
                 self.transient(format!("settings applied; {} on the next start", and_list(keys)));

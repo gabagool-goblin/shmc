@@ -60,6 +60,18 @@ async fn settings_for_the_next_start_are_named_by_key() {
 }
 
 #[tokio::test]
+async fn a_bad_colour_still_names_the_next_start_settings() {
+    let mut app = new_app().await;
+    let _appearance = AppearanceGuard::new();
+    app.handle_msg(saved(
+        "[plex]\nserver = \"http://elsewhere:32400\"\n[theme]\naccent = \"#zz\"\n",
+        &["plex.server"],
+    ));
+    assert!(app.status.contains("theme.accent"), "{}", app.status);
+    assert!(app.status.ends_with("; plex.server on the next start"), "{}", app.status);
+}
+
+#[tokio::test]
 async fn a_file_that_does_not_parse_changes_nothing() {
     let mut app = new_app().await;
     let before = app.ui.scrolloff;
