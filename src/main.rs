@@ -736,7 +736,7 @@ fn ui_loop(
             app.autosave_queue(path, std::time::Instant::now());
         }
         if let Some(new) = app.reloaded.take() {
-            queue_file = ui::app::saved_queue::queue_file_after(new.ui.restore_queue, queue_file);
+            queue_file = app.queue_file_after(new.ui.restore_queue, queue_file);
             frame_budget =
                 frame_interval(new.cava.enabled, app.ui.visualizer_pct, new.cava.framerate());
             if let Some(c) = &cava {

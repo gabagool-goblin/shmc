@@ -232,13 +232,20 @@ async fn a_playing_queue_is_saved_every_30_seconds_only_when_it_changed() {
     assert_eq!(written(&path).position, 42.0);
 }
 
-#[test]
-fn turning_restore_queue_off_removes_the_saved_queue() {
+#[tokio::test]
+async fn turning_restore_queue_off_and_on_saves_the_queue_again() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("queue.json");
-    saved_queue::write(&path, &saved(&[1], Some(0), 1.0)).unwrap();
-    assert_eq!(saved_queue::queue_file_after(true, Some(path.clone())), Some(path.clone()));
-    assert!(path.exists());
-    assert_eq!(saved_queue::queue_file_after(false, Some(path.clone())), None);
+    let mut app = new_app().await;
+    app.replace_queue_and_play((0..3).map(track).collect(), Confirm::Tracks);
+    let start = std::time::Instant::now();
+    let at = |s| start + std::time::Duration::from_secs(s);
+    app.autosave_queue(&path, at(0));
+    app.autosave_queue(&path, at(30));
+
+    assert_eq!(app.queue_file_after(false, Some(path.clone())), None);
     assert!(!path.exists());
+    assert_eq!(app.queue_file_after(true, Some(path.clone())), Some(path.clone()));
+    app.autosave_queue(&path, at(60));
+    assert_eq!(written(&path).tracks, keys(&[0, 1, 2]));
 }
