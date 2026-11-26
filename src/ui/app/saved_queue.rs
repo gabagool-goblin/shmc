@@ -47,19 +47,6 @@ pub fn write(path: &Path, saved: &SavedQueue) -> anyhow::Result<()> {
     Ok(())
 }
 
-/// The file to save to once `ui.restore_queue` is `enabled`; turning it off removes the file.
-pub fn queue_file_after(enabled: bool, now: Option<PathBuf>) -> Option<PathBuf> {
-    match (enabled, now) {
-        (true, None) => crate::config::queue_path(),
-        (true, now) => now,
-        (false, Some(path)) => {
-            remove(&path);
-            None
-        }
-        (false, None) => None,
-    }
-}
-
 pub fn remove(path: &Path) {
     match std::fs::remove_file(path) {
         Ok(()) => {}
@@ -146,6 +133,20 @@ impl App {
 
     pub fn save_queue(&self, path: &Path) {
         let _ = self.store_queue(path, &self.saved_queue());
+    }
+
+    /// The file to save to once `ui.restore_queue` is `enabled`; turning it off removes the file.
+    pub fn queue_file_after(&mut self, enabled: bool, now: Option<PathBuf>) -> Option<PathBuf> {
+        match (enabled, now) {
+            (true, None) => crate::config::queue_path(),
+            (true, now) => now,
+            (false, Some(path)) => {
+                remove(&path);
+                self.autosave.written = None;
+                None
+            }
+            (false, None) => None,
+        }
     }
 
     /// At most every `AUTOSAVE_EVERY`, and only when the queue or position changed.
