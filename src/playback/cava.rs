@@ -30,7 +30,7 @@ pub enum CavaCmd {
     /// Release the tap now.
     Stop,
     Shutdown,
-    /// Used from the next start; a running cava restarts with it.
+    /// Used from the next start; a running cava restarts when they differ.
     Configure(Box<CavaConfig>),
 }
 
@@ -107,6 +107,7 @@ pub fn controller(mut cfg: CavaConfig) -> (CavaControl, UnboundedReceiver<CavaEv
                         let grace = std::time::Duration::from_secs(cfg.pause_grace_secs);
                         stop_at = Some(tokio::time::Instant::now() + grace);
                     }
+                    Some(CavaCmd::Configure(new)) if *new == cfg => {}
                     Some(CavaCmd::Configure(new)) => {
                         cfg = *new;
                         keep = false;
@@ -614,6 +615,30 @@ noise_reduction = 77
         while next_frame(&mut events).await != b.as_bytes() {
             assert!(tokio::time::Instant::now() < deadline, "still the old settings");
         }
+        control.shutdown();
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn the_same_settings_leave_a_running_cava_alone() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let starts = dir.path().join("starts");
+        let (a, b) = ("a".repeat(BARS), "b".repeat(BARS));
+        let script = format!(
+            "echo >> '{}'\n\
+             if grep -q 'framerate = 50' \"$2\"; then f='{b}'; else f='{a}'; fi\n\
+             while true; do printf \"$f\"; sleep 0.01; done",
+            starts.display()
+        );
+        let cfg = fake_cava(dir.path(), &script);
+        let (control, mut events) = controller(cfg.clone());
+        control.play();
+        assert_eq!(next_frame(&mut events).await, a.as_bytes());
+
+        control.configure(cfg.clone());
+        control.configure(CavaConfig { framerate: 50, ..cfg });
+        while next_frame(&mut events).await != b.as_bytes() {}
+        assert_eq!(std::fs::read_to_string(&starts).unwrap().lines().count(), 2);
         control.shutdown();
     }
 

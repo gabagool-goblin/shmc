@@ -707,7 +707,7 @@ impl ThemeConfig {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct CavaConfig {
     /// Enable the visualizer (requires the `cava` binary)
