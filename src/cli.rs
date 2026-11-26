@@ -1,6 +1,6 @@
 //! `main` ignores unknown words, so this refuses `shmc confg` before any side effect.
 
-const COMMANDS: &[&str] = &["config", "setup", "cache", "log"];
+const COMMANDS: &[&str] = &["config", "setup", "cache", "log", "update"];
 
 /// `-h`, `-V` and `-v` are left out: every one-letter flag is a near miss for them.
 const OPTIONS: &[&str] = &["--version", "--help", "--config", "--check", "--list"];
@@ -27,7 +27,6 @@ pub fn validate(args: &[String]) -> Result<(), String> {
                 if i + 1 >= args.len() {
                     return Err(format!("shmc: '--config' needs a file name\n{HINT}"));
                 }
-                // The value is a path, not a command.
                 i += 2;
                 continue;
             }
@@ -97,8 +96,15 @@ pub fn validate(args: &[String]) -> Result<(), String> {
             config_options[0], config_options[1]
         ));
     }
-    if !config_options.is_empty() && command != Some("config") {
-        return Err(format!("shmc: '{}' needs 'shmc config'\n{HINT}", config_options[0]));
+    let allowed = |opt: &str| match command {
+        Some("config") => true,
+        Some("update") => opt == "--check",
+        _ => false,
+    };
+    if let Some(opt) = config_options.iter().find(|o| !allowed(o)) {
+        let homes =
+            if *opt == "--check" { "'shmc config' or 'shmc update'" } else { "'shmc config'" };
+        return Err(format!("shmc: '{opt}' needs {homes}\n{HINT}"));
     }
     Ok(())
 }
@@ -162,6 +168,8 @@ mod tests {
             &["config", "--check"][..],
             &["config", "--list"][..],
             &["setup"][..],
+            &["update"][..],
+            &["update", "--check"][..],
             &["cache"][..],
             &["cache", "clear"][..],
             &["log"][..],
@@ -181,7 +189,6 @@ mod tests {
         assert!(err.contains("unknown command 'confg'"), "{err}");
         assert!(err.contains("did you mean 'config'"), "{err}");
 
-        // Only the case differs.
         let err = validate(&args(&["Config"])).unwrap_err();
         assert!(err.contains("did you mean 'config'"), "{err}");
 
@@ -205,10 +212,13 @@ mod tests {
     #[test]
     fn config_options_need_config_command() {
         let err = validate(&args(&["--check"])).unwrap_err();
-        assert!(err.contains("needs 'shmc config'"), "{err}");
+        assert!(err.contains("needs 'shmc config' or 'shmc update'"), "{err}");
 
         let err = validate(&args(&["config", "--check", "--list"])).unwrap_err();
         assert!(err.contains("cannot be combined"), "{err}");
+
+        let err = validate(&args(&["update", "--list"])).unwrap_err();
+        assert!(err.contains("needs 'shmc config'"), "{err}");
     }
 
     #[test]

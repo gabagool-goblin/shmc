@@ -88,6 +88,8 @@ curl -fsSL https://raw.githubusercontent.com/gabagool-goblin/shmc/main/scripts/i
 
 The installer downloads a prebuilt binary for macOS on Apple Silicon or Linux on x86_64 and arm64. Downloads are verified against the release's `SHA256SUMS` file. To check that a downloaded tarball was built by this repository's release workflow, run `gh attestation verify shmc-*.tar.gz --repo gabagool-goblin/shmc`.
 
+`shmc update` replaces a prebuilt binary with the latest release, checked against `SHA256SUMS` the same way, and `shmc update --check` only says whether a newer release exists. It does not update a binary built with Cargo or from a checkout.
+
 On other platforms, or when using `--source`, the installer builds from source. This requires Rust 1.90 or newer, git and a C compiler. On macOS, install the compiler tools with `xcode-select --install`. On Debian or Ubuntu, install `build-essential`; on Fedora, install `gcc`.
 
 The default install location is `~/.local/bin`. Set a different location with `install.sh DIR` or `PREFIX=DIR`. Use `--version x.x.x` to install a specific release. Pass options through the pipe with `sh -s --`:

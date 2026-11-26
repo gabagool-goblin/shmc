@@ -61,3 +61,11 @@ fn version_flags_print_the_version() {
         );
     }
 }
+
+#[test]
+fn update_refuses_a_build_the_release_workflow_did_not_make() {
+    let out = Command::new(env!("CARGO_BIN_EXE_shmc")).arg("update").output().unwrap();
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert_eq!(out.status.code(), Some(1), "{stderr}");
+    assert!(stderr.contains("release workflow"), "{stderr}");
+}
