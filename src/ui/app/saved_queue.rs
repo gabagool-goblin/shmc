@@ -145,7 +145,7 @@ impl App {
     }
 
     pub fn save_queue(&self, path: &Path) {
-        self.store_queue(path, &self.saved_queue());
+        let _ = self.store_queue(path, &self.saved_queue());
     }
 
     /// At most every `AUTOSAVE_EVERY`, and only when the queue or position changed.
@@ -159,22 +159,24 @@ impl App {
         }
         self.autosave.due = Some(now + AUTOSAVE_EVERY);
         let saved = self.saved_queue();
-        if self.autosave.written.as_ref() != Some(&saved) {
-            self.store_queue(path, &saved);
+        if self.autosave.written.as_ref() != Some(&saved) && self.store_queue(path, &saved) {
             self.autosave.written = Some(saved);
         }
     }
 
-    fn store_queue(&self, path: &Path, saved: &SavedQueue) {
+    /// False when the write failed.
+    fn store_queue(&self, path: &Path, saved: &SavedQueue) -> bool {
         if saved.tracks.is_empty() {
             if !self.restore.unapplied {
                 remove(path);
             }
-            return;
+            return true;
         }
-        if let Err(e) = write(path, saved) {
+        let written = write(path, saved);
+        if let Err(e) = &written {
             tracing::warn!("cannot save the queue: {e:#}");
         }
+        written.is_ok()
     }
 
     /// `tracks` has each saved key at most once, in any order.
