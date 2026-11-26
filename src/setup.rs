@@ -105,25 +105,37 @@ async fn sign_in(path: &Path) -> Result<(String, String)> {
     println!("signed in");
 
     let mut servers = tv.servers(&account_token).await?;
-    let server = match servers.len() {
-        0 => bail!("this Plex account has no servers; the config was not changed"),
-        1 => servers.remove(0),
-        n => {
-            println!();
-            for (i, s) in servers.iter().enumerate() {
-                let shared = if s.owned { "" } else { " (shared)" };
-                println!("  {}) {}{shared}", i + 1, s.name);
-            }
-            let pick = loop {
-                match prompt("Server", Some("1"))?.parse::<usize>() {
-                    Ok(i) if (1..=n).contains(&i) => break i - 1,
-                    _ => println!("  a number from 1 to {n}"),
-                }
-            };
-            servers.remove(pick)
+    if servers.is_empty() {
+        bail!("this Plex account has no servers; the config was not changed");
+    }
+    let ask = servers.len() > 1;
+    loop {
+        let pick = if ask { choose_server(&servers)? } else { 0 };
+        if let Some(found) = connect(servers.remove(pick)).await {
+            return Ok(found);
         }
-    };
+        if servers.is_empty() {
+            bail!("no server answered from here; the config was not changed");
+        }
+    }
+}
 
+fn choose_server(servers: &[account::Server]) -> Result<usize> {
+    println!();
+    for (i, s) in servers.iter().enumerate() {
+        let shared = if s.owned { "" } else { " (shared)" };
+        println!("  {}) {}{shared}", i + 1, s.name);
+    }
+    let n = servers.len();
+    loop {
+        match prompt("Server", Some("1"))?.parse::<usize>() {
+            Ok(i) if (1..=n).contains(&i) => return Ok(i - 1),
+            _ => println!("  a number from 1 to {n}"),
+        }
+    }
+}
+
+async fn connect(server: account::Server) -> Option<(String, String)> {
     println!();
     print!("checking {} ... ", server.name);
     io::stdout().flush().ok();
@@ -137,10 +149,8 @@ async fn sign_in(path: &Path) -> Result<(String, String)> {
     .await
     else {
         println!("failed");
-        bail!(
-            "none of its {} addresses answered from here; the config was not changed",
-            addresses.len()
-        );
+        println!("  none of its {} addresses answered from here", addresses.len());
+        return None;
     };
     let address = &addresses[i];
     let kind = match (address.relay, address.local, address.https) {
@@ -158,7 +168,7 @@ async fn sign_in(path: &Path) -> Result<(String, String)> {
     if let Some(warning) = crate::config::plain_http_warning(&address.uri) {
         println!("  ! {warning}");
     }
-    Ok((address.uri.clone(), server.token))
+    Some((address.uri.clone(), server.token))
 }
 
 /// 0600 through a temp file: `fs::copy` would keep a hand-edited config's 0644.
