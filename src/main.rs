@@ -439,9 +439,11 @@ struct Started {
     reporter: Option<plex::report::Reporter>,
     picker: Option<ratatui_image::picker::Picker>,
     art_enabled: bool,
+    has_client_id: bool,
 }
 
 async fn start(cfg: config::Config, client_id: Option<String>) -> Result<Started> {
+    let has_client_id = client_id.is_some();
     let client = plex::PlexClient::new(&cfg.plex.server, &cfg.plex.token);
 
     let section = if !cfg.plex.music_section.is_empty() {
@@ -553,6 +555,7 @@ async fn start(cfg: config::Config, client_id: Option<String>) -> Result<Started
         reporter,
         picker,
         art_enabled,
+        has_client_id,
     })
 }
 
@@ -704,7 +707,9 @@ fn ui_loop(
     app.set_leveling(cfg.mpv.leveling(), cfg.mpv.preamp_db());
     app.reporter = started.reporter.as_ref().map(|r| r.sender());
     let mut queue_file = app.restore_saved_queue(cfg.ui.restore_queue);
-    ui::app::reload::watch(config_path.to_path_buf(), cfg.clone(), started.msg_tx.clone());
+    let startup =
+        ui::app::reload::Startup { cava: started.cava.is_some(), client_id: started.has_client_id };
+    ui::app::reload::watch(config_path.to_path_buf(), cfg.clone(), startup, started.msg_tx.clone());
 
     let cava = started.cava.clone();
     let mut cava_state = cava_wanted(&app);

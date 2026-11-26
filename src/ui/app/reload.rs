@@ -11,24 +11,48 @@ use tokio::sync::mpsc::UnboundedSender;
 const WATCH_EVERY: Duration = Duration::from_secs(1);
 
 pub struct Reload {
-    /// Its `cava.enabled` is the running one.
     pub cfg: Config,
     /// Changed keys that wait for the next start.
     pub later: Vec<&'static str>,
 }
 
+/// What the player started with that a saved config cannot add.
+#[derive(Clone, Copy)]
+pub struct Startup {
+    pub cava: bool,
+    pub client_id: bool,
+}
+
 /// Sends a `Msg::ConfigRead` each time the file at `path` changes.
-pub fn watch(path: PathBuf, mut running: Config, tx: UnboundedSender<Msg>) {
-    let cava_enabled = running.cava.enabled;
+pub fn watch(path: PathBuf, mut running: Config, startup: Startup, tx: UnboundedSender<Msg>) {
     crate::config::watch::watch(path, WATCH_EVERY, move |read| {
-        let read = read.map_err(|e| format!("{e:#}")).map(|mut cfg| {
-            let later = running.next_start_changes(&cfg);
-            running = cfg.clone();
-            cfg.cava.enabled = cava_enabled;
-            Reload { cfg, later }
+        let read = read.map_err(|e| format!("{e:#}")).map(|cfg| {
+            let reload = settle(&running, cfg.clone(), startup);
+            running = cfg;
+            reload
         });
         tx.send(Msg::ConfigRead(Box::new(read))).is_ok()
     });
+}
+
+/// `cfg` with what `startup` lacks kept off, and the keys that wait for the next start.
+pub fn settle(running: &Config, mut cfg: Config, startup: Startup) -> Reload {
+    let mut later = running.next_start_changes(&cfg);
+    let mut wait = |on: bool, was: bool, key| {
+        if on && !was {
+            later.push(key);
+        }
+    };
+    let shown = |c: &Config| c.cava.enabled && c.ui.visualizer_pct > 0;
+    if !startup.cava && running.cava.enabled == cfg.cava.enabled {
+        wait(shown(&cfg), shown(running), "ui.visualizer_pct");
+    }
+    cfg.cava.enabled = startup.cava;
+    if !startup.client_id {
+        wait(cfg.plex.allow_writes, running.plex.allow_writes, "plex.allow_writes");
+        cfg.plex.allow_writes = false;
+    }
+    Reload { cfg, later }
 }
 
 impl App {
@@ -82,5 +106,32 @@ fn and_list(keys: &[&str]) -> String {
         [] => String::new(),
         [one] => one.to_string(),
         [rest @ .., last] => format!("{} and {last}", rest.join(", ")),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_visualizer_without_cava_waits_for_the_next_start() {
+        let mut running = Config::default();
+        running.cava.enabled = true;
+        running.ui.visualizer_pct = 0;
+        let mut saved = running.clone();
+        saved.ui.visualizer_pct = 30;
+        let reload = settle(&running, saved, Startup { cava: false, client_id: true });
+        assert_eq!(reload.later, ["ui.visualizer_pct"]);
+        assert_eq!(player_ui(&reload.cfg).visualizer_pct, 0);
+    }
+
+    #[test]
+    fn writes_without_a_client_id_wait_for_the_next_start() {
+        let running = Config::default();
+        let mut saved = running.clone();
+        saved.plex.allow_writes = true;
+        let reload = settle(&running, saved, Startup { cava: true, client_id: false });
+        assert_eq!(reload.later, ["plex.allow_writes"]);
+        assert!(!reload.cfg.plex.allow_writes);
     }
 }
