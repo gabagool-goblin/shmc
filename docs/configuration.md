@@ -4,7 +4,7 @@ shmc reads `~/.config/shmc/config.toml`, or `$XDG_CONFIG_HOME/shmc/config.toml` 
 
 On first launch, shmc offers two ways to set up. Run `shmc setup` to do it again. Only `plex.server` and `plex.token` are required.
 
-Sign in with plex.tv: shmc shows a code to enter at [plex.tv/link](https://plex.tv/link). Once you approve it, pick a server if your account has more than one. shmc tries each address Plex lists for it, local ones first, and saves the first that answers with that server's token. Plain http is tried only on the server's own network, and never when the server requires https. A relay is used only when no direct address answers. Only setup talks to plex.tv, and shmc appears under Authorized Devices in your Plex account, where you can revoke it.
+Sign in with plex.tv: shmc shows a code to enter at [plex.tv/link](https://plex.tv/link). Once you approve it, pick a server if your account has more than one; if it does not answer, setup offers the others. shmc tries each address Plex lists for it, local ones first, and saves the first that answers with that server's token. Plain http is tried only on the server's own network, and never when the server requires https. A relay is used only when no direct address answers. Only setup talks to plex.tv, and shmc appears under Authorized Devices in your Plex account, where you can revoke it.
 
 Or enter a server URL and token. To find your Plex token, open a track in Plex Web, select **Get Info**, then **View XML**. The URL ends with `X-Plex-Token=...`.
 
