@@ -128,8 +128,13 @@ async fn sign_in(path: &Path) -> Result<(String, String)> {
     print!("checking {} ... ", server.name);
     io::stdout().flush().ok();
     let addresses = server.addresses();
-    let Some((i, machine, version)) =
-        account::first_answering(&addresses, &server.token, account::ANSWER_WITHIN).await
+    let Some((i, version)) = account::first_answering(
+        &addresses,
+        &server.token,
+        &server.machine_id,
+        account::ANSWER_WITHIN,
+    )
+    .await
     else {
         println!("failed");
         bail!(
@@ -146,7 +151,7 @@ async fn sign_in(path: &Path) -> Result<(String, String)> {
     };
     println!("ok");
     println!("  {} ({kind})", address.uri);
-    println!("  Plex Media Server {version} ({})", crate::doctor::short_id(&machine));
+    println!("  Plex Media Server {version} ({})", crate::doctor::short_id(&server.machine_id));
     if address.relay {
         println!("  ! a relay is slow; shmc uses it because no direct address answered");
     }
