@@ -189,6 +189,24 @@ fn written(path: &std::path::Path) -> SavedQueue {
 }
 
 #[tokio::test]
+async fn a_failed_save_is_tried_again_at_the_next_one() {
+    let dir = tempfile::tempdir().unwrap();
+    let blocked = dir.path().join("state");
+    std::fs::write(&blocked, "").unwrap();
+    let path = blocked.join("queue.json");
+    let mut app = new_app().await;
+    app.replace_queue_and_play((0..3).map(track).collect(), Confirm::Tracks);
+    let start = std::time::Instant::now();
+    let at = |s| start + std::time::Duration::from_secs(s);
+
+    app.autosave_queue(&path, at(0));
+    app.autosave_queue(&path, at(30));
+    std::fs::remove_file(&blocked).unwrap();
+    app.autosave_queue(&path, at(60));
+    assert_eq!(written(&path).tracks, keys(&[0, 1, 2]));
+}
+
+#[tokio::test]
 async fn a_playing_queue_is_saved_every_30_seconds_only_when_it_changed() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("queue.json");
