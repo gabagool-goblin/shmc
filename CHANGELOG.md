@@ -8,6 +8,7 @@ All notable changes to shmc are documented here. The format follows
 
 ### Added
 
+- `shmc update` replaces a prebuilt binary with the latest release after checking it against `SHA256SUMS`; `shmc update --check` only checks.
 - The queue is kept across restarts and comes back paused where it was, with its shuffle, repeat, single and consume modes (`ui.restore_queue`).
 - When a dropped connection stops playback, shmc plays the failed track again once Plex answers.
 - Loudness leveling from Plex's analysis, by track or by album (`mpv.loudness_leveling`, Plex Pass).

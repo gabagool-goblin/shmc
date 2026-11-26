@@ -2714,6 +2714,7 @@ dependencies = [
  "ratatui",
  "ratatui-image",
  "reqwest",
+ "ring",
  "serde",
  "serde_json",
  "tempfile",

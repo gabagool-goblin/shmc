@@ -10,3 +10,4 @@ pub mod plex;
 pub mod redact;
 pub mod setup;
 pub mod ui;
+pub mod update;

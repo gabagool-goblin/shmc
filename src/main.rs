@@ -94,6 +94,9 @@ fn run() -> Result<()> {
     }
     let args = command_args(&args);
 
+    if args.iter().any(|a| a == "update") {
+        return shmc::update::run(args.iter().any(|a| a == "--check"));
+    }
     if let Some(pos) = args.iter().position(|a| a == "cache") {
         return cache_command(&args[pos + 1..]);
     }
@@ -203,7 +206,6 @@ fn run() -> Result<()> {
             .send(Msg::Error("playback reports are off: cannot store the client id".into()));
     }
 
-    // A signal from here on is the same as pressing `q`.
     {
         let tx = started.msg_tx.clone();
         let mut signals = signals.clone();
@@ -221,7 +223,6 @@ fn run() -> Result<()> {
         );
     }
 
-    // Whatever happens to the terminal, mpv and cava are shut down below.
     let result = (|| {
         ui::term::install_panic_hook();
         let mut terminal = ui::term::setup()?;
@@ -295,6 +296,8 @@ fn print_help(config_path: Option<&std::path::Path>) {
          \x20 shmc config --check  check config, server, mpv, cava and terminal\n\
          \x20 shmc config --list   print every setting and its default\n\
          \x20 shmc setup           (re)write the config interactively\n\
+         \x20 shmc update          replace this binary with the latest release\n\
+         \x20 shmc update --check  say whether a newer release exists\n\
          \x20 shmc cache           show the cache size and log location\n\
          \x20 shmc cache clear     delete cached album art\n\
          \x20 shmc log [N]         print the last N lines of the logs, 60 by default\n\
@@ -431,7 +434,6 @@ fn init_logging() {
 struct Started {
     cfg: config::Config,
     msg_rx: tokio::sync::mpsc::UnboundedReceiver<Msg>,
-    /// back-channel for non-worker senders (transient status timers)
     msg_tx: UnboundedSender<Msg>,
     plex: PlexHandle,
     mpv: playback::MpvHandle,
@@ -566,7 +568,6 @@ fn ui_msg(ev: crossterm::event::Event) -> Option<Msg> {
     match ev {
         Event::Key(key) => Some(Msg::Key(Event::Key(key))),
         Event::Paste(text) => Some(Msg::Paste(text)),
-        // The loop paints only on a message.
         Event::Resize(..) => Some(Msg::Resize),
         _ => None,
     }
