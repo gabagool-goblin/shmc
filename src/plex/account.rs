@@ -30,6 +30,7 @@ pub struct Server {
     /// For this server only; a shared server's differs from the account's.
     pub token: String,
     https_required: bool,
+    on_its_network: bool,
     connections: Vec<Connection>,
 }
 
@@ -63,6 +64,8 @@ struct Resource {
     access_token: Option<String>,
     #[serde(default)]
     https_required: bool,
+    #[serde(default)]
+    public_address_matches: bool,
     #[serde(default)]
     connections: Vec<Connection>,
 }
@@ -98,7 +101,6 @@ impl PlexTv {
         }
     }
 
-    /// The account token goes only in a header.
     async fn call<T: serde::de::DeserializeOwned>(
         &self,
         method: reqwest::Method,
@@ -138,7 +140,6 @@ impl PlexTv {
         Ok(Pin { id: pin.id, code: pin.code, expires_in: Duration::from_secs(pin.expires_in) })
     }
 
-    /// The account token once the code is approved at plex.tv/link.
     pub async fn wait_for_token(&self, pin: &Pin, every: Duration) -> Result<String> {
         let deadline = tokio::time::Instant::now() + pin.expires_in;
         let mut failures = 0;
@@ -172,6 +173,7 @@ impl PlexTv {
                     owned: r.owned,
                     token: r.access_token.filter(|t| !t.is_empty())?,
                     https_required: r.https_required,
+                    on_its_network: r.public_address_matches,
                     connections: r.connections,
                 })
             })
@@ -180,8 +182,7 @@ impl PlexTv {
 }
 
 impl Server {
-    /// Best first: local https, local http where the server allows it, remote https, relay.
-    /// Never remote http, which would send the token in the clear.
+    /// Best first. Never remote plain http: it would send the token in the clear.
     pub fn addresses(&self) -> Vec<Address> {
         let https =
             |c: &Connection| reqwest::Url::parse(&c.uri).is_ok_and(|u| u.scheme() == "https");
@@ -194,12 +195,16 @@ impl Server {
         let local_http = self
             .connections
             .iter()
-            .filter(|c| c.local && !c.relay && !self.https_required && !c.address.is_empty())
-            .map(|c| Address {
-                uri: format!("http://{}:{}", c.address, c.port),
-                local: true,
-                https: false,
-                relay: false,
+            .filter(|c| c.local && !c.relay && self.on_its_network && !self.https_required)
+            .filter_map(|c| {
+                let ip: std::net::IpAddr = c.address.parse().ok()?;
+                let at = std::net::SocketAddr::new(ip, c.port);
+                (c.port != 0).then(|| Address {
+                    uri: format!("http://{at}"),
+                    local: true,
+                    https: false,
+                    relay: false,
+                })
             });
         let mut out: Vec<Address> = Vec::new();
         for a in listed(true, false).chain(local_http).chain(listed(false, false)) {
@@ -331,6 +336,7 @@ mod tests {
             owned: true,
             token: "fake".into(),
             https_required,
+            on_its_network: true,
             connections,
         }
     }
@@ -362,6 +368,23 @@ mod tests {
             ],
             "no plain http when the server requires https"
         );
+    }
+
+    #[test]
+    fn plain_http_is_left_out_away_from_the_servers_network() {
+        let local = connection("https://local.plex.direct:32400", "10.0.0.3", true, false);
+        let mut away = server(vec![local], false);
+        away.on_its_network = false;
+        let uris: Vec<_> = away.addresses().into_iter().map(|a| a.uri).collect();
+        assert_eq!(uris, ["https://local.plex.direct:32400"]);
+    }
+
+    #[test]
+    fn a_local_ipv6_address_is_bracketed() {
+        let local = connection("https://v6.plex.direct:32400", "fd00::3", true, false);
+        let http: Vec<_> =
+            server(vec![local], false).addresses().into_iter().filter(|a| !a.https).collect();
+        assert_eq!(http[0].uri, "http://[fd00::3]:32400");
     }
 
     #[test]
