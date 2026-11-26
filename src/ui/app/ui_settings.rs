@@ -44,6 +44,12 @@ pub struct UiSettings {
 }
 
 impl UiSettings {
+    /// What decides where the cover goes and how it is drawn.
+    pub fn art_layout(&self) -> (u16, bool, bool, u16, u16, bool) {
+        let s = self;
+        (s.art_pct, s.art_square, s.art_metadata, s.art_pad_px, s.visualizer_pct, s.header_compact)
+    }
+
     pub fn new(ui: &UiConfig) -> Self {
         Self {
             rating_style: ui.rating_mode(),
