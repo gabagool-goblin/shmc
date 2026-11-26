@@ -6,7 +6,7 @@ mod settings;
 pub mod watch;
 
 pub use file::retired_keys;
-pub(crate) use file::scrub_value;
+pub(crate) use file::{ensure_config_dir, scrub_value};
 pub use paths::{
     cache_dir, config_path, log_dir, queue_path, state_dir, themes_dir_for, usable_log_dir, NO_HOME,
 };

@@ -125,7 +125,7 @@ fn remove_from_document(doc: &mut toml_edit::DocumentMut, key: &str) {
 }
 
 /// An existing dir is tightened only at the default path: `--config` can name any dir.
-fn ensure_config_dir(dir: &Path) -> std::io::Result<()> {
+pub(crate) fn ensure_config_dir(dir: &Path) -> std::io::Result<()> {
     #[cfg(unix)]
     {
         use std::os::unix::fs::{DirBuilderExt, PermissionsExt};

@@ -22,7 +22,6 @@ pub fn hint(path: &Path) -> String {
     )
 }
 
-/// `existing`'s values are offered as defaults.
 pub async fn interactive(path: &PathBuf, existing: Option<Config>) -> Result<Config> {
     println!();
     println!("shmc setup");
@@ -87,11 +86,14 @@ async fn typed(existing: Option<&Config>) -> Result<(String, String)> {
     Ok((server, token))
 }
 
+fn client_id_beside(path: &Path) -> Result<String> {
+    let dir = path.parent().filter(|d| !d.as_os_str().is_empty()).unwrap_or(Path::new("."));
+    crate::config::ensure_config_dir(dir).with_context(|| format!("creating {}", dir.display()))?;
+    crate::plex::client_id::load_or_create(dir).context("storing the client id")
+}
+
 async fn sign_in(path: &Path) -> Result<(String, String)> {
-    let dir = path.parent().unwrap_or_else(|| Path::new("."));
-    let client_id = crate::plex::client_id::load_or_create(dir)
-        .context("storing the client id plex.tv lists shmc under")?;
-    let tv = PlexTv::new(&client_id);
+    let tv = PlexTv::new(&client_id_beside(path)?);
     let pin = tv.create_pin().await?;
     println!();
     println!("Go to https://plex.tv/link and enter the code  {}", pin.code);
@@ -104,7 +106,7 @@ async fn sign_in(path: &Path) -> Result<(String, String)> {
 
     let mut servers = tv.servers(&account_token).await?;
     let server = match servers.len() {
-        0 => bail!("this Plex account has no servers; nothing was written"),
+        0 => bail!("this Plex account has no servers; the config was not changed"),
         1 => servers.remove(0),
         n => {
             println!();
@@ -130,7 +132,10 @@ async fn sign_in(path: &Path) -> Result<(String, String)> {
         account::first_answering(&addresses, &server.token, account::ANSWER_WITHIN).await
     else {
         println!("failed");
-        bail!("none of its {} addresses answered from here; nothing was written", addresses.len());
+        bail!(
+            "none of its {} addresses answered from here; the config was not changed",
+            addresses.len()
+        );
     };
     let address = &addresses[i];
     let kind = match (address.relay, address.local, address.https) {
@@ -292,6 +297,17 @@ mod tests {
     use super::*;
 
     #[test]
+    fn a_first_sign_in_creates_the_config_dir() {
+        use std::os::unix::fs::PermissionsExt;
+        let home = tempfile::tempdir().unwrap();
+        let dir = home.path().join("shmc");
+        let id = client_id_beside(&dir.join("config.toml")).unwrap();
+        assert_eq!(std::fs::read_to_string(dir.join("client-id")).unwrap(), id);
+        let mode = std::fs::metadata(&dir).unwrap().permissions().mode();
+        assert_eq!(mode & 0o777, 0o700);
+    }
+
+    #[test]
     fn setting_a_value_goes_through_the_schema() {
         let mut cfg = Config::default();
         set_by_key(&mut cfg, "ui.art_pct", toml::Value::Integer(55)).unwrap();
@@ -346,7 +362,6 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let path = tmp.path().join("config.toml");
         std::fs::write(&path, "[plex]\ntoken = \"secret\"\n").unwrap();
-        // hand-edited configs are typically 0644
         use std::os::unix::fs::PermissionsExt;
         std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o644)).unwrap();
 
