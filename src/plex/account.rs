@@ -217,25 +217,51 @@ impl Server {
     }
 }
 
-/// The best-ranked address that answers, with the server's machine id and version.
+/// The best-ranked address that answers; the rest get the token only if no local https one does.
 pub async fn first_answering(
     addresses: &[Address],
     token: &str,
     within: Duration,
 ) -> Option<(usize, String, String)> {
-    let tries: Vec<_> = addresses
-        .iter()
-        .map(|a| {
-            let client = PlexClient::new(&a.uri, token);
-            tokio::spawn(async move { tokio::time::timeout(within, client.identity()).await })
-        })
-        .collect();
-    for (i, attempt) in tries.into_iter().enumerate() {
-        if let Ok(Ok(Ok((machine, version)))) = attempt.await {
+    let local_https = addresses.iter().take_while(|a| a.local && a.https && !a.relay).count();
+    let (first, rest) = addresses.split_at(local_https);
+    if let Some(found) = answering(first, token, within).await {
+        return Some(found);
+    }
+    let (i, machine, version) = answering(rest, token, within).await?;
+    Some((local_https + i, machine, version))
+}
+
+async fn answering(
+    addresses: &[Address],
+    token: &str,
+    within: Duration,
+) -> Option<(usize, String, String)> {
+    let mut tries = AbortOnDrop(
+        addresses
+            .iter()
+            .map(|a| {
+                let client = PlexClient::new(&a.uri, token);
+                tokio::spawn(async move { tokio::time::timeout(within, client.identity()).await })
+            })
+            .collect(),
+    );
+    for i in 0..tries.0.len() {
+        if let Ok(Ok(Ok((machine, version)))) = (&mut tries.0[i]).await {
             return Some((i, machine, version));
         }
     }
     None
+}
+
+struct AbortOnDrop<T>(Vec<tokio::task::JoinHandle<T>>);
+
+impl<T> Drop for AbortOnDrop<T> {
+    fn drop(&mut self) {
+        for task in &self.0 {
+            task.abort();
+        }
+    }
 }
 
 #[cfg(test)]
@@ -419,5 +445,19 @@ mod tests {
             first_answering(&[address(&answers), address(&silent_uri)], "fake", within).await;
         assert_eq!(picked.map(|p| p.0), Some(0));
         assert_eq!(first_answering(&[address(&silent_uri)], "fake", within).await, None);
+    }
+
+    #[tokio::test]
+    async fn plain_http_waits_for_local_https_to_fail() {
+        let identity = r#"<MediaContainer machineIdentifier="m1" version="1.41.0"/>"#;
+        let (https, _, _) = serve_full(move |_| (200, identity.into())).await;
+        let (http, http_seen, _) = serve_full(move |_| (200, identity.into())).await;
+        let addresses = [
+            Address { uri: https, local: true, https: true, relay: false },
+            Address { uri: http, local: true, https: false, relay: false },
+        ];
+        let picked = first_answering(&addresses, "fake", Duration::from_millis(300)).await;
+        assert_eq!(picked.map(|p| p.0), Some(0));
+        assert!(http_seen.lock().unwrap().is_empty(), "the token went over plain http");
     }
 }
