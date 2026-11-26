@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 
 /// An atomic save gives the file a new inode.
-#[derive(PartialEq)]
+#[derive(Clone, PartialEq)]
 struct Stamp {
     len: u64,
     modified: Option<SystemTime>,
@@ -18,20 +18,25 @@ fn stamp(path: &Path) -> Option<Stamp> {
     Some(Stamp { len: meta.len(), modified: meta.modified().ok(), inode: meta.ino() })
 }
 
-/// Calls `changed` with the file read again after each change, until it returns false.
+/// Calls `changed` with the file once a change has held for one poll, until it returns false.
 pub fn watch(
     path: PathBuf,
     every: Duration,
     mut changed: impl FnMut(anyhow::Result<Config>) -> bool + Send + 'static,
 ) {
-    let mut last = stamp(&path);
+    let mut read = stamp(&path);
+    let mut seen = read.clone();
     std::thread::spawn(move || loop {
         std::thread::sleep(every);
         let Some(now) = stamp(&path) else { continue };
-        if last.as_ref() == Some(&now) {
+        if seen.as_ref() != Some(&now) {
+            seen = Some(now);
             continue;
         }
-        last = Some(now);
+        if read == seen {
+            continue;
+        }
+        read = seen.clone();
         if !changed(Config::read(&path)) {
             break;
         }
@@ -62,5 +67,20 @@ mod tests {
         std::fs::write(&path, "[ui]\nscrolloff = \"many\"\n").unwrap();
         let err = rx.recv_timeout(Duration::from_secs(5)).unwrap().unwrap_err();
         assert!(err.contains("line 2"), "{err}");
+    }
+
+    #[test]
+    fn a_file_still_being_written_is_not_read() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("config.toml");
+        std::fs::write(&path, "[ui]\nscrolloff = 3\n").unwrap();
+        let (tx, rx) = channel();
+        let every = Duration::from_millis(200);
+        watch(path.clone(), every, move |read| tx.send(read.map(|c| c.ui.scrolloff).ok()).is_ok());
+        std::thread::sleep(every / 2);
+        std::fs::write(&path, "[ui]\n").unwrap();
+        std::thread::sleep(every);
+        std::fs::write(&path, "[ui]\nscrolloff = 9\n").unwrap();
+        assert_eq!(rx.recv_timeout(Duration::from_secs(5)).unwrap(), Some(9));
     }
 }
