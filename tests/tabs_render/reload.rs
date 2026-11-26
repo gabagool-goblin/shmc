@@ -68,3 +68,12 @@ async fn a_file_that_does_not_parse_changes_nothing() {
     assert!(app.status.ends_with("; settings unchanged"), "{}", app.status);
     assert_eq!(app.ui.scrolloff, before);
 }
+
+#[tokio::test]
+async fn the_art_size_cap_stays_as_started() {
+    let mut app = new_app().await;
+    let _appearance = AppearanceGuard::new();
+    let started = app.art_max_px;
+    app.handle_msg(saved("[album_art]\nmax_size_px = [1234, 1234]\n", &["album_art.max_size_px"]));
+    assert_eq!(app.art_max_px, started);
+}

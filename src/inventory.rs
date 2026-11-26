@@ -826,7 +826,7 @@ pub const ALL: &[Setting] = &[
 ];
 
 /// Read once at startup: a running player names these when a save changes them.
-pub const NEXT_START: [&str; 10] = [
+pub const NEXT_START: [&str; 11] = [
     "plex.server",
     "plex.token",
     "plex.music_section",
@@ -835,6 +835,7 @@ pub const NEXT_START: [&str; 10] = [
     "mpv.extra_args",
     "mpv.volume",
     "album_art.backend",
+    "album_art.max_size_px",
     "album_art.cache_mb",
     "cava.enabled",
 ];
