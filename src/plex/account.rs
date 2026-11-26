@@ -72,8 +72,6 @@ struct Resource {
 struct Connection {
     uri: String,
     #[serde(default)]
-    protocol: String,
-    #[serde(default)]
     address: String,
     #[serde(default)]
     port: u16,
@@ -185,7 +183,8 @@ impl Server {
     /// Best first: local https, local http where the server allows it, remote https, relay.
     /// Never remote http, which would send the token in the clear.
     pub fn addresses(&self) -> Vec<Address> {
-        let https = |c: &Connection| c.protocol == "https" || c.uri.starts_with("https://");
+        let https =
+            |c: &Connection| reqwest::Url::parse(&c.uri).is_ok_and(|u| u.scheme() == "https");
         let listed = |local: bool, relay: bool| {
             self.connections
                 .iter()
@@ -323,8 +322,7 @@ mod tests {
     }
 
     fn connection(uri: &str, address: &str, local: bool, relay: bool) -> Connection {
-        let protocol = uri.split(':').next().unwrap().into();
-        Connection { uri: uri.into(), protocol, address: address.into(), port: 32400, local, relay }
+        Connection { uri: uri.into(), address: address.into(), port: 32400, local, relay }
     }
 
     fn server(connections: Vec<Connection>, https_required: bool) -> Server {
@@ -364,6 +362,15 @@ mod tests {
             ],
             "no plain http when the server requires https"
         );
+    }
+
+    #[test]
+    fn an_http_uri_listed_as_https_is_left_out() {
+        let listed = serde_json::from_str(
+            r#"{"uri":"http://203.0.113.5:32400","protocol":"https","address":"203.0.113.5","port":32400,"local":false,"relay":false}"#,
+        )
+        .unwrap();
+        assert_eq!(server(vec![listed], false).addresses(), []);
     }
 
     #[tokio::test]
