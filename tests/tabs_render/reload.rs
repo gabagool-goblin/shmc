@@ -77,3 +77,16 @@ async fn the_art_size_cap_stays_as_started() {
     app.handle_msg(saved("[album_art]\nmax_size_px = [1234, 1234]\n", &["album_art.max_size_px"]));
     assert_eq!(app.art_max_px, started);
 }
+
+#[tokio::test]
+async fn only_an_art_setting_redraws_the_cover() {
+    let mut app = new_app().await;
+    let _appearance = AppearanceGuard::new();
+    app.handle_msg(saved("", &[]));
+    let shown = Some(ratatui::layout::Rect::new(1, 1, 30, 15));
+    app.art.shown_rect = shown;
+    app.handle_msg(saved("[ui]\nscrolloff = 2\n", &[]));
+    assert_eq!(app.art.shown_rect, shown, "an unrelated save resent the cover");
+    app.handle_msg(saved("[ui]\nart_pct = 55\n", &[]));
+    assert_eq!(app.art.shown_rect, None);
+}

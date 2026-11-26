@@ -64,6 +64,9 @@ impl App {
     }
 
     fn apply_config(&mut self, Reload { cfg, mut later }: Reload) {
+        let art =
+            |app: &Self| (app.ui.art_layout(), crate::ui::theme::theme(), crate::ui::theme::look());
+        let art_before = art(self);
         let mut problems = Vec::new();
         let (appearance, theme_problems) = crate::ui::theme::appearance_from_config(&cfg.theme);
         crate::ui::theme::set_appearance(appearance, cfg.ui.ascii_icons());
@@ -79,10 +82,12 @@ impl App {
         if self.ui.auto_follow != auto_follow {
             self.queue_follow = self.ui.auto_follow;
         }
-        self.art.shown_rect = None;
-        self.art.protocol = None;
-        self.art.prepared_rect = None;
-        self.hold_art();
+        if art(self) != art_before {
+            self.art.shown_rect = None;
+            self.art.protocol = None;
+            self.art.prepared_rect = None;
+            self.hold_art();
+        }
 
         self.allow_writes = cfg.plex.allow_writes;
         if !self.relevel(cfg.mpv.leveling(), cfg.mpv.preamp_db()) {
