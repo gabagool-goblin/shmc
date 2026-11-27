@@ -12,10 +12,11 @@ mod top;
 
 use super::radio::RadioEnv;
 use super::{App, ListRef, Msg, PlexCmd};
-use crate::plex::discover::{BestOf, DiscoverHubs, LibraryList, Shelf};
+use crate::plex::discover::{BestOf, DiscoverHubs, LibraryList, Shelf, ShelfItems};
 use crate::plex::radio::Station;
 use crate::plex::sonic::Features;
 use crate::plex::{Album, PlexClient, Track};
+use crate::ui::keymap::Act;
 pub use best_of::Choices;
 pub use library::{Library, LibraryOutcome};
 pub use pane::{trail, ItemsPane, Pane, TracksPane, TracksSource};
@@ -120,6 +121,13 @@ impl DiscoverView {
         }
     }
 
+    pub fn items(&self) -> Option<&ShelfItems> {
+        match &self.pane {
+            Pane::Items(p) => Some(&p.items),
+            _ => None,
+        }
+    }
+
     pub fn shown_preview(&self) -> Option<&Preview> {
         match self.followed? {
             Row::Station(i) => self.previews.get(&self.stations.get(i)?.key),
@@ -209,13 +217,33 @@ impl App {
     }
 
     pub(super) fn reveal_discover(&mut self) {
-        let Some(real) = self.real_at(ListRef::DTracks) else { return };
-        let Some(t) = self.discover.tracks().get(real) else { return };
-        let (artist, album, track) = (
-            t.grandparent_rating_key.clone(),
-            t.parent_rating_key.clone(),
-            Some(t.rating_key.clone()),
-        );
-        self.reveal(artist, album, track);
+        let list = self.discover_list();
+        let target = self.real_at(list).and_then(|real| match list {
+            ListRef::DTracks => self.discover.tracks().get(real).map(|t| {
+                (
+                    t.grandparent_rating_key.clone(),
+                    t.parent_rating_key.clone(),
+                    Some(t.rating_key.clone()),
+                )
+            }),
+            ListRef::DItems => match self.discover.items()? {
+                ShelfItems::Albums(v) => {
+                    v.get(real).map(|a| (a.artist_key.clone(), Some(a.rating_key.clone()), None))
+                }
+                ShelfItems::Artists(v) => {
+                    v.get(real).map(|a| (Some(a.rating_key.clone()), None, None))
+                }
+                ShelfItems::Playlists(_) | ShelfItems::BestOf(_) => None,
+            },
+            _ => None,
+        });
+        match target {
+            Some((artist, album, track)) => self.reveal(artist, album, track),
+            None => {
+                if let Some(key) = self.keymap.first_key(self.key_ctx(), &Act::GotoAlbum) {
+                    self.transient(format!("{key} works on a track, album or artist"));
+                }
+            }
+        }
     }
 }

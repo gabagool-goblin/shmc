@@ -1,7 +1,8 @@
 //! `m`: tracks, albums or artists that sound like the selected one.
 
 use super::{App, ListKind, ListRef, PlexCmd, SearchDetail, Tab};
-use crate::plex::{HitKind, SearchHit, Track};
+use crate::plex::discover::ShelfItems;
+use crate::plex::{Album, Artist, HitKind, SearchHit, Track};
 use ratatui::widgets::TableState;
 
 /// What `m` was pressed on, and so what it lists.
@@ -41,7 +42,6 @@ pub struct SimilarHits {
     pub matches: Vec<Option<u8>>,
 }
 
-/// What the worker found for one request.
 #[derive(Debug)]
 pub enum SimilarOutcome {
     /// Plex's order, each with its match percentage when it gave a distance.
@@ -53,7 +53,6 @@ pub enum SimilarOutcome {
     NoneFound,
 }
 
-/// The row `m` was pressed on.
 struct Seed {
     key: String,
     kind: SimilarKind,
@@ -68,6 +67,24 @@ impl Seed {
             kind: SimilarKind::Tracks,
             exclude: t.grandparent_rating_key.clone(),
             label: format!("Sonically similar to {} — {}", t.title, t.artist),
+        }
+    }
+
+    fn of_album(a: &Album) -> Self {
+        Self {
+            key: a.rating_key.clone(),
+            kind: SimilarKind::Albums,
+            exclude: None,
+            label: format!("Sonically similar to {} — {}", a.title, a.artist),
+        }
+    }
+
+    fn of_artist(a: &Artist) -> Self {
+        Self {
+            key: a.rating_key.clone(),
+            kind: SimilarKind::Artists,
+            exclude: None,
+            label: format!("Sonically similar to {}", a.title),
         }
     }
 
@@ -101,24 +118,13 @@ impl App {
             ListRef::PlItems => self.playlists.tracks.items.get(real).map(Seed::of),
             ListRef::SearchDetail => self.search.detail.as_ref()?.tracks.get(real).map(Seed::of),
             ListRef::DTracks => self.discover.tracks().get(real).map(Seed::of),
-            ListRef::BArtists => {
-                let a = self.browser.artists.items.get(real)?;
-                Some(Seed {
-                    key: a.rating_key.clone(),
-                    kind: SimilarKind::Artists,
-                    exclude: None,
-                    label: format!("Sonically similar to {}", a.title),
-                })
-            }
-            ListRef::BAlbums => {
-                let a = self.browser.albums.items.get(real)?;
-                Some(Seed {
-                    key: a.rating_key.clone(),
-                    kind: SimilarKind::Albums,
-                    exclude: None,
-                    label: format!("Sonically similar to {} — {}", a.title, a.artist),
-                })
-            }
+            ListRef::DItems => match self.discover.items()? {
+                ShelfItems::Albums(v) => v.get(real).map(Seed::of_album),
+                ShelfItems::Artists(v) => v.get(real).map(Seed::of_artist),
+                ShelfItems::Playlists(_) | ShelfItems::BestOf(_) => None,
+            },
+            ListRef::BArtists => self.browser.artists.items.get(real).map(Seed::of_artist),
+            ListRef::BAlbums => self.browser.albums.items.get(real).map(Seed::of_album),
             ListRef::Search => self.search.hits.get(real).map(Seed::of_hit),
             _ => None,
         }

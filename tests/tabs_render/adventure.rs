@@ -120,6 +120,7 @@ async fn p_on_an_album_row_only_shows_a_hint() {
         rating_key: "al1".into(),
         title: "Evening Satellite".into(),
         artist: "Northwind Sounds".into(),
+        artist_key: None,
         year: None,
         thumb: None,
         plays: None,

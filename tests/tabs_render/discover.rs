@@ -8,6 +8,7 @@ use shmc::plex::radio::{RadioQueue, RadioSeed, Station};
 use shmc::plex::{Album, Artist};
 use shmc::ui::app::{
     DiscoverCmd, DiscoverCol, DiscoverMsg, LibraryOutcome, OpenKind, Opened, Pane, Preview,
+    SimilarKind,
 };
 
 pub(super) type Plex = tokio::sync::mpsc::UnboundedReceiver<PlexCmd>;
@@ -35,7 +36,6 @@ pub(super) fn loaded() -> Msg {
     loaded_with(Vec::new(), stations())
 }
 
-/// Discover opened and its stations listed, writes allowed.
 pub(super) async fn on_discover() -> (TestApp, Plex) {
     let (mut app, mut plex) = new_app_with_plex().await;
     app.allow_writes = true;
@@ -343,6 +343,7 @@ pub(super) fn album(key: &str, title: &str, artist: &str, year: u32) -> Album {
         rating_key: key.into(),
         title: title.into(),
         artist: artist.into(),
+        artist_key: None,
         year: Some(year),
         thumb: None,
         plays: None,
@@ -351,7 +352,10 @@ pub(super) fn album(key: &str, title: &str, artist: &str, year: u32) -> Album {
 
 fn shelves() -> Vec<Shelf> {
     let albums = vec![
-        album("a1", "Evening Satellite", "Northwind Sounds", 2019),
+        Album {
+            artist_key: Some("r1".into()),
+            ..album("a1", "Evening Satellite", "Northwind Sounds", 2019)
+        },
         album("a2", "Paper Lanterns", "Mira Vale", 2021),
         album("a3", "A Very Long Album Title For A Narrow Pane", "Northwind Sounds", 2015),
     ];
@@ -600,6 +604,53 @@ async fn a_on_a_shelf_item_queues_the_album_artist_or_playlist() {
         c,
         PlexCmd::ResolvePlaylist { key, action: QueueAction::PlayNext, .. } if key == "p1"
     )));
+}
+
+#[tokio::test]
+async fn m_on_a_shelf_album_or_artist_finds_similar_ones() {
+    let (mut app, mut plex) = on_shelves().await;
+    let similar = |app: &mut TestApp, plex: &mut Plex| {
+        app.handle_msg(key('l'));
+        app.handle_msg(key('m'));
+        app.handle_msg(key('h'));
+        app.handle_msg(key('j'));
+        sent(plex)
+            .into_iter()
+            .filter_map(|c| match c {
+                PlexCmd::LoadSimilar { key, kind, .. } => Some((key, kind)),
+                _ => None,
+            })
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(similar(&mut app, &mut plex), [("a1".to_string(), SimilarKind::Albums)]);
+    app.handle_msg(key('2'));
+    assert_eq!(similar(&mut app, &mut plex), [("r0".to_string(), SimilarKind::Artists)]);
+    app.handle_msg(key('2'));
+    assert!(similar(&mut app, &mut plex).is_empty());
+}
+
+#[tokio::test]
+async fn b_on_a_shelf_album_or_artist_shows_it_in_the_browser() {
+    let (mut app, mut plex) = on_shelves().await;
+    let reveal = |app: &mut TestApp, plex: &mut Plex| {
+        app.handle_msg(key('l'));
+        app.handle_msg(key('b'));
+        let cmds = sent(plex);
+        let tab = app.tab;
+        app.handle_msg(key('2'));
+        app.handle_msg(key('h'));
+        app.handle_msg(key('j'));
+        (cmds, tab)
+    };
+    let (cmds, tab) = reveal(&mut app, &mut plex);
+    assert!(matches!(cmds.as_slice(), [PlexCmd::ResolveArtist(k)] if k == "r1"));
+    assert_eq!(tab, Tab::Browser);
+    let (cmds, tab) = reveal(&mut app, &mut plex);
+    assert!(matches!(cmds.as_slice(), [PlexCmd::ResolveArtist(k)] if k == "r0"));
+    assert_eq!(tab, Tab::Browser);
+    let (cmds, tab) = reveal(&mut app, &mut plex);
+    assert!(cmds.is_empty());
+    assert_eq!(tab, Tab::Discover);
 }
 
 #[tokio::test]
