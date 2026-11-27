@@ -233,7 +233,7 @@ pub const BINDINGS: &[Binding] = &[
     Binding { ctx: KeyCtx::Discover, keys: &["a"], act: Act::AddToQueue, desc: "add track, album, artist or playlist to queue" },
     Binding { ctx: KeyCtx::Discover, keys: &["i"], act: Act::PlayNext, desc: "insert track or item after the playing track" },
     Binding { ctx: KeyCtx::Discover, keys: &["v"], act: Act::VisualMode, desc: "select tracks (visual mode)" },
-    Binding { ctx: KeyCtx::Discover, keys: &["m"], act: Act::Similar, desc: "sonically similar tracks" },
+    Binding { ctx: KeyCtx::Discover, keys: &["m"], act: Act::Similar, desc: "sonically similar tracks, albums or artists" },
     Binding { ctx: KeyCtx::Discover, keys: &["p"], act: Act::Period, desc: "Top lists: week, month, year or all time" },
     Binding { ctx: KeyCtx::Discover, keys: &["{"], act: Act::PeriodBack, desc: "Top lists: the period before" },
     Binding { ctx: KeyCtx::Discover, keys: &["}"], act: Act::PeriodForward, desc: "Top lists: the period after" },
@@ -241,7 +241,7 @@ pub const BINDINGS: &[Binding] = &[
     Binding { ctx: KeyCtx::Discover, keys: &["w"], act: Act::AddStop, desc: "add to a Sonic Adventure" },
     Binding { ctx: KeyCtx::Discover, keys: &["W"], act: Act::BuildAdventure, desc: "build the Sonic Adventure" },
     Binding { ctx: KeyCtx::Discover, keys: &["Esc"], act: Act::Back, desc: "back, or clear the Sonic Adventure stops" },
-    Binding { ctx: KeyCtx::Discover, keys: &["b"], act: Act::GotoAlbum, desc: "show track in Browser" },
+    Binding { ctx: KeyCtx::Discover, keys: &["b"], act: Act::GotoAlbum, desc: "show track, album or artist in Browser" },
     Binding { ctx: KeyCtx::Discover, keys: &["o"], act: Act::JumpToPlaying, desc: "jump to the playing track" },
     Binding { ctx: KeyCtx::Browser, keys: &["h", "Left"], act: Act::ColumnLeft, desc: "focus the column to the left" },
     Binding { ctx: KeyCtx::Browser, keys: &["l", "Right"], act: Act::ColumnRight, desc: "open, or focus the column to the right" },
@@ -690,17 +690,13 @@ mod tests {
              [keys.lists]\nmove_down = [\"e\"]\n",
         );
         assert!(problems.is_empty(), "{problems:?}");
-        // an entry replaces the action's keys
         assert_eq!(map.lookup(KeyCtx::Global, ">"), Some(&Act::NextTrack));
         assert_eq!(map.lookup(KeyCtx::Global, "n"), Some(&Act::NextTrack));
-        // [] unbinds
         assert_eq!(map.lookup(KeyCtx::Queue, "u"), None);
-        // lists reaches every context with the action
         for ctx in [KeyCtx::Browser, KeyCtx::Playlists, KeyCtx::Search, KeyCtx::Help] {
             assert_eq!(map.lookup(ctx, "e"), Some(&Act::MoveDown), "{ctx:?}");
             assert_eq!(map.lookup(ctx, "j"), None, "{ctx:?}");
         }
-        // ... but a per-context entry wins
         assert_eq!(map.lookup(KeyCtx::Queue, "y"), Some(&Act::MoveDown));
         assert_eq!(map.lookup(KeyCtx::Queue, "e"), None);
         assert_eq!(map.lookup(KeyCtx::Queue, "j"), None);
@@ -755,7 +751,6 @@ mod tests {
     #[test]
     fn context_specific_beats_global() {
         let map = Keymap::default();
-        // 'q' quits globally but goes back in Help
         assert_eq!(map.lookup(KeyCtx::Help, "q"), Some(&Act::Back));
         assert_eq!(map.lookup(KeyCtx::Queue, "q"), Some(&Act::Quit));
         // no Global '/' binding to fall back to

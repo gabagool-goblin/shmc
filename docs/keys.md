@@ -104,10 +104,11 @@ The Discover tab has four groups, and the highlighted entry shows on the right.
 | `a` | Add the track, album, artist or playlist to the queue |
 | `i` | Insert the track, album, artist or playlist after the playing track |
 | `v` | Select a range of tracks |
-| `m`, `s` | Similar tracks, track radio |
+| `m` | Similar tracks, albums or artists |
+| `s` | Track radio |
 | `p` | Top lists: week, month, year or all time |
 | `{`, `}` | Top lists: the period before or after |
-| `b` | Open the track in Browser |
+| `b` | Open the track, album or artist in Browser |
 | `Esc` | Go back, or clear the Sonic Adventure stops |
 
 ## Browser, Playlists and Search

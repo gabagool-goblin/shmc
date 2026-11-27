@@ -24,6 +24,7 @@ fn parse_albums_fixture() {
     assert_eq!(a.title, "Album 1");
     assert_eq!(a.year, Some(2008));
     assert_eq!(a.artist, "Artist 1");
+    assert_eq!(a.artist_key.as_deref(), Some("20041"));
 }
 
 #[test]

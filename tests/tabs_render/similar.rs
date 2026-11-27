@@ -28,6 +28,7 @@ fn album(key: &str, title: &str) -> Album {
         rating_key: key.into(),
         title: title.into(),
         artist: "Northwind Sounds".into(),
+        artist_key: None,
         year: None,
         thumb: None,
         plays: None,

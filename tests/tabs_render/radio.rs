@@ -34,6 +34,7 @@ async fn on_browser() -> (TestApp, Plex) {
         rating_key: "al1".into(),
         title: "Evening Satellite".into(),
         artist: "Northwind Sounds".into(),
+        artist_key: None,
         year: None,
         thumb: None,
         plays: None,
