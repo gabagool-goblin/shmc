@@ -59,7 +59,7 @@ Compact layout with the `gruvbox-dark` theme and track details below the cover:
 ## Requirements
 
 - Plex Media Server with a music library.
-- [mpv](https://mpv.io) 0.36 or newer. Some older distributions ship an earlier version.
+- [mpv](https://mpv.io) 0.38 or newer. Some older distributions ship an earlier version.
 - [cava](https://github.com/karlstav/cava) (optional, for the visualizer).
 - A terminal supporting at least 256 colours.
 - A [Nerd Font](https://www.nerdfonts.com) for the default icons. Set `ui.icons = "ascii"` to use ASCII icons instead.

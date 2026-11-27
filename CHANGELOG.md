@@ -19,6 +19,7 @@ All notable changes to shmc are documented here. The format follows
 
 ### Changed
 
+- shmc needs mpv 0.38 or newer.
 - Building from source needs Rust 1.90 or newer.
 - Large numbers use commas as the thousands separator.
 
