@@ -4,6 +4,7 @@ use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
 use image::{DynamicImage, RgbaImage};
 use ratatui::backend::TestBackend;
 use ratatui::buffer::CellDiffOption;
+use ratatui::style::Color;
 use ratatui::Terminal;
 use shmc::config::{KeyTable, MpvConfig, UiConfig};
 use shmc::playback::{mpv, MpvEvent};
@@ -18,9 +19,11 @@ mod adventure;
 mod art;
 mod best_of;
 mod browse;
+mod columns;
 mod consume;
 mod discover;
 mod failures;
+mod header;
 mod keys;
 mod layout;
 mod leveling;
@@ -39,6 +42,7 @@ mod theme;
 mod top;
 mod transport;
 mod visual;
+mod visualizer;
 
 fn track(i: usize) -> Track {
     Track {
@@ -366,4 +370,17 @@ fn cells_skipped(
 
 fn row_text(g: &[Vec<String>], y: u16) -> String {
     g[y as usize].concat()
+}
+
+/// Foreground colour of the first cell of `needle`.
+fn fg_at(terminal: &Terminal<TestBackend>, needle: &str) -> Option<Color> {
+    let (x, y) = locate(terminal, needle)?;
+    terminal.backend().buffer().cell((x, y))?.style().fg
+}
+
+/// Column (not byte offset) of `needle` in `line`.
+fn char_x(line: &str, needle: &str) -> Option<usize> {
+    let want: Vec<char> = needle.chars().collect();
+    let hay: Vec<char> = line.chars().collect();
+    hay.windows(want.len()).position(|w| w == want.as_slice())
 }
