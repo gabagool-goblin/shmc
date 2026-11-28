@@ -18,21 +18,26 @@ mod adventure;
 mod art;
 mod best_of;
 mod browse;
+mod consume;
 mod discover;
+mod failures;
 mod keys;
 mod layout;
 mod leveling;
 mod queue;
 mod queue_requests;
+mod queue_scroll;
 mod radio;
 mod rating;
 mod reload;
 mod report;
 mod restore;
 mod resume;
+mod shuffle;
 mod similar;
 mod theme;
 mod top;
+mod transport;
 mod visual;
 
 fn track(i: usize) -> Track {
